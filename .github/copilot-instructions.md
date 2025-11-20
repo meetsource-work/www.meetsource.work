@@ -1,6 +1,6 @@
 # GitHub Copilot Instructions
 
-このリポジトリは MeetSource のウェブサイト（www.meetsource.work）を管理するものです。
+このリポジトリは Meetsource のウェブサイト（www.meetsource.work）を管理するものです。
 
 ## プロジェクト概要
 
