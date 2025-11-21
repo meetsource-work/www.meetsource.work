@@ -1,0 +1,41 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Web Development Icon: Laptop with code brackets -->
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#357ABD;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Laptop base -->
+  <rect x="30" y="140" width="140" height="10" rx="2" fill="#2C3E50"/>
+  <rect x="20" y="150" width="160" height="5" rx="2" fill="#34495E"/>
+  
+  <!-- Laptop screen -->
+  <rect x="40" y="50" width="120" height="90" rx="3" fill="url(#grad1)"/>
+  <rect x="45" y="55" width="110" height="80" rx="2" fill="#1E3A5F"/>
+  
+  <!-- Code brackets on screen -->
+  <g fill="#00D9FF" opacity="0.9">
+    <!-- Left bracket < -->
+    <path d="M 75 75 L 65 85 L 75 95" stroke="#00D9FF" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Right bracket > -->
+    <path d="M 125 75 L 135 85 L 125 95" stroke="#00D9FF" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Slash / -->
+    <line x1="95" y1="100" x2="105" y2="70" stroke="#00D9FF" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Server/database icon (small) -->
+  <g transform="translate(130, 105)">
+    <rect x="0" y="0" width="15" height="4" rx="1" fill="#4CAF50"/>
+    <rect x="0" y="5" width="15" height="4" rx="1" fill="#4CAF50"/>
+    <rect x="0" y="10" width="15" height="4" rx="1" fill="#4CAF50"/>
+  </g>
+  
+  <!-- Shopping cart icon (small, for EC site) -->
+  <g transform="translate(55, 105)">
+    <circle cx="3" cy="10" r="1.5" fill="#FF6B6B"/>
+    <circle cx="10" cy="10" r="1.5" fill="#FF6B6B"/>
+    <path d="M 1 2 L 3 2 L 5 8 L 11 8 L 12 4 L 4 4" stroke="#FF6B6B" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

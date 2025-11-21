@@ -1,0 +1,40 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Music Education Icon: Musical note with graduation cap -->
+  <defs>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E74C3C;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#C0392B;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="80" fill="url(#grad2)" opacity="0.1"/>
+  
+  <!-- Musical note stem -->
+  <rect x="95" y="60" width="8" height="70" rx="3" fill="url(#grad2)"/>
+  
+  <!-- Musical note head -->
+  <ellipse cx="90" cy="130" rx="20" ry="15" fill="url(#grad2)"/>
+  
+  <!-- Graduation cap on top of note -->
+  <g transform="translate(100, 50)">
+    <!-- Cap top (board) -->
+    <polygon points="-35,-5 35,-5 30,-10 -30,-10" fill="#2C3E50"/>
+    <!-- Cap base -->
+    <ellipse cx="0" cy="-5" rx="18" ry="8" fill="#34495E"/>
+    <!-- Tassel -->
+    <line x1="30" y1="-7" x2="35" y2="5" stroke="#F39C12" stroke-width="2"/>
+    <circle cx="35" cy="8" r="3" fill="#F39C12"/>
+  </g>
+  
+  <!-- Music staff lines -->
+  <g opacity="0.3">
+    <line x1="30" y1="140" x2="70" y2="140" stroke="#2C3E50" stroke-width="1.5"/>
+    <line x1="30" y1="148" x2="70" y2="148" stroke="#2C3E50" stroke-width="1.5"/>
+    <line x1="30" y1="156" x2="70" y2="156" stroke="#2C3E50" stroke-width="1.5"/>
+  </g>
+  
+  <!-- "20+" years text -->
+  <text x="140" y="110" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#E74C3C">20+</text>
+  <text x="135" y="128" font-family="Arial, sans-serif" font-size="12" fill="#666">years</text>
+</svg>
