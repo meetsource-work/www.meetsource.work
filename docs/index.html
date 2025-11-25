@@ -1,10 +1,72 @@
 <!doctype>
-<html>
+<html lang="ja">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to Meetsource!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #2C3E50;
+        }
+        .icon-container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-top: 40px;
+            gap: 30px;
+        }
+        .icon-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            flex: 1;
+            min-width: 250px;
+            max-width: 350px;
+        }
+        .icon-card h3 {
+            color: #34495E;
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+        .icon-card p {
+            color: #7F8C8D;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
 </head>
 <body>
 <h1>Welcome to Meetsource!</h1>
-<p>under construction</p>
+<p style="text-align: center; color: #7F8C8D;">under construction</p>
+
+<div class="icon-container">
+    <div class="icon-card">
+        <img src="icon-web-development.svg" alt="Web Development Icon" width="200" height="200">
+        <h3>Webサービス開発</h3>
+        <p>ECサイト、顧客管理システム、サーバー監視など、法人向けウェブサービスの開発を行なっております。</p>
+    </div>
+    
+    <div class="icon-card">
+        <img src="icon-music-education.svg" alt="Music Education Icon" width="200" height="200">
+        <h3>音楽教室向けWeb制作</h3>
+        <p>音楽講師歴20年超のノウハウを生かした、生徒募集に効率的な教室向けウェブ制作を承ります。</p>
+    </div>
+    
+    <div class="icon-card">
+        <img src="icon-integrated-service.svg" alt="Integrated Service Icon" width="200" height="200">
+        <h3>統合サービス</h3>
+        <p>テクノロジーと音楽教育の経験を融合した、独自のサービスを提供いたします。</p>
+    </div>
+</div>
 </body>
 </html>
