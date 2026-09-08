@@ -1,0 +1,131 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>スキルの進捗表とHarnessのリマインダーが二重管理を生む：ツール呼び出し29回 vs 0回の実測ケーススタディ | Meetsource</title><meta name="description" content="AIエージェントの実行基盤（Harness）が出すタスク更新リマインダーに素直に従うと、ツール呼び出しが急増しAPIコストが悪化する二重管理の罠を、5セッションの実測比較データと現場ルールを交えて解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/harness-reminder-double-management"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="スキルの進捗表とHarnessのリマインダーが二重管理を生む：ツール呼び出し29回 vs 0回の実測ケーススタディ | Meetsource"><meta property="og:description" content="AIエージェントの実行基盤（Harness）が出すタスク更新リマインダーに素直に従うと、ツール呼び出しが急増しAPIコストが悪化する二重管理の罠を、5セッションの実測比較データと現場ルールを交えて解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/harness-reminder-double-management"><meta property="og:image" content="https://www.meetsource.work/blog/harness-reminder-double-management-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-09T07:23:40.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="スキルの進捗表とHarnessのリマインダーが二重管理を生む：ツール呼び出し29回 vs 0回の実測ケーススタディ | Meetsource"><meta name="twitter:description" content="AIエージェントの実行基盤（Harness）が出すタスク更新リマインダーに素直に従うと、ツール呼び出しが急増しAPIコストが悪化する二重管理の罠を、5セッションの実測比較データと現場ルールを交えて解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/harness-reminder-double-management-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"スキルの進捗表とHarnessのリマインダーが二重管理を生む：ツール呼び出し29回 vs 0回の実測ケーススタディ","description":"AIエージェントの実行基盤（Harness）が出すタスク更新リマインダーに素直に従うと、ツール呼び出しが急増しAPIコストが悪化する二重管理の罠を、5セッションの実測比較データと現場ルールを交えて解説します。","datePublished":"2026-08-09T07:23:40.000Z","image":"https://www.meetsource.work/blog/harness-reminder-double-management-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/harness-reminder-double-management"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-09T07:23:40.000Z" data-astro-cid-7jjqptxk> 2026.08.09 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#agent-harness</span><span class="tag" data-astro-cid-7jjqptxk>#cost-optimization</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>スキルの進捗表とHarnessのリマインダーが二重管理を生む：ツール呼び出し29回 vs 0回の実測ケーススタディ</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/harness-reminder-double-management-hero.webp" alt="スキルの進捗表とHarnessのリマインダーが二重管理を生む：ツール呼び出し29回 vs 0回の実測ケーススタディ" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>AIエージェントを開発・運用する際、「システム基盤が提示するリマインダーやタスク管理の指示に愚直に従って動作させる」設計を採用していないでしょうか。一見すると自律性と信頼性を高める健全な運用に見えますが、実際の開発現場では、この忠実さが予期せぬAPIコストの暴騰やコンテキストの急速な肥大化を引き起こすケースがあります。</p>
+<p>本記事では、同一の執筆パイプラインを完走させた自社の5つのセッションログにおいて、進捗管理ツールの呼び出し回数が <strong>「29回 vs 0回」</strong> という極端な差を生んだ実測ケーススタディを提示します。エージェント制御基盤（Harness）がもたらす構造的オーバーヘッド「Harness Tax」のメカニズムを解明し、スキル側と基盤側の二重管理を防ぐための実用的な現場ルールと設計原則を解説します。</p>
+<hr>
+<h2 id="1-はじめに-リマインダーに素直に従うとなぜコストが跳ね上がるのか">1. はじめに: リマインダーに素直に従うと、なぜコストが跳ね上がるのか</h2>
+<p>AIエージェントのシステム構成は、タスクの実行手順やドメイン知識を保持する <strong>「スキル」</strong> と、セッションループやツール呼出、コンテキスト履歴を制御する実行基盤 <strong>「Harness（ハーネス）」</strong> の2層に分かれます。</p>
+<p>開発者がエージェントの指示通りに作業を進めようとする際、Harness側が「未完了タスクの進捗をタスク管理ツールで更新してください」といった定期的なリマインダーや更新チェックリストを発行することがあります。しかし、スキル側が独自に進捗表を保持している場合、このHarness側のリマインダーに応じ続けることで、本来1回で済む状態更新が二重に行われ、大量のツール呼び出しが誘発されるパラドックスが発生します。</p>
+<p>このようなエージェント基盤層の維持・制御に伴う構造的なトークン・コスト消費は、AIインフラ大手の Portkey.ai によって <strong>Harness Tax</strong> （ハーネスタックス）<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> と呼ばれています。モデル本来の推論やコンテンツ生成とは直接関係のない「基盤維持のためのやり取り」が、APIコストの大半を占めてしまう現象です。</p>
+<hr>
+<h2 id="2-セッション実測ケーススタディ-ツール呼び出し29回-vs-0回の差">2. セッション実測ケーススタディ: ツール呼び出し「29回 vs 0回」の差</h2>
+<p>この「進捗管理の重複」がどれほどツール呼び出し回数に影響を与えるのか、自社で同一のコンテンツ執筆スキルを運用した5つのセッションログから抽出した一次計測データを比較します。</p>
+<p>すべてのセッションは同じスキル仕様に基づき、同等品質の成果物を最後まで完成させています。しかし、タスク作成ツール（<code>TaskCreate</code>）およびタスク更新ツール（<code>TaskUpdate</code>）の呼び出し回数には以下の決定的な差が生じました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>セッションID</th><th>TaskCreate 呼び出し</th><th>TaskUpdate 呼び出し</th><th>成功呼び出し合計</th><th>成果物の品質</th></tr></thead><tbody><tr><td>セッション A</td><td>10回</td><td>19回</td><td><strong>29回</strong></td><td>完了（同等品質）</td></tr><tr><td>セッション B</td><td>0回</td><td>0回</td><td><strong>0回</strong></td><td>完了（同等品質）</td></tr><tr><td>セッション C</td><td>0回</td><td>0回</td><td><strong>0回</strong></td><td>完了（同等品質）</td></tr><tr><td>セッション D</td><td>0回</td><td>0回</td><td><strong>0回</strong></td><td>完了（同等品質）</td></tr><tr><td>セッション E</td><td>1回（※パラメータエラーで即時失敗）</td><td>0回</td><td><strong>0回</strong></td><td>完了（同等品質）</td></tr></tbody></table>
+<h3 id="実測データから見えた事実">実測データから見えた事実</h3>
+<ul>
+<li><strong>セッション A の突出</strong>: セッション A では、進捗ステップを進めるごとにタスク作成と更新が繰り返され、合計 <strong>29回</strong> ものツール呼び出しが実行されました。</li>
+<li><strong>他セッションのゼロ達成</strong>: 一方で、直前のセッション B〜E の4セッションでは、タスク管理ツールの成功呼び出し回数は <strong>0回</strong> でした。セッション E では複数タスクを1括送信しようとするパラメータ指定ミスで1回試行失敗したものの、タスクツールの更新なしで問題なく完了しています。</li>
+<li><strong>成果物品質の同一性</strong>: タスクツールを29回呼んだセッション A と、0回で完了したセッション B〜E の間で、最終成果物の品質や達成状態に差は見られませんでした。</li>
+</ul>
+<p>※ セッション A においてタスクツールが29回呼ばれた直接の引き金について、過去の振り返りメモでは「Harnessのリマインダーに機械的に応じたため」と解釈されていました。しかし生ログを詳細に検索したところ、直接的なシステムメッセージの記録は確認できませんでした。ログから確定できる客観的事実としては、「進捗管理ツールの呼出回数に29回 vs 0回という巨大な差が存在し、ツール呼出なしでも問題なく完走できた」という事実そのものです。</p>
+<hr>
+<h2 id="3-構造分析-harness-tax-と進捗管理の二重化メカニズム">3. 構造分析: Harness Tax と進捗管理の二重化メカニズム</h2>
+<p>なぜ、同じスキルを実行しているにもかかわらずツール呼び出し数が29回も増加してしまうのでしょうか。その構造的背景には2つのメカニズムが存在します。</p>
+<h3 id="1-harness-tax基盤オーバーヘッドの拡大">1. Harness Tax（基盤オーバーヘッド）の拡大</h3>
+<p>Portkey.ai の調査によると、エージェント基盤（Harness）の設計、システムプロンプトの冗長性、ツール定義の記述量、および履歴保持方針の違いにより、同一のタスクを実行する場合でも全体の消費トークン量が最大10倍以上変動することが実証されています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>近年、業界全体が「単純な対話型チャットボット」から「自律型Harnessエージェント」へと移行する中で、基盤層が引き起こす不要なツール呼出やコンテキスト肥大化の制御が最重要課題となっています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h3 id="2-状態管理の二重化とコンテキスト増幅">2. 状態管理の「二重化」とコンテキスト増幅</h3>
+<p>今回実行したスキルには、フェーズ0からフェーズ7までの進捗状態をテキストドキュメント内の管理表として更新するロジックがあらかじめ組み込まれていました。</p>
+<p>この状態で、Harness共通のタスク管理ツール（<code>TaskCreate</code> / <code>TaskUpdate</code>）が有効化されていると、エージェントは「スキル独自のPhase表」と「Harness共通のTaskツール」の両方を更新しようと試みます。1つの作業ステップを進めるたびに、会話履歴へのツール呼び出しリクエストとレスポンスの双方が挿入され、コンテキストウインドウが「進捗管理の通信ログ」で埋め尽くされていきます。</p>
+<p>学術研究の ToolLLM (ArXiv:2307.16789)<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> でも指摘されている通り、LLMに提示されるツールの選択肢や指示命令が増加するほど、モデルは誤ったツール選択や冗長な呼び出しループに陥りやすくなります。</p>
+<hr>
+<h2 id="4-対策と現場ルール-スキルとharnessの責務分離">4. 対策と現場ルール: スキルとHarnessの責務分離</h2>
+<p>この二重管理によるコスト急増を防ぐため、社内の意思決定ログにおいて、スキルとHarnessの責務を明確に分離する実務ルールが決定されました。</p>
+<h3 id="意思決定ルール-d20-進捗管理の一本化">意思決定ルール [D20]: 進捗管理の一本化</h3>
+<blockquote><p><strong>「スキル本体に進捗表（例: Phase表）が組み込まれている実行期間中は、Harness側のタスク管理ツール（TaskCreate/TaskUpdate）の利用を明示的にスキップし、進捗管理をスキル側の表に一本化する」</strong></p></blockquote>
+<p>進捗表を持つスキルを実行する際は、Harness標準のタスク管理ツールを呼び出さないよう、スキルの定義ファイル（<code>SKILL.md</code> 等）に明確な制御指示を記述します。</p>
+<h3 id="引き算の設計the-subtraction-principleの適用">「引き算の設計（The Subtraction Principle）」の適用</h3>
+<p>ToolLLM 等の研究知見<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> を元に本記事で整理する <strong>「引き算の設計（The Subtraction Principle）」</strong> とは、機能を無暗に追加するのではなく、特定の文脈で不要なツール定義や重複指示を意識的に削除・非表示化するアプローチです。</p>
+<p>以下は、スキルのルール節に組み込むプロンプト記述の実例です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#FE640B">## 進捗管理とツール利用のルール</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#179299">1.</span><span style="color:#4C4F69"> 本スキルは内部の「Phase管理表（Phase 0〜7）」を用いて会話テキスト内で進捗を保持します。</span></span>
+<span class="line"><span style="color:#179299">2.</span><span style="color:#4C4F69"> Harness基盤が提供するタスク管理ツール（</span><span style="color:#40A02B">`TaskCreate`</span><span style="color:#4C4F69">, </span><span style="color:#40A02B">`TaskUpdate`</span><span style="color:#4C4F69">）は使用しないでください。</span></span>
+<span class="line"><span style="color:#179299">3.</span><span style="color:#4C4F69"> 進捗の更新は、ドキュメント内のPhase管理表の書き換えのみで行います。</span></span>
+<span class="line"></span></code></pre>
+<p>このようにプロンプト上で責務を明記することで、エージェントがHarnessのリマインダーや共通ツール呼び出しに過剰反応することを防ぎ、セッションあたりのツール呼び出し回数を最小限に抑えられます。</p>
+<hr>
+<h2 id="5-まとめ-エージェント基盤設定を見直す4つのチェックリスト">5. まとめ: エージェント基盤設定を見直す4つのチェックリスト</h2>
+<p>AIエージェントのAPIコスト増大やコンテキスト溢れに悩んでいる場合は、自社の基盤設定とプロンプト構成を以下の4つの観点で点検することをお勧めします。</p>
+<ol>
+<li><strong>二重管理の有無</strong>: スキル固有の状態管理表と、Harness共通のタスクツールが重複して動いていないか？</li>
+<li><strong>機械的指示の評価</strong>: Harnessが出す自動リマインダーやチェックリストが、無用なツール呼び出しを誘発していないか？</li>
+<li><strong>引き算の設計（The Subtraction Principle）</strong>: スキル実行時に、不要な共通ツールの使用をプロンプトで明示的にスキップできているか？</li>
+<li><strong>コストとツール呼び出しの可視化</strong>: 1セッションあたりのツール呼出回数やトークン消費内訳をリアルタイムにモニタリングできているか？</li>
+</ol>
+<p>単一プロンプトの調整にとどまらず、複数のスキルやエージェントが連携する複雑なシステム全体において、Harness構造の最適化やガバナンス設計でお困りの際は、ぜひご相談ください。</p>
+<p><a href="/#contact">コンタクトフォーム</a></p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://portkey.ai/blog/the-harness-tax/">Portkey.ai - The Harness Tax: The Dead Weight Inside Your Coding Agent</a> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://portkey.ai/blog/1-trillion-tokens-and-the-death-of-the-chatbot/">Portkey.ai - 1 Trillion Tokens and the Death of the Chatbot</a> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://arxiv.org/abs/2307.16789">ToolLLM: Facilitating Large Language Models to Master 16000+ Real-world APIs (ArXiv:2307.16789)</a> <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

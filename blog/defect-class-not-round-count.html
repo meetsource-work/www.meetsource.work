@@ -1,0 +1,360 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>差し戻しループを止めたのは周回数ではなかった ── 検証記録68件で数えた2つの停止装置 | Meetsource</title><meta name="description" content="エージェントの差し戻しループを止めるには回数上限で十分か。自社ログ68件の実測から、周回数カウンタ（0/43）より先に欠陥クラスの再発検知（4/38）が決着させていた事実と、その実装パターンを解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/defect-class-not-round-count"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="差し戻しループを止めたのは周回数ではなかった ── 検証記録68件で数えた2つの停止装置 | Meetsource"><meta property="og:description" content="エージェントの差し戻しループを止めるには回数上限で十分か。自社ログ68件の実測から、周回数カウンタ（0/43）より先に欠陥クラスの再発検知（4/38）が決着させていた事実と、その実装パターンを解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/defect-class-not-round-count"><meta property="og:image" content="https://www.meetsource.work/blog/defect-class-not-round-count-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-09-06T01:35:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="差し戻しループを止めたのは周回数ではなかった ── 検証記録68件で数えた2つの停止装置 | Meetsource"><meta name="twitter:description" content="エージェントの差し戻しループを止めるには回数上限で十分か。自社ログ68件の実測から、周回数カウンタ（0/43）より先に欠陥クラスの再発検知（4/38）が決着させていた事実と、その実装パターンを解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/defect-class-not-round-count-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"差し戻しループを止めたのは周回数ではなかった ── 検証記録68件で数えた2つの停止装置","description":"エージェントの差し戻しループを止めるには回数上限で十分か。自社ログ68件の実測から、周回数カウンタ（0/43）より先に欠陥クラスの再発検知（4/38）が決着させていた事実と、その実装パターンを解説します。","datePublished":"2026-09-06T01:35:00.000Z","image":"https://www.meetsource.work/blog/defect-class-not-round-count-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/defect-class-not-round-count"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-09-06T01:35:00.000Z" data-astro-cid-7jjqptxk> 2026.09.06 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#loop-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>差し戻しループを止めたのは周回数ではなかった ── 検証記録68件で数えた2つの停止装置</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/defect-class-not-round-count-hero.webp" alt="差し戻しループを止めたのは周回数ではなかった ── 検証記録68件で数えた2つの停止装置" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>自律型 AI エージェントの設計では、ReAct パターンや、生成と検証を繰り返すレビュー・修正ループを組み込む構成が定着しています。エージェントにタスクを委任する開発者は、安全弁として反復回数の上限（リトライ制限やステップ制限）を設けるのが通例です。</p>
+<p>しかし運用を続けると、多くの現場で共通の課題に直面します。「エージェントが進展のないまま同じ失敗を繰り返し、上限に達するまで止まらない」という時間とコストの浪費です。主要なフレームワークのコミュニティでも、行動パターンの反復によるスタックや無限ループに関する問題が継続的に報告されています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。さらにエージェントループが長引くと、コンテキストの肥大化に伴いキャッシュ読み込みコストが二次関数的に増大していくため<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>、無駄な反復を早期に打ち切る重要性は一層高まっています。</p>
+<p>回数上限以外に、何を監視すればエージェントの無駄なループを早期に止められるのでしょうか。</p>
+<p>結論から言えば、<strong>欠陥クラス</strong> に着目した停止装置が有効でした。ここでいう <strong>欠陥クラス</strong> とは、表現や指摘箇所が変わっても、閉じるべき欠陥の本質的な種類が同じであるならば同一と見なす判定単位です。</p>
+<p>当開発基盤（<code>meetsource.work</code>）に蓄積された検証記録 68 件のうち、停止装置の稼働記録を持つログを突き合わせた実測調査をもとに、回数カウンタより先に効いた停止装置の正体と、その実装パターンを解説します。</p>
+<h2 id="検証環境と調査スコープ">検証環境と調査スコープ</h2>
+<p>本調査では、当サイトの技術ブログ執筆パイプラインにおいて、記事設計書（<code>design.md</code>）のファクトチェックを行う品質検証エージェント（<code>/blog-verify</code>）の実行履歴を対象としました。</p>
+<p>検証環境の詳細は以下のとおりです。</p>
+<ul>
+<li><strong>実行環境 OS</strong>: macOS Sequoia 15.3 (Apple Silicon)</li>
+<li><strong>ランタイム</strong>: Node.js v22.14.0</li>
+<li><strong>調査対象データ</strong>: <code>specs/blog-posts/*/verify-history/*.md</code>（計 68 レコード / 36 slug、期間: 2026-07-19 〜 2026-08-20）</li>
+<li><strong>集計スクリプト</strong>: <code>node scripts/verify-history-stats.mjs</code></li>
+<li><strong>ロジック検証テスト</strong>: <code>node tests/verify-history-stats.test.mjs</code>（<code>ok: verify-history-stats</code>、正常終了）</li>
+</ul>
+<p><strong>1 レコード = 1 検証ラウンド</strong> です。品質検証エージェントは 1 周走るたびに 1 ファイルを追記するため、以下に出てくる母数と発火率の分母はいずれも記事の本数ではなくラウンド数を指します。<code>検証ラウンド</code> 欄を持つ 49 レコードの内訳は、1 周目 30 / 2 周目 17 / 3 周目 2 です。</p>
+<p>集計にあたっては、パイプライン運用の改善に伴い検証記録の固定欄が段階的に後付けされた点に留意する必要があります。初出以降の欠落はいずれもゼロですが、固定欄ごとに有効な母数が異なります<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>固定欄</th><th>初出レコード (UTC)</th><th align="right">有効母数</th><th align="right">記載あり</th><th align="right">欠落</th></tr></thead><tbody><tr><td><code>検証ラウンド</code></td><td><code>20260726T164023Z</code></td><td align="right">49</td><td align="right">49</td><td align="right">0</td></tr><tr><td><code>Hard Stop</code></td><td><code>20260730T034410Z</code></td><td align="right">43</td><td align="right">43</td><td align="right">0</td></tr><tr><td><code>中断条件4（再発）</code></td><td><code>20260804T080214Z</code></td><td align="right">38</td><td align="right">38</td><td align="right">0</td></tr></tbody></table>
+<p>なお、本調査の母数は履歴ディレクトリを保持している 36 slug に限られます（全 76 slug 中、初期の 40 slug は履歴書き出し導入前）。また、後述の Hard Stop 0 件という結果は「回数上限が不要である」ことを意味しません。同期間中に判定基準の緩和など運用改善が並行して行われており、対照実験は未実施である点にご留意ください。</p>
+<h2 id="2つの停止装置とは何か">2つの停止装置とは何か</h2>
+<p>当パイプラインには、差し戻しループを打ち切るための停止装置が 2 つ組み込まれています。</p>
+<ol>
+<li><strong>周回数ベースの停止装置（Hard Stop）</strong>: レビューと修正の反復回数が規定上限（3周目）に達した時点でループを強制的に打ち切る停止装置。</li>
+<li><strong>欠陥クラスベースの停止装置（中断条件4）</strong>: 表現や箇所が変わっても同一の欠陥クラスが連続して発生した時点でループを打ち切る停止装置。</li>
+</ol>
+<h3 id="主要フレームワークにおける設計の非対称性">主要フレームワークにおける設計の非対称性</h3>
+<p>主要なエージェントフレームワークを見渡すと、そのほぼすべてが「反復回数の上限」を一級市民の API として標準提供しています。</p>
+<ul>
+<li><strong>LangGraph</strong>: <code>config={"recursion_limit": 25}</code> による superstep 制限。超過時は <code>GraphRecursionError</code> を送出<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</li>
+<li><strong>AutoGen</strong>: <code>MaxMessageTermination(max_messages=N)</code> によるメッセージ数制限。超過時は <code>StopMessage</code> を返却<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</li>
+<li><strong>CrewAI</strong>: <code>Agent(max_iter=25)</code> による最大反復回数制限。超過時は <code>_handle_max_iterations_exceeded</code> により最終回答の生成を強制<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。</li>
+<li><strong>OpenAI Agents SDK</strong>: <code>Runner.run(..., max_turns=10)</code> によるターン数制限。超過時は <code>MaxTurnsExceeded</code> を送出<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。</li>
+</ul>
+<p>このように、フレームワーク標準の安全弁は「回数を数えること」に特化しています。一方で、「エージェントが同じ失敗を繰り返しているか」を検知する仕組みはフレームワーク組み込みではなく、利用者が条件付きエッジやカスタムロジックとして後付けしなければならないという非対称性が存在します。</p>
+<h3 id="サーキットブレーカーとしての欠陥クラス検知">サーキットブレーカーとしての欠陥クラス検知</h3>
+<p>同一欠陥クラスの再発でループを止める機構は、ソフトウェアエンジニアリングにおける <strong>サーキットブレーカー（Circuit Breaker）</strong> パターン<sup><a href="#user-content-fn-12" id="user-content-fnref-12" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>と構造が一致します。</p>
+<p>サーキットブレーカーは、外部サービスの呼び出しにおいて連続する障害回数が閾値を超えた際、回路を「Open」にして以降の呼び出しを即座に遮断（フェイルファスト）する機構です。周回数上限がタイムアウト的な打ち切りであるのに対し、欠陥クラスの再発検知は「同じ障害パターンが連続した時点で直ちに回路を開く」サーキットブレーカーとして機能します。</p>
+<p>先行研究においても同様の知見が示されています。Alexander 氏による 200 タスクの ReAct エージェント実験では、リトライの 90.8% が「存在しないツール名の呼び出し」という復旧不能な恒久エラーに浪費されていたと報告されています<sup><a href="#user-content-fn-13" id="user-content-fnref-13" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup>（※90.8% はツール名幻覚1回につき3スロットを消費するシミュレーション定数に依存した値です）。Alexander 氏はグローバルな回数カウンタを廃止し、エラー分類に基づくサーキットブレーカーの導入を提唱しました。</p>
+<p>この先行例が対象としたのは「機械的に判定可能なツール実行エラー」であり、当パイプラインで再発していたのは「自然言語によるレビュー指摘の意味的な欠陥」です。ドメインは異なりますが、「回数を数えるより、エラーの分類と再発検知が先に効く」という結論において軌を一にしています。</p>
+<h2 id="それぞれの停止装置は何回発火したか">それぞれの停止装置は何回発火したか</h2>
+<p>同一の検証記録について、2 つの停止装置が実際に何回発火したかを数えた結果が以下の表です。母数が 68 ではなく 43 / 38 になるのは、前節のとおり固定欄ごとに初出時期が異なるためです。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>停止装置</th><th>判定単位</th><th align="right">有効母数</th><th align="right">発火件数</th><th align="right">発火率</th></tr></thead><tbody><tr><td><strong>Hard Stop（周回数 = 3周目）</strong></td><td><code>検証ラウンド</code> / <code>Hard Stop</code></td><td align="right">43</td><td align="right"><strong>0</strong></td><td align="right"><strong>0.0%</strong></td></tr><tr><td><strong>中断条件4（欠陥クラスの再発）</strong></td><td><code>中断条件4（再発）</code></td><td align="right">38</td><td align="right"><strong>4</strong></td><td align="right"><strong>10.5%</strong></td></tr></tbody></table>
+<p>周回数ベースの Hard Stop は、記録を持つ 43 レコード中、一度も発火しませんでした（全件が「対象外」）。期間中に 3 周目に達したレコードは 2 件存在しましたが、いずれも 2026年7月28日の記録であり、<code>Hard Stop</code> 欄が導入された 7月30日より前のため欄自体を持ちません。</p>
+<p>一方、欠陥クラスの再発を見る中断条件4は、母数 38 件中 4 件（10.5%）で発火していました。</p>
+<p>特筆すべきは、<strong>中断条件4 が発火した 4 件のすべてが「2 周目」「Hard Stop: 対象外」の時点だった</strong> という事実です。エージェントが差し戻しを修正できず、ループが打ち切られた事例では、3 周目の回数上限カウンタが作動する前に、すべて 2 周目の欠陥クラス再発検知によって決着していました。</p>
+<p>この数字の読み方には 2 つ注意が要ります。1 つは、4 件が「中断条件4 が該当と記録されたレコード」として抽出されている以上、<strong>その 4 件が中断条件4 で決着したこと自体は抽出条件の帰結</strong> だという点です。観測として意味を持つのは決着した装置の名前ではなく、4 件がいずれも 3 周目に到達しないまま終わったという到達周回のほうです。もう 1 つは、中断条件4 が 2 周目時点、Hard Stop が 3 周目に置かれている以上、<strong>内側のゲートが先に鳴れば外枠のカウンタは構造的に鳴り得ない</strong> という配置上の交絡です。中断条件4 を無効化した場合に 3 周目へ到達していたかは測っていません。したがって Hard Stop 0 / 43 は「回数上限が不要である」証拠ではなく、<strong>早期ゲートのほうが先に働いた記録</strong> として読むべき数字です。</p>
+<h2 id="周回数で止める場合と欠陥クラスで止める場合の違い">周回数で止める場合と欠陥クラスで止める場合の違い</h2>
+<p>反復回数による停止と欠陥クラスによる停止は、それぞれ異なるトレードオフを持っています。反復回数による停止は実装が極めて容易である反面、タスクが収束に向かっている場合でも画一的に打ち切る過剰停止（False Positive）を招きやすい特性があります。これに対し欠陥クラスによる停止は、実装コストを要するものの、本質的な停滞を早期に捉えて無駄な周回を防ぐことができます。</p>
+<p>両者の特性を 5 つの軸で比較した結果が以下のとおりです。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>比較軸</th><th>周回数で止める場合（Hard Stop）</th><th>欠陥クラスで止める場合（中断条件4）</th></tr></thead><tbody><tr><td><strong>1. 判定単位</strong></td><td>単純な試行回数（カウンタ整数値）</td><td>指摘内容のセマンティクス（欠陥の分類体系）</td></tr><tr><td><strong>2. 発火タイミング</strong></td><td>上限到達時（遅い。本パイプラインでは 3 周目）</td><td>同一欠陥の再発検知時（早い。本実測の発火全 4 件は 2 周目）</td></tr><tr><td><strong>3. 実装コスト</strong></td><td><strong>極小</strong>（フレームワーク標準の引数を指定するのみ）</td><td><strong>中〜高</strong>（過去の指摘履歴の保持＋モデルによる分類突き合わせ）</td></tr><tr><td><strong>4. 誤検出の向き</strong></td><td><strong>False Positive（過剰停止）</strong>: 前進・収束しつつある複雑タスクを画一的に止めてしまう</td><td><strong>False Negative と False Positive の双方</strong>: 言い換えを見落として通すリスクと、前進した修正を過剰一般化して誤認し、打ち切ってしまうリスクの双方を抱える</td></tr><tr><td><strong>5. 機械判定の可否</strong></td><td><strong>完全自動・決定論的</strong>（コード1行、例外ハンドリングで確定）</td><td><strong>ハイブリッド</strong>（判定はLLMの意味読解、記録は固定スキーマ）</td></tr></tbody></table>
+<p>したがって、両者は二者択一ではありません。安全弁としての回数上限（Safety Net）を外枠に敷いた上で、早期打ち切りのサーキットブレーカーとして欠陥クラス再発検知を内側に配置する多層防御が合理的な設計となります。</p>
+<h2 id="欠陥クラス判定をどう実装するか">欠陥クラス判定をどう実装するか</h2>
+<p>欠陥クラス判定をエージェントに任せる際、プロンプトへの指示だけに頼ると、その指示が遵守されないリスクが残ります。当パイプラインでは、判定自体は LLM の意味読解に委ねつつ、判定結果の記録側を「追記専用ログ」と「必須固定フォーマット（スキーマ）」で縛るハイブリッド構成を採用しています。</p>
+<p>ここで重要なのは、<strong>当パイプラインは欠陥クラスの固定リスト（taxonomy）を持っていない</strong> という点です。中断条件4 が見るのは「一度撤回したはずの記述が再発したか」であり、クラス名はラウンド間で指摘同士を突き合わせた結果としてその場で言語化されます。前掲の「ヘッジ不足」「過剰一般化」「参照 URL ルール違反」も、事前に定義された選択肢ではなく事後の記述です。固定リストを持たない分だけクラス名は揺れますが、揺れても記録は固定欄に残るため、事後に人が読んで判定の当否を検証できます。読者の系で事前に列挙できる分類（テスト ID、例外型、ツール名など）があるなら、そちらを <code>Literal</code> で固定するほうが再現性は上がります。</p>
+<p>この知見のエッセンスを抽出し、一般的な Python エージェントループで利用可能な最小のサーキットブレーカー実装例としてまとめたコードが以下です。</p>
+<h3 id="実装コード-agent_circuit_breakerpy">実装コード: <code>agent_circuit_breaker.py</code></h3>
+<p>構造化出力のパースヘルパー <code>client.chat.completions.parse()</code> を使うため、依存は <code>openai</code> と <code>pydantic</code> の 2 つです。ヘルパーの置き場所は SDK の版で変わっている（旧 v1 系では <code>client.beta.chat.completions.parse()</code>）ので、バージョンを固定してから実行してください。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">pip</span><span style="color:#40A02B"> install</span><span style="color:#40A02B"> 'openai>=3.8'</span><span style="color:#40A02B"> 'pydantic>=2'</span></span>
+<span class="line"><span style="color:#8839EF">export</span><span style="color:#4C4F69"> OPENAI_API_KEY</span><span style="color:#179299">=</span><span style="color:#40A02B">'sk-...'</span></span>
+<span class="line"></span></code></pre>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>from typing import List, Optional</span></span>
+<span class="line"><span>from pydantic import BaseModel, Field</span></span>
+<span class="line"><span>from openai import OpenAI</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>class DefectAnalysis(BaseModel):</span></span>
+<span class="line"><span>    is_recurring: bool = Field(description="今回の指摘が前回の指摘と同一の欠陥クラスに該当するか")</span></span>
+<span class="line"><span>    defect_class: str = Field(description="分類された欠陥クラスの名称（例: 過剰主張、根拠不整合、ルール違反）")</span></span>
+<span class="line"><span>    reason: str = Field(description="同一クラスと判定した、または異なるクラスと判定した論理的根拠")</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>class DefectClassCircuitBreaker:</span></span>
+<span class="line"><span>    """同一欠陥クラスの再発を検知してループを遮断するサーキットブレーカー"""</span></span>
+<span class="line"><span>    def __init__(self, client: OpenAI, model: str = "gpt-4o"):</span></span>
+<span class="line"><span>        self.client = client</span></span>
+<span class="line"><span>        self.model = model</span></span>
+<span class="line"><span>        self.history: List[str] = []</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    def check_and_record(self, current_feedback: str) -> DefectAnalysis:</span></span>
+<span class="line"><span>        if not self.history:</span></span>
+<span class="line"><span>            self.history.append(current_feedback)</span></span>
+<span class="line"><span>            return DefectAnalysis(</span></span>
+<span class="line"><span>                is_recurring=False,</span></span>
+<span class="line"><span>                defect_class="初回指摘",</span></span>
+<span class="line"><span>                reason="前回の指摘が存在しないため初回ラウンドとして記録"</span></span>
+<span class="line"><span>            )</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        previous_feedback = self.history[-1]</span></span>
+<span class="line"><span>        prompt = f"""あなたは品質検証エージェントです。</span></span>
+<span class="line"><span>前回の指摘事項と今回の指摘事項を比較し、同一の「欠陥クラス」が繰り返されていないか判定してください。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>【重要な判定基準】</span></span>
+<span class="line"><span>指摘箇所の見出し、段落、具体的な言い回しが修正されていても、</span></span>
+<span class="line"><span>「閉じるべき欠陥の本質的理由」（例: 根拠不足の断定、小規模データからの過剰一般化、参照URLルールの不遵守）</span></span>
+<span class="line"><span>が共通している場合は同一の欠陥クラス（再発）と判定してください。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>--- 前回の指摘 ---</span></span>
+<span class="line"><span>{previous_feedback}</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>--- 今回の指摘 ---</span></span>
+<span class="line"><span>{current_feedback}</span></span>
+<span class="line"><span>"""</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        response = self.client.chat.completions.parse(</span></span>
+<span class="line"><span>            model=self.model,</span></span>
+<span class="line"><span>            messages=[{"role": "user", "content": prompt}],</span></span>
+<span class="line"><span>            response_format=DefectAnalysis,</span></span>
+<span class="line"><span>            temperature=0.0,</span></span>
+<span class="line"><span>        )</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        analysis = response.choices[0].message.parsed</span></span>
+<span class="line"><span>        self.history.append(current_feedback)</span></span>
+<span class="line"><span>        return analysis</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>if __name__ == "__main__":</span></span>
+<span class="line"><span>    # 動作確認の最小シミュレーション</span></span>
+<span class="line"><span>    client = OpenAI()</span></span>
+<span class="line"><span>    breaker = DefectClassCircuitBreaker(client)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    # 1周目の指摘（本文中の過剰主張）</span></span>
+<span class="line"><span>    round1_defect = "第2章本文において『あらゆるエージェントで必ず発生する』と断定しているが、提示されたデータは単一環境のものであり過剰主張である。"</span></span>
+<span class="line"><span>    result1 = breaker.check_and_record(round1_defect)</span></span>
+<span class="line"><span>    print(f"Round 1: 再発={result1.is_recurring} (クラス: {result1.defect_class})")</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    # 2周目の指摘（本文の表現を修正したが、見出しに過剰主張が移動した場合）</span></span>
+<span class="line"><span>    round2_defect = "本文の断定は和らげられたが、章見出しが『すべてのフレームワークで不可避な停止障害』となっており、過剰一般化の欠陥が解消されていない。"</span></span>
+<span class="line"><span>    result2 = breaker.check_and_record(round2_defect)</span></span>
+<span class="line"><span>    print(f"Round 2: 再発={result2.is_recurring} (クラス: {result2.defect_class})")</span></span>
+<span class="line"><span>    print(f"判定理由: {result2.reason}")</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    if result2.is_recurring:</span></span>
+<span class="line"><span>        print(">> サーキットブレーカー発火: 同一欠陥クラスの再発を検知したため、ループを早期打ち切りします。")</span></span>
+<span class="line"><span></span></span></code></pre>
+<h3 id="想定される出力">想定される出力</h3>
+<p>上記の <code>__main__</code> を実行したとき、2 周目で再発が検知されると次のような出力になります（判定文は LLM の生成結果なので、文面はそのつど変わります）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>$ python agent_circuit_breaker.py</span></span>
+<span class="line"><span>Round 1: 再発=False (クラス: 初回指摘)</span></span>
+<span class="line"><span>Round 2: 再発=True (クラス: 過剰主張・過剰一般化)</span></span>
+<span class="line"><span>判定理由: 第1ラウンドでは本文中の単一環境データに基づく過剰な断定が指摘され、第2ラウンドでは本文が修正されたものの章見出しに同等の過剰一般化表現が残っており、解消すべき本質的な欠陥クラス（過剰一般化）が同一であるため。</span></span>
+<span class="line"><span>>> サーキットブレーカー発火: 同一欠陥クラスの再発を検知したため、ループを早期打ち切りします。</span></span>
+<span class="line"><span></span></span></code></pre>
+<h3 id="実装のポイント">実装のポイント</h3>
+<ol>
+<li><strong>セマンティックな同一性判定</strong>: 単純な文字列比較ではなく、LLM の構造化出力（<code>response_format=DefectAnalysis</code>）を用いて「本質的な誤りの種類」を突き合わせています。埋め込みベクトルの類似度のような、より安価な判定手段でどこまで代替できるかは検証していません。</li>
+<li><strong>履歴の追記</strong>: 判定結果を追記のみで積み、過去の指摘を書き換えずに残します。ただし不変性を担保しているのは当パイプライン側のファイル追記＋固定スキーマであり、このサンプルの <code>self.history</code> は同等の保証を持たない最小版です。</li>
+<li><strong>フェイルファストの実現</strong>: 回数上限（本パイプラインでは 3 周目、フレームワーク既定値なら 10〜25 ターン）を待つことなく、2 ターン目で同一欠陥の再発が検知された瞬間にループを中断できます。</li>
+</ol>
+<p>なお、このサンプルは意図的に範囲を絞っています。比較するのは直前 1 件のみで、クラス単位の集合比較は行いません（実測の <code>replace-estimate-tacit-knowledge</code> のように 3 クラスが同時に再発する事例は、クラスごとの突き合わせに拡張する必要があります）。「1 周目に出て 2 周目で消え 3 周目に戻る」非連続の再発も検知できず、サーキットブレーカーの Closed / Open 状態や連続回数の閾値も持ちません。実運用では、前ラウンドのクラス集合との積集合を取る形へ広げてください。</p>
+<h2 id="実際に再発した4件の中身">実際に再発した4件の中身</h2>
+<p>実際に中断条件4が発火した 4 件の検証記録を掘り下げると、エージェントが修正時にどのような振る舞いを見せていたのかが具体的に分かります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>記事識別子 (slug)</th><th>記録された欠陥クラス（生ログ要約）</th><th align="center">「移動」の有無</th></tr></thead><tbody><tr><td><code>ai-memory-multiple-curves</code></td><td>『主張が自分の提示する論証より強い』というヘッジ不足</td><td align="center"><strong>あり</strong></td></tr><tr><td><code>replace-estimate-tacit-knowledge</code></td><td>転換点の主張不整合、事実外挿、ヘッジ不足の3クラス</td><td align="center"><strong>あり</strong></td></tr><tr><td><code>agent-option-label-duplication</code></td><td>参照URL指定ルール違反（個別パーマリンクではなくトップURLを指定）</td><td align="center">なし</td></tr><tr><td><code>gemini-pro-flash-fact-synthesis-ab-test</code></td><td>小規模データ・単一事例からの過剰一般化パターンの再発</td><td align="center">なし</td></tr></tbody></table>
+<h3 id="欠陥が別の場所へ移動する現象">欠陥が「別の場所へ移動する」現象</h3>
+<p>ここで注目すべきは、発火した 4 件中 2 件（50%）において、<strong>欠陥が別の場所へ移動した</strong> とログに明記されていた点です。</p>
+<ul>
+<li><code>ai-memory-multiple-curves</code> の記録:
+<blockquote><p>「『主張が自分の提示する論証より強い』というヘッジ不足が、本文から看板主張・見出しへ移動しただけで解消していない。過去に中断に至った同型の過剰主張パターンと同型」</p></blockquote>
+</li>
+<li><code>replace-estimate-tacit-knowledge</code> の記録:
+<blockquote><p>「3クラスとも1周目と同一で、修正により別の文へ移動した」</p></blockquote>
+</li>
+</ul>
+<p>エージェントに「この文の断定を修正せよ」と指示した場合、エージェントはその文自体を素直に削除・緩和します。しかし、プロンプトのコンテキスト内に保持された前提構造や全体最適化のバイアスが解消されないまま生成を続けると、同じ主張を別の場所（見出し、まとめ、あるいは前後の段落）に再生成してしまいます。</p>
+<p>人間から見れば「同じ欠陥が別の文へ移動しただけ」であっても、行番号や差分しか見ない単純なツールでは新規の文と見なされてすり抜けてしまいます。欠陥クラスという概念で意味の連続性を捉えていたからこそ、この移動を確実に検知して打ち切ることができました。</p>
+<p>なお、残り 2 件は移動ではなく単純な修正漏れや同一ルールの連続違反でした。「欠陥の移動」は 4 件中 2 件の観測であり、すべての再発事例が移動を伴うわけではない点には留意が必要です。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本調査の要点を命題として整理します。</p>
+<ul>
+<li><strong>反復回数の上限は必要条件だが、十分条件ではない</strong>: 回数制限は無限ループを防ぐ最低限の安全弁ですが、停滞した反復を早期に止めることはできません。</li>
+<li><strong>実測では、回数上限に到達する前に決着した事例が 4 件あり、いずれも引き金は欠陥クラスの再発だった</strong>: 差し戻しループが打ち切り（中断）となった全 4 件は、回数上限（3 周目）に達する前の 2 周目の時点で同一欠陥クラスの再発により決着していました。ただし前述のとおり、早期ゲートが先に置かれている以上、これは「欠陥クラス判定が周回数より優れている」ことの証明ではなく、先に鳴った装置の記録です。</li>
+<li><strong>欠陥クラス判定は LLM と固定スキーマのハイブリッドで組む</strong>: 指示プロンプトだけに頼らず、追記専用ログと必須フォーマットによる決定論的な制約を組み合わせることで実用的な監査が可能になります。</li>
+<li><strong>安全弁（周回数）と早期停止（欠陥クラス）の二重構造にする</strong>: 外枠に回数上限（Safety Net）を敷き、内側にサーキットブレーカーを配置するのが現実的な最適解です。</li>
+</ul>
+<h3 id="よくある質問faq">よくある質問（FAQ）</h3>
+<p><strong>Q: AI エージェントのリトライは何回で打ち切るべきでしょうか？</strong><br>
+<strong>A: 回数上限だけでなく、同一欠陥クラスの再発を見る早期停止（サーキットブレーカー）を併用すべきです。</strong><br>
+一般に 3〜5 回の上限が設定されますが、自社ログの実測で差し戻しループが打ち切りとなった全 4 件においては、回数上限（3 周目）が発火する前に、すべて 2 周目の時点で同一欠陥クラスの再発によって決着していました（中断条件4 の判定対象 38 ラウンドのうち、同一欠陥クラスの再発が記録されなかった＝そのまま次工程へ進んだものが 89.5%。残る 4 ラウンドが早期停止の側です）。</p>
+<p><strong>Q: エージェントが同じ失敗を繰り返しているかを機械的に判定できますか？</strong><br>
+<strong>A: 構文エラーを除き、意味的な欠陥を完全に機械判定することは困難です。</strong><br>
+判定自体は LLM に意味読解を行わせつつ、判定結果を「追記専用ログ」と「必須固定スキーマ」という決定論的フォーマットに縛るハイブリッド構成が実用的です。</p>
+<p>エージェント運用のリトライ設計や、品質ゲートの自動化・パイプライン設計についてのご相談は、<a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://github.com/crewAIInc/crewAI/issues/4682">[FEATURE] Agent Loop Detection Middleware</a> CrewAI コミュニティ (GitHub Issue)、2026年3月3日。自律ループにおける同一行動パターンの反復検知とミドルウェアによるループ打ち切り提案。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://github.com/langchain-ai/langgraph/issues/6617">RFC: Production Reliability Improvements for ReAct Agents</a> LangGraph コミュニティ (GitHub Issue)、2025年12月22日。本番 ReAct エージェントにおけるコンテキスト溢れ、サイレント停止、スタックループの防止改善提案。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://github.com/microsoft/autogen/issues/108">Infinite Loops</a> AutoGen コミュニティ (GitHub Issue)、2023年10月4日。空メッセージ連続送信による無限ループ障害の実在確認。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://github.com/langchain-ai/langchain/issues/38843">Agent Performance Degradation and Infinite Reasoning Loop</a> LangChain コミュニティ (GitHub Issue)、2026年7月14日。<code>enable_thinking=true</code> での同一推論無限出力障害の報告。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://github.com/OpenHands/OpenHands/issues/8187">Agent delegation seems to be broken</a> OpenHands コミュニティ (GitHub Issue)、2025年4月30日。エージェント委任時の無限スタック障害の実在確認。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://blog.exe.dev/expensively-quadratic">Expensively Quadratic: the LLM Agent Cost Curve</a> Philip Zeyliger (exe.dev)、2026年2月3日。ループ継続に伴うコンテキスト肥大とキャッシュ読み込みコストの二次関数的増大モデル。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p>一次計測ログ「差し戻しループの停止装置は、周回数と欠陥クラスのどちらで発火したか」当開発基盤（<code>meetsource.work</code>）、2026年9月3日。Hard Stop 0/43（0%）、中断条件4 4/38（10.5%）、該当4件が全件2周目で発火した実測データ、欠陥移動2件。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://docs.langchain.com/oss/python/langgraph/graph-api#create-and-control-loops">Graph API overview - Docs by LangChain</a> LangChain, Inc.、公式ドキュメント（2026年確認）。<code>config={"recursion_limit": 25}</code> のデフォルト仕様、超過時の <code>GraphRecursionError</code> 送出仕様。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/termination.html">Termination — AutoGen</a> Microsoft AutoGen Team、v0.4 公式チュートリアル。<code>MaxMessageTermination</code> による終了条件と論理演算子による合成仕様。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://docs.crewai.com/concepts/agents">Agents - CrewAI</a> CrewAI, Inc.、公式ドキュメント（2026年確認）。<code>Agent(max_iter=25)</code> のデフォルト仕様と <code>_handle_max_iterations_exceeded</code> による強制終了挙動。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://openai.github.io/openai-agents-python/running_agents/">Running agents - OpenAI Agents SDK</a> OpenAI、公式ドキュメント（2026年確認）。<code>Runner.run</code> の <code>max_turns</code> 超過時に <code>MaxTurnsExceeded</code> を送出する仕様は「Runner lifecycle and configuration」節、例外の定義は「Exceptions」節。デフォルト値 10 は本文には現れず、実装側の定数 <code>DEFAULT_MAX_TURNS</code>（<code>src/agents/run_config.py</code>）で確認した値。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-12">
+<p><a href="https://martinfowler.com/bliki/CircuitBreaker.html">CircuitBreaker</a> Martin Fowler、2014年3月6日。ソフトウェアにおけるサーキットブレーカーの基本定義、Closed / Open / Half-Open の状態遷移と閾値による即時遮断パターン。 <a href="#user-content-fnref-12" data-footnote-backref="" aria-label="Back to reference 12" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-13">
+<p><a href="https://towardsdatascience.com/your-react-agent-is-wasting-90-of-its-retries-heres-how-to-stop-it/">Your ReAct Agent Is Wasting 90% of Its Retries — Here’s How to Stop It</a> Emmimal P. Alexander (Towards Data Science)、2026年4月12日。200タスクでリトライの90.8%が恒久エラー（ツール名幻覚）に浪費された実測、エラー分類とサーキットブレーカーの提唱。※90.8% はシミュレーション定数 <code>HALLUCINATION_RETRY_BURN = 3</code> に依存する旨の注記。 <a href="#user-content-fnref-13" data-footnote-backref="" aria-label="Back to reference 13" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

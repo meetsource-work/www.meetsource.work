@@ -1,0 +1,120 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>LLMエージェントのコンテキスト削減でハマった穴 — 「ファイルを分ければ減る」という錯覚と常時ロード予算 | Meetsource</title><meta name="description" content="LLMエージェント指示書を複数ファイルに分割しても削減効果が0行に終わる理由と、常時ロード上限を自動検証するContext Budgetガードレールの実践法を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/context-budget-agents-md"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="LLMエージェントのコンテキスト削減でハマった穴 — 「ファイルを分ければ減る」という錯覚と常時ロード予算 | Meetsource"><meta property="og:description" content="LLMエージェント指示書を複数ファイルに分割しても削減効果が0行に終わる理由と、常時ロード上限を自動検証するContext Budgetガードレールの実践法を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/context-budget-agents-md"><meta property="og:image" content="https://www.meetsource.work/blog/context-budget-agents-md-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-08T14:32:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="LLMエージェントのコンテキスト削減でハマった穴 — 「ファイルを分ければ減る」という錯覚と常時ロード予算 | Meetsource"><meta name="twitter:description" content="LLMエージェント指示書を複数ファイルに分割しても削減効果が0行に終わる理由と、常時ロード上限を自動検証するContext Budgetガードレールの実践法を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/context-budget-agents-md-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"LLMエージェントのコンテキスト削減でハマった穴 — 「ファイルを分ければ減る」という錯覚と常時ロード予算","description":"LLMエージェント指示書を複数ファイルに分割しても削減効果が0行に終わる理由と、常時ロード上限を自動検証するContext Budgetガードレールの実践法を解説します。","datePublished":"2026-08-08T14:32:00.000Z","image":"https://www.meetsource.work/blog/context-budget-agents-md-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/context-budget-agents-md"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-08T14:32:00.000Z" data-astro-cid-7jjqptxk> 2026.08.08 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#ai</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#開発プロセス</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>LLMエージェントのコンテキスト削減でハマった穴 — 「ファイルを分ければ減る」という錯覚と常時ロード予算</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/context-budget-agents-md-hero.webp" alt="LLMエージェントのコンテキスト削減でハマった穴 — 「ファイルを分ければ減る」という錯覚と常時ロード予算" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>LLM エージェント（ Claude Code や Cursor 等）を運用するプロジェクトで、エージェントへの指示書（ <code>CLAUDE.md</code> や <code>AGENTS.md</code> ）にルールを追記し続けると、コンテキストウィンドウが圧迫され、エージェントが重要な規律を無視し始める「コンテキスト汚染」が発生します。</p>
+<p>この問題に対処するため「指示書を複数のファイルに分割・整理する」アプローチが一般的ですが、ここには見落としがちな <strong>「ファイルを分けてもコンテキストは1行も減らない」</strong> という罠が存在します。</p>
+<p>本記事では、実際に指示書移設を行ったもののコンテキスト削減効果が0行に終わった失敗実例をもとに、スコープの仕組みと定量的上限（ Context Budget ）を管理する自動検証ガードレールの構築手法を解説します。</p>
+<hr>
+<h2 id="1-導入-ファイルを分ければ軽くなるという錯覚">1. 導入: 「ファイルを分ければ軽くなる」という錯覚</h2>
+<p>エージェント指示書の肥大化に直面した開発者の多くは、「1つの大きな指示書を複数のサブファイルに切り出せば、コンテキスト消費量を抑えられる」と考えます。</p>
+<p>しかし、エージェントツールの仕様を理解せずにファイル分割を行うと、単にファイル数が増えただけで、エージェントがセッション開始時にインジェストするトークン量は一切変わらないという現象が起こります。</p>
+<p>Claude Code の公式ドキュメントでは、 <code>CLAUDE.md</code> はセッション開始時に毎回自動的に読み込まれる永続的指示ファイルであり、ルールが多すぎると指示遵守率の低下を招くため、簡潔（目安として 150〜200 行以下）に保つことが推奨されています <sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。また、エージェント指示書のオープン規格である AGENTS.md でも、人間用の <code>README.md</code> と分離して明確かつ決定論的なルールを整理する重要性が示されています <sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>重要なのは「ファイル単位の行数」ではなく、「一度に自動インジェストされるスコープの合計行数」です。</p>
+<hr>
+<h2 id="2-失敗実例-オーナープロフィールを移設したのに0行も減らなかった理由">2. 失敗実例: オーナープロフィールを移設したのに0行も減らなかった理由</h2>
+<p>当社社内ハブ（ AI コンサル・開発運用ハブ）の実例をご紹介します。</p>
+<p>当時、ルート直下の <code>CLAUDE.md</code> が 263 行まで膨張しており、エージェントが規律を流し読みする傾向が見られました。そこで、<code>CLAUDE.md</code> 内に記述されていた「オーナープロフィール」（27 行）を削除し、新たに作成した <code>CONTEXT.md</code> へ移設しました。</p>
+<p><code>CLAUDE.md</code> 単体の行数は 263 行から 236 行に減ったため、一見するとコンテキストの削減に成功したように見えました。しかし、実効値を計測したところ、 <strong>セッション開始時にエージェントがインジェストする常時ロード行数は 338 行のまま 1 行も減っていませんでした。</strong></p>
+<p>なぜ削減効果が 0 行だったのでしょうか。原因は、エージェントが起動時にルート直下の <code>CLAUDE.md</code> だけでなく、<code>CONTEXT.md</code> も同一の常時ロードスコープ（自動一括読み込み対象）として処理していたためです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>【移設前】</span></span>
+<span class="line"><span>CLAUDE.md (263行) ＝ 常時ロード合計 338行 (※他ルート共通ファイル含む)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>【移設後】</span></span>
+<span class="line"><span>CLAUDE.md (236行) ＋ CONTEXT.md (27行) ＝ 常時ロード合計 338行 (削減量 0行)</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>「リポジトリ全体の総行数」や「単一ファイルの行数」を定性的に減らしても、 <strong>同一の自動ロード枠の中でファイルを移動させただけでは削減効果はゼロ</strong> に終わります。</p>
+<hr>
+<h2 id="3-対策-常時ロード上限context-budgetの策定と自動検証ガードレール">3. 対策①: 常時ロード上限（Context Budget）の策定と自動検証ガードレール</h2>
+<p>感覚的なファイル分割から脱却するために導入したのが、 <strong>「常時ロード行数上限（ Context Budget ）」の定量管理</strong> と、それをスクリプトで計測・検証するガードレールです。</p>
+<p>まず、自社プロジェクトの運用規律として以下の明確な行数予算（ Context Budget ）を定義しました。</p>
+<ul>
+<li><strong><code>CLAUDE.md</code> 単体上限</strong>: 200 行以内</li>
+<li><strong>ルート常時ロード合計上限</strong>: 400 行以内（ <code>CLAUDE.md</code> + <code>CONTEXT.md</code> + <code>index.md</code> ）</li>
+</ul>
+<p>そして、インデックス生成スクリプト（ Python ）の中に予算計測と自動検証ロジックを組み込みました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#4C4F69">BUDGET_FILE </span><span style="color:#179299">=</span><span style="color:#FE640B"> 200</span><span style="color:#9CA0B0;font-style:italic">   # CLAUDE.md 単体の上限</span></span>
+<span class="line"><span style="color:#4C4F69">BUDGET_ROOT </span><span style="color:#179299">=</span><span style="color:#FE640B"> 400</span><span style="color:#9CA0B0;font-style:italic">   # ルート常時ロード合計の上限</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> always_loaded</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">index_lines</span><span style="color:#179299">=</span><span style="color:#8839EF">None</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#40A02B">    """毎セッション自動的に読まれるファイル群の行数を計測"""</span></span>
+<span class="line"><span style="color:#4C4F69">    out </span><span style="color:#179299">=</span><span style="color:#7C7F93"> []</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> name </span><span style="color:#8839EF">in</span><span style="color:#7C7F93"> (</span><span style="color:#40A02B">"CLAUDE.md"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "CONTEXT.md"</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#4C4F69">        p </span><span style="color:#179299">=</span><span style="color:#4C4F69"> HUB </span><span style="color:#179299">/</span><span style="color:#4C4F69"> name</span></span>
+<span class="line"><span style="color:#4C4F69">        out</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">append</span><span style="color:#7C7F93">((</span><span style="color:#4C4F69">name</span><span style="color:#7C7F93">,</span><span style="color:#FE640B;font-style:italic"> len</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">p</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">read_text</span><span style="color:#7C7F93">().</span><span style="color:#1E66F5">splitlines</span><span style="color:#7C7F93">())</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> p</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">exists</span><span style="color:#7C7F93">()</span><span style="color:#8839EF"> else</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">))</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> index_lines </span><span style="color:#8839EF">is</span><span style="color:#8839EF"> None</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">        p </span><span style="color:#179299">=</span><span style="color:#4C4F69"> HUB </span><span style="color:#179299">/</span><span style="color:#40A02B"> "index.md"</span></span>
+<span class="line"><span style="color:#4C4F69">        index_lines </span><span style="color:#179299">=</span><span style="color:#FE640B;font-style:italic"> len</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">p</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">read_text</span><span style="color:#7C7F93">().</span><span style="color:#1E66F5">splitlines</span><span style="color:#7C7F93">())</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> p</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">exists</span><span style="color:#7C7F93">()</span><span style="color:#8839EF"> else</span><span style="color:#FE640B"> 0</span></span>
+<span class="line"><span style="color:#4C4F69">    out</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">append</span><span style="color:#7C7F93">((</span><span style="color:#40A02B">"index.md"</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> index_lines</span><span style="color:#7C7F93">))</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#4C4F69"> out</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> build</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">docs</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> index_lines</span><span style="color:#179299">=</span><span style="color:#8839EF">None</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#4C4F69">    al </span><span style="color:#179299">=</span><span style="color:#1E66F5"> always_loaded</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">index_lines</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">    total </span><span style="color:#179299">=</span><span style="color:#FE640B;font-style:italic"> sum</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">n </span><span style="color:#8839EF">for</span><span style="color:#4C4F69"> _</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> n </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> al</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">    warn </span><span style="color:#179299">=</span><span style="color:#7C7F93"> []</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#FE640B;font-style:italic"> dict</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">al</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"CLAUDE.md"</span><span style="color:#7C7F93">,</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">)</span><span style="color:#179299"> ></span><span style="color:#4C4F69"> BUDGET_FILE</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">        warn</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">append</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"CLAUDE.md </span><span style="color:#EA76CB">{</span><span style="color:#FE640B;font-style:italic">dict</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">al</span><span style="color:#7C7F93">)[</span><span style="color:#40A02B">'CLAUDE.md'</span><span style="color:#7C7F93">]</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">行 > </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">BUDGET_FILE</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> total </span><span style="color:#179299">></span><span style="color:#4C4F69"> BUDGET_ROOT</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">        warn</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">append</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"ルート合計 </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">total</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">行 > </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">BUDGET_ROOT</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">    </span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> w </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> warn</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"WARN: 常時ロード予算オーバー: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">w</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> file</span><span style="color:#179299">=</span><span style="color:#4C4F69">sys</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">stderr</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#4C4F69"> total</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> warn</span></span>
+<span class="line"></span></code></pre>
+<p>このスクリプトに <code>--check</code> オプションを設け、予算オーバー時にはステータスコード <code>1</code> で終了するように構成し、ローカルの git フックや CI で常時ロード行数の増加を自動で抑止・警告するガードレールを敷きました。</p>
+<p>これにより、<code>CLAUDE.md</code> 単体を 263 行から 151 行へ抑え、常時ロード合計を約 320 行（ 400 行枠内）へ管理することに成功しました。</p>
+<hr>
+<h2 id="4-対策-常時ロード枠外への退避と段階的開示progressive-disclosure">4. 対策②: 常時ロード枠外への退避と段階的開示（Progressive Disclosure）</h2>
+<p>常時ロード枠を実際に削減するには、 <strong>「常時ロードスコープの外側」にファイルを退避させる</strong> 必要があります。</p>
+<p>失敗談で取り上げた「オーナープロフィール」の記述は、ルートの <code>CONTEXT.md</code> ではなく、部署サブディレクトリ <code>secretary/owner-profile.md</code> へ再退避させました。</p>
+<p>部署配下のサブディレクトリは「ディレクトリスコープ」であり、エージェントがその部署配下の作業を行う時のみオンデマンドでロードされます。常時ロード枠外へ退避させたことで、常時ロード合計は <strong>338 行 → 311 行</strong> へと確実に減少しました。</p>
+<p>指示書の構造は、以下の 3 段階で整理・分散させる設計が有効です。</p>
+<ol>
+<li><strong>常時ロード枠（ルート: &#x3C; 400 行）</strong>:
+全作業で必須となる共通規律・安全制約・主要コマンドのみ。</li>
+<li><strong>ディレクトリスコープ枠（サブディレクトリ）</strong>:
+特定機能や特定部署に閉じた専門ルール（ <code>pm/CLAUDE.md</code> など）。</li>
+<li><strong>オンデマンド枠（ Skill / Sub-agent ）</strong>:
+複雑な手順や特定タスク（ <code>SKILL.md</code> やサブエージェント定義）は、呼び出された時のみ段階的開示（ Progressive Disclosure ）でインジェスト。</li>
+</ol>
+<hr>
+<h2 id="5-対策-指示書リファクタリング時の規律脱落を防ぐ機械的照合">5. 対策③: 指示書リファクタリング時の規律脱落を防ぐ「機械的照合」</h2>
+<p>指示書を大規模に分割・整理する際、もう 1 つの深刻なリスクが <strong>「リファクタリング中に重要な規律が静かに消えること」</strong> です。</p>
+<p>当社社内ハブで 142 行のルールを分解・移設した際、移動前のテキストと移動後の全ファイル群を機械的なスクリプトで照合（テキスト差分抽出）しました。</p>
+<p>その結果、28 行の差分のうち 26 行は意図的な表現の統一や重複削除でしたが、 <strong>以下の 2 行が作業ミスにより静かに消失していた</strong> ことが発覚しました。</p>
+<ul>
+<li><strong>部署一覧のインデックス表</strong> （全体構造を把握するための基盤情報）</li>
+<li><strong>コミット方針:「古い方針に戻さないこと」</strong> （エージェントのリグレッションを防止する重要規律）</li>
+</ul>
+<p>定性的な目視確認だけに頼ると、こうした安全制約の脱落を見過ごす危険があります。指示書を分割・移設する際は、移動前後のテキスト照合を行い、意図しないルールの脱落がないかを機械的に検証することが重要です。</p>
+<hr>
+<h2 id="6-まとめ-定性的な分割から定量的-context-budget-管理へ">6. まとめ: 定性的な分割から定量的 Context Budget 管理へ</h2>
+<p>エージェント指示書のコンテキスト管理において最も重要なのは、単に「ファイルを分ける」ことではありません。</p>
+<ul>
+<li><strong>ファイル数ではなく「常時ロードされるスコープの合計行数」を意識する。</strong></li>
+<li><strong>Context Budget（常時ロード上限）を定義し、スクリプトや CI で自動チェックする。</strong></li>
+<li><strong>常時ロード枠外（ディレクトリスコープや Skill ）へ段階的開示する構造を作る。</strong></li>
+</ul>
+<p>まずは自社リポジトリのエージェント起動時に読み込まれるファイルの常時ロード行数を計測することから始めてみてください。</p>
+<p>AI エージェント運用の最適化やコンテキスト設計に関するご相談は、<a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://code.claude.com/docs/en/memory">Claude Code Documentation (Memory)</a> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://agents.md/">AGENTS.md Open Standard Specification</a> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

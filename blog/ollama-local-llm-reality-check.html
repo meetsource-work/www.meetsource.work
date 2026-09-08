@@ -1,0 +1,149 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Claude Codeの制限対策にOllamaを試して痛感した、ローカルLLMのリアルとクラウドAIのありがたみ | Meetsource</title><meta name="description" content="Claude Code利用量上限の逃げ道としてOllamaでローカルLLM導入を試みたリアルな体験談。M1 Pro Macでのスワップや遅延の現実、最新クラウドAPI（Claude Haiku 4.5, Gemini 3.6 Flash）とのコスト比較を通じ、クラウドとローカルの正しい使い分けを解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/ollama-local-llm-reality-check"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="Claude Codeの制限対策にOllamaを試して痛感した、ローカルLLMのリアルとクラウドAIのありがたみ | Meetsource"><meta property="og:description" content="Claude Code利用量上限の逃げ道としてOllamaでローカルLLM導入を試みたリアルな体験談。M1 Pro Macでのスワップや遅延の現実、最新クラウドAPI（Claude Haiku 4.5, Gemini 3.6 Flash）とのコスト比較を通じ、クラウドとローカルの正しい使い分けを解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/ollama-local-llm-reality-check"><meta property="og:image" content="https://www.meetsource.work/blog/ollama-local-llm-reality-check-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-07-24T16:51:30.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Claude Codeの制限対策にOllamaを試して痛感した、ローカルLLMのリアルとクラウドAIのありがたみ | Meetsource"><meta name="twitter:description" content="Claude Code利用量上限の逃げ道としてOllamaでローカルLLM導入を試みたリアルな体験談。M1 Pro Macでのスワップや遅延の現実、最新クラウドAPI（Claude Haiku 4.5, Gemini 3.6 Flash）とのコスト比較を通じ、クラウドとローカルの正しい使い分けを解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/ollama-local-llm-reality-check-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Claude Codeの制限対策にOllamaを試して痛感した、ローカルLLMのリアルとクラウドAIのありがたみ","description":"Claude Code利用量上限の逃げ道としてOllamaでローカルLLM導入を試みたリアルな体験談。M1 Pro Macでのスワップや遅延の現実、最新クラウドAPI（Claude Haiku 4.5, Gemini 3.6 Flash）とのコスト比較を通じ、クラウドとローカルの正しい使い分けを解説します。","datePublished":"2026-07-24T16:51:30.000Z","image":"https://www.meetsource.work/blog/ollama-local-llm-reality-check-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/ollama-local-llm-reality-check"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-07-24T16:51:30.000Z" data-astro-cid-7jjqptxk> 2026.07.25 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#ollama</span><span class="tag" data-astro-cid-7jjqptxk>#ローカルLLM</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#Mac</span><span class="tag" data-astro-cid-7jjqptxk>#AI開発</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>Claude Codeの制限対策にOllamaを試して痛感した、ローカルLLMのリアルとクラウドAIのありがたみ</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/ollama-local-llm-reality-check-hero.webp" alt="Claude Codeの制限対策にOllamaを試して痛感した、ローカルLLMのリアルとクラウドAIのありがたみ" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>日常的に Claude Code などのクラウド型 AI コーディングエージェントを活用して開発を進めていると、誰しも一度は直面するのが「利用量制限（レートリミット）」の壁です。作業が最も乗っているタイミングで突然「リミットに達しました」と通知され、数時間〜数日間の作業停止を余儀なくされる絶望感は想像以上にストレスが大きいものです。</p>
+<p>「この制限を回避し、完全無制限で開発を続けるバックアップ環境（逃げ道）はないだろうか？」</p>
+<p>そう考えた筆者が目をつけたのが、ローカル環境で LLM（大規模言語モデル）を実行できるツール <strong>「Ollama」</strong> でした。Continue 拡張機能や Aider といった外部エージェントツールと組み合わせれば、ローカル LLM をバックエンドに指定して無制限にコード生成を続けられるはず——。</p>
+<p>しかし、実際に Mac 上で最新モデルを動かしてみた結果待っていたのは、導入の手軽さに対する感動と、それを上回る「ハードウェアと速度の厳しい現実」でした。本記事では、筆者のリアルな体験談と具体的な数値データをもとに、ローカル LLM の課題とクラウド AI サービスの圧倒的な価値について考察します。</p>
+<hr>
+<h2 id="1-環境構築は拍子抜けするほど簡単だった導入編">1. 環境構築は拍子抜けするほど簡単だった（導入編）</h2>
+<p>「ローカルで LLM を動かす」と聞くと、高度な GPU ドライバの設定や複雑なビルド環境が必要そうに感じられますが、macOS での Ollama の導入体験は驚くほどスムーズでした。</p>
+<p>コマンドラインから Homebrew を利用してインストールを行います<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">brew</span><span style="color:#40A02B"> install</span><span style="color:#40A02B"> ollama</span></span>
+<span class="line"></span></code></pre>
+<h3 id="最初にハマりやすいサーバー起動の手順とエラーメッセージ">最初にハマりやすい「サーバー起動」の手順とエラーメッセージ</h3>
+<p>インストール完了後、すぐに <code>ollama run</code> を叩きたくなりますが、ここが最初の注意ポイントです。Ollama は CLI クライアントとバックグラウンド API サーバーに分かれたアーキテクチャを採用しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p><code>ollama run</code> や <code>ollama list</code>（モデル一覧表示）はクライアント CLI で、<code>http://localhost:11434</code> の API サーバーへ HTTP リクエストを送って結果を受け取ります。サーバーを起動せずに実行すると、この接続が拒否されて（<code>connection refused</code>）実行が止まります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>モデルを実行・操作する前に、まずバックグラウンドでサーバーを起動しておく必要があるのです<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># ターミナル（またはバックグラウンド）でサーバーを起動</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">ollama</span><span style="color:#40A02B"> serve</span></span>
+<span class="line"></span></code></pre>
+<p>API サーバーはデフォルトでポート <strong><code>11434</code></strong> （Leetspeak の “011434” に由来）でリクエストを待機します<sup><a href="#user-content-fn-1" id="user-content-fnref-1-5" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="サーバー起動後に-run-するだけで自動-pull対話開始">サーバー起動後に <code>run</code> するだけで自動 pull＆対話開始</h3>
+<p>サーバー（<code>ollama serve</code>）が裏で動いている状態になれば、あとは簡単です。例えば最新の 12B モデルである <strong><code>gemma4:12b</code></strong> を動かしたい場合、別ターミナルで以下のコマンドを実行します<sup><a href="#user-content-fn-1" id="user-content-fnref-1-6" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">ollama</span><span style="color:#40A02B"> run</span><span style="color:#40A02B"> gemma4:12b</span></span>
+<span class="line"></span></code></pre>
+<p>事前にモデルを手動でダウンロード（pull）していなくても、<code>ollama run</code> コマンドが全自動で必要なモデルファイルを公式ライブラリから取得し、ローカルサーバーにロードして対話を開始してくれます<sup><a href="#user-content-fn-1" id="user-content-fnref-1-7" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>「最初に <code>ollama serve</code> でサーバーを立ち上げておく」というルールさえ把握しておけば、コマンド一発でダウンロードから実行まで完了する洗練された体験に非常に感銘を受けました。</p>
+<hr>
+<h2 id="2-m1-pro-mac-で動かして直面した厳しい現実実践編">2. M1 Pro Mac で動かして直面した「厳しい現実」（実践編）</h2>
+<p>環境構築の手軽さに満足し、いよいよ普段の開発環境（VS Code + Continue / Aider 等）と連携させてコーディングタスクを試すことにしました。試したモデルは、2026 年最新の標準的な中型コーディング・汎用モデルである <strong><code>gemma4:12b</code></strong> や <strong><code>qwen3.6-coder:14b</code></strong> です。</p>
+<p>しかし、モデルを呼び出した瞬間に筆者の M1 Pro Mac（16GB メモリ）の挙動が一変しました。</p>
+<h3 id="メモリ枯渇と-ssd-スワップの発生">メモリ枯渇と SSD スワップの発生</h3>
+<p>10B〜14B クラスの 4bit 量子化モデル（<code>Q4_K_M</code> 等）は、モデル単体を VRAM / RAM に展開するだけでも約 7GB〜9GB のメモリを消費します。</p>
+<p>普段の開発では、OS 自体に加え、IDE（VS Code 等）、Web ブラウザ、Docker、Claude Code などのツールがすでにメモリを消費しています。16GB の Unified Memory 環境で 8GB 超の LLM をロードした結果、空きメモリは一瞬で枯渇し、NVMe/SSD への激しい <strong>スワップ（Swap）</strong> が発生しました。</p>
+<h3 id="1分以上待たされる遅延の正体ttft-のボトルネック">1分以上待たされる遅延の正体（TTFT のボトルネック）</h3>
+<p>スワップが発生したことで、最も深刻な問題となったのが「応答の遅延」です。</p>
+<p>本来、Unified Memory にモデルが完全に収まっていれば、M1 Pro の 200GB/s の帯域を活かして 15〜30 tps (tokens per second) 程度の推論速度が期待できます。しかしスワップが発生すると推論速度は 5 tps 未満へ急落します。</p>
+<p>さらに致命的だったのが、スワップに伴う <strong>「モデルの SSD からの再ロード時間」</strong> と、最初の 1 文字目が出力されるまでの <strong>「Time To First Token (TTFT)」 の遅延</strong> です。</p>
+<p>普段 Claude Code であれば数秒で返ってくるような「簡単な挨拶」や「数行の補完」の単一リクエストに対して、最初のトークンが出力されるまでに <strong>1分以上</strong> も待たされる結果となりました。開発のテンポは完全に途切れ、実用に耐えうるものではありませんでした。</p>
+<h3 id="サーマルスロットリングとファンの激しい回転">サーマルスロットリングとファンの激しい回転</h3>
+<p>また、LLM 推論は GPU / SoC に持続的な高負荷をかけ続けます。</p>
+<p>高負荷状態が連続したことで SoC の発熱が増大し、Mac のサーマルスロットリング機能が発動。普段は静音で無音に近い M1 Pro の冷却ファンがフル回転（爆音）を開始しました。マシンの損耗やバッテリーの急激な消費を目の当たりにし、「これを日常の開発で常用するのは現実的ではない」と痛感させられました。</p>
+<blockquote><p><strong>他者の実感・コミュニティでの検証データ</strong>:
+なお、筆者が今回の体験で直面した「16GB メモリ環境で 10B〜14B クラスのモデルを実行した際のスワップ発生や、それによる推論速度 (tps) および TTFT の著しい低下」は、筆者固有の現象ではありません。llama.cpp 開発コミュニティや Apple Silicon 向け LLM 検証掲示板においても、メモリ枯渇とスワップに起因する同様の挙動や他ユーザーの報告が多数共有されています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p></blockquote>
+<hr>
+<h2 id="3-考察ローカル-llm-常用のコスパとクラウド-ai-への感謝">3. 考察：ローカル LLM 常用のコスパと、クラウド AI への感謝</h2>
+<p>「それなら <code>gemma4:e2b</code> や <code>llama3.2:3b</code> のような超軽量モデルに下げれば良いのでは？」という疑問も湧きます。しかし、モデルサイズを極端に小さくするとコンテキストの保持力や複雑なコード生成精度が著しく低下し、コーディングエージェントのバックエンドとしては実用性が乏しくなってしまいます。</p>
+<p>ここで一度冷静になり、「クラウド AI の費用とローカル実行のコスト」を定量的に比較してみましょう。</p>
+<h3 id="月額-20-ドル定額と従量-apiの2つの選択肢">「月額 20 ドル定額」と「従量 API」の2つの選択肢</h3>
+<p>クラウド AI の活用には、大きく分けて2つの形態があります。</p>
+<ol>
+<li><strong>定額サブスク（Claude Pro 等: 月額 $20）</strong>: 開発者が主力で使う上位モデル（Claude 4.5 / 4.7 Sonnet 等）をストレスなく、事実上無制限に近い感覚で利用できる形態。</li>
+<li><strong>従量 API（Aider / Continue 等での API キー連携）</strong>: レート制限時の逃げ道として、最新の高速・軽量 API を従量課金でスポット利用する形態。</li>
+</ol>
+<p>後者の従量 API について、2026 年 7 月現在の最新軽量モデルの単価を比較してみます。</p>
+<ul>
+<li><strong>Claude Haiku 4.5</strong>: 入力 $1.00 / 1M tokens, 出力 $5.00 / 1M tokens <sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup></li>
+<li><strong>Gemini 3.6 Flash (128K以下 Tier)</strong>: 入力 $0.075 / 1M tokens, 出力 $0.30 / 1M tokens <sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup></li>
+<li><strong>Groq (Llama 3/4 8B等)</strong>: 入力 $0.05 / 1M tokens, 出力 $0.08 / 1M tokens <sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup></li>
+</ul>
+<h3 id="現実的なコーディングタスクでのコスト試算">現実的なコーディングタスクでのコスト試算</h3>
+<p>Aider などのエージェントツールでリポジトリのコードベース（コンテキスト）を含め、1 ターンで合計 30,000 トークン（入力 28,000 + 出力 2,000）を消費するケースを想定して計算してみます。</p>
+<p>為替レートを $1 = 155 円と仮定した場合、計算式および 1 ターンあたりのコストは以下の通りです。</p>
+<p><strong>【計算式】</strong>
+<code>コスト(USD) = (入力トークン数 × 入力単価) + (出力トークン数 × 出力単価)</code></p>
+<ul>
+<li><strong>Claude Haiku 4.5</strong>: (0.028 × 1.00) + (0.002 × 5.00) = 0.038 USD（約 <strong>5.89 円</strong>）</li>
+<li><strong>Gemini 3.6 Flash</strong>: (0.028 × 0.075) + (0.002 × 0.30) = 0.0027 USD（約 <strong>0.418 円</strong>）</li>
+<li><strong>Groq</strong>: (0.028 × 0.05) + (0.002 × 0.08) = 0.00156 USD（約 <strong>0.242 円</strong>）</li>
+</ul>
+<p>たった数円〜数十円、Gemini Flash や Groq に至っては 1 ターン <strong>1 円未満</strong> という破格の単価です。</p>
+<h3 id="マシンリソースとコストパフォーマンスの比較">マシンリソースとコストパフォーマンスの比較</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>評価軸</th><th>ローカル LLM (M1 Pro 16GB)</th><th>クラウド API (Haiku 4.5 / Gemini 3.6 Flash)</th></tr></thead><tbody><tr><td><strong>応答速度</strong></td><td>TTFT 遅延大・1分以上の待機</td><td>超高速レスポンス・即時応答</td></tr><tr><td><strong>マシン負荷</strong></td><td>RAM 枯渇・SSD スワップ・ファン全開</td><td>CPU/GPU 使用率 0%・完全静音</td></tr><tr><td><strong>モデル性能</strong></td><td>10B〜14B クラス（量子化）</td><td>最新のクラウド最適化軽量/上位モデル</td></tr><tr><td><strong>金銭コスト</strong></td><td>マシン損耗・電気代（実質コスト有）</td><td>1 ターン数円〜数十分の 1 円</td></tr></tbody></table>
+<p>ネット上で「ローカル LLM が快適に動く」と発信している層の多くは、64GB〜128GB の Unified Memory を積んだ Mac Studio や M3/M4 Max、あるいは 24GB 以上の独立 VRAM を備えたハイエンド環境を所有しています。</p>
+<p>標準的な開発マシン（16GB メモリクラス）で無理をしてローカル LLM を常時実行することは、マシンの劣化リスクや時間的ストレスを考慮すると、現時点では「自己満足に近い」というのが筆者の素直な見解です。</p>
+<p>月額 20 ドル（約 3,100 円）の定額サブスクや、スポットで利用できる数円のクラウド API が提供してくれる圧倒的な速度と快適性には、改めて感謝しかありません。</p>
+<hr>
+<h2 id="4-まとめクラウドとローカルの正しい距離感">4. まとめ：クラウドとローカルの正しい距離感</h2>
+<p>Ollama の登場によって、ローカル LLM の実行環境自体は驚くほど身近になりました。しかし、「クラウド AI の完全な代替」としてローカル環境を常用しようとすると、現在のハードウェアスペックや計算資源の相場観においてはミスマッチが生じます。</p>
+<p>過去に紹介した <a href="/blog/hermes-agent-self-improving">セルフホスト型 AI エージェントの自律運用</a> のように、常駐型の実験環境や完全なオフライン・機密保護環境といった「明確な理由」がある場合を除き、日常のコーディングにおいては以下のスタンスが最も合理的です。</p>
+<ol>
+<li><strong>メインは定額クラウド AI（Claude Code / Claude Pro 等）をフル活用する</strong></li>
+<li><strong>レート制限時のバックアップには、安価で超高速な従量 API（Gemini Flash や Claude Haiku 等）を Aider/Continue 経由で使う</strong></li>
+<li><strong>ローカル LLM は実験目的や完全オフライン時のみの限定利用にとどめる</strong></li>
+</ol>
+<p>ツールそれぞれの得意分野とコスト構造を正しく理解し、ストレスのない快適な AI 開発環境を構築していきましょう。</p>
+<hr>
+<p>AI エージェントの導入や開発プロセス自動化に関するご相談・お問い合せは、<a href="/#contact">コンタクトフォーム</a> よりお気軽にご連絡ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://github.com/ollama/ollama/tree/main/docs">Ollama Documentation</a> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-1-5" data-footnote-backref="" aria-label="Back to reference 1-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-1-6" data-footnote-backref="" aria-label="Back to reference 1-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-1-7" data-footnote-backref="" aria-label="Back to reference 1-7" class="data-footnote-backref">↩<sup>7</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://github.com/ggerganov/llama.cpp/discussions">Apple Silicon Unified Memory Bandwidth &#x26; LLM Benchmarks</a> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://www.anthropic.com/pricing">Anthropic API Pricing</a> <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://ai.google.dev/pricing">Google Gemini API Pricing</a> <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://groq.com/pricing">Groq Pricing</a> <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

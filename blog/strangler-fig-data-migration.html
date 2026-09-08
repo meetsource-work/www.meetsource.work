@@ -1,0 +1,195 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ストラングラーフィグの本当の難所は、切り替えではなく並行稼働中のデータ二重管理 | Meetsource</title><meta name="description" content="ストラングラーフィグパターンによる段階的移行で最も手が止まりやすい「並行稼働中のデータ二重管理」を解説。Dual Writeの破綻要因、会員・注文・在庫ごとの正マスタ配置、JITパスワード移行による切り戻し不能点（PNR）の設計まで、実務で壊れないデータ移行の手順を整理します。"><link rel="canonical" href="https://www.meetsource.work/blog/strangler-fig-data-migration"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="ストラングラーフィグの本当の難所は、切り替えではなく並行稼働中のデータ二重管理 | Meetsource"><meta property="og:description" content="ストラングラーフィグパターンによる段階的移行で最も手が止まりやすい「並行稼働中のデータ二重管理」を解説。Dual Writeの破綻要因、会員・注文・在庫ごとの正マスタ配置、JITパスワード移行による切り戻し不能点（PNR）の設計まで、実務で壊れないデータ移行の手順を整理します。"><meta property="og:url" content="https://www.meetsource.work/blog/strangler-fig-data-migration"><meta property="og:image" content="https://www.meetsource.work/blog/strangler-fig-data-migration-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-19T15:25:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="ストラングラーフィグの本当の難所は、切り替えではなく並行稼働中のデータ二重管理 | Meetsource"><meta name="twitter:description" content="ストラングラーフィグパターンによる段階的移行で最も手が止まりやすい「並行稼働中のデータ二重管理」を解説。Dual Writeの破綻要因、会員・注文・在庫ごとの正マスタ配置、JITパスワード移行による切り戻し不能点（PNR）の設計まで、実務で壊れないデータ移行の手順を整理します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/strangler-fig-data-migration-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"ストラングラーフィグの本当の難所は、切り替えではなく並行稼働中のデータ二重管理","description":"ストラングラーフィグパターンによる段階的移行で最も手が止まりやすい「並行稼働中のデータ二重管理」を解説。Dual Writeの破綻要因、会員・注文・在庫ごとの正マスタ配置、JITパスワード移行による切り戻し不能点（PNR）の設計まで、実務で壊れないデータ移行の手順を整理します。","datePublished":"2026-08-19T15:25:00.000Z","image":"https://www.meetsource.work/blog/strangler-fig-data-migration-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/strangler-fig-data-migration"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"なぜアプリケーション層の Dual Write（二重書き）は避けるべきなのか？","acceptedAnswer":{"@type":"Answer","text":"アプリケーション層での二重書きは、2相コミット（2PC）を用いない限りアトミック性を保証できません。片側書き込み失敗時のパーシャルフェイルや、ネットワーク遅延による書き込み順序の逆転（Race Conditions）によって、エラーログに残らないサイレントなデータ不整合（Data Drift）を引き起こすためです。"}},{"@type":"Question","name":"新旧システムが並行稼働している期間中、在庫データはどちらを正（System of Record）とすべきか？","acceptedAnswer":{"@type":"Answer","text":"在庫引き当ては二重販売（オーバーセリング）を防ぐための厳密な排他制御と ACID トランザクションが必要なため、新旧間で分散させず、移行プロセスの最終段階まで旧システムに正を一元集約するか、先行して独立した在庫専用 API サービスへ切り出して Single Writer を維持すべきです。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-19T15:25:00.000Z" data-astro-cid-7jjqptxk> 2026.08.20 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#ストラングラーフィグ</span><span class="tag" data-astro-cid-7jjqptxk>#データ移行</span><span class="tag" data-astro-cid-7jjqptxk>#システム設計</span><span class="tag" data-astro-cid-7jjqptxk>#legacy-modernization</span><span class="tag" data-astro-cid-7jjqptxk>#アーキテクチャ</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>ストラングラーフィグの本当の難所は、切り替えではなく並行稼働中のデータ二重管理</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/strangler-fig-data-migration-hero.webp" alt="ストラングラーフィグの本当の難所は、切り替えではなく並行稼働中のデータ二重管理" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>レガシーな EC サイトや基幹業務システムを刷新する際、全体を一括で作り直す「ビッグバンリプレイス」のリスクを避け、機能を少しずつ新しい基盤へ移していく <strong>ストラングラーフィグパターン（Strangler Fig Pattern）</strong> の採用が一般化してきました。</p>
+<p>リバースプロキシや API Gateway を前段に配置し、「商品検索」「会員認証」「カート」といったエンドポイント単位で段階的にリクエストを新システムへ振り分ける構成は、アーキテクチャ図としても非常にわかりやすく、チーム内での合意も比較的容易です。</p>
+<p>しかし、いざ実装フェーズに入ると、多くの開発チームでピタッと手が止まる瞬間が訪れます。それが <strong>「新旧システムが同時に動く期間、データベースとデータをどう同期・整合させるか」</strong> という問題です。</p>
+<p>ストラングラーフィグパターンにおける並行稼働とは、レガシーシステムと新システムを一時的に共存させ、リクエストを段階的に振り分けながら、データ整合性と切り戻し可能性を維持する過渡的アーキテクチャ（Transitional Architecture）です<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>以前公開した <a href="/blog/ec-replace-timing">EC サイトのリプレイス判断基準に関する記事</a> では並行稼働フェーズの概要に触れ、<a href="/blog/perl-ec-modernization-before-replace">Perl 製 EC の近代化に関する記事</a> では「新旧システムが一時的に共存する期間は、二重管理のコストがかかり無駄に見えるかもしれないが、全面リプレイスのダウンタイムリスクに比べればはるかに小さい」と書き残しました。</p>
+<p>本記事では、その「二重管理」の中身に踏み込み、段階的移行の成否を分ける過渡期のデータ設計、二重書きの落とし穴、エンティティごとのマスタ配置、そして切り戻しを担保する手順を具体的に解説します。</p>
+<h2 id="なぜ素朴な二重書きdual-writeは破綻するのか">なぜ「素朴な二重書き（Dual Write）」は破綻するのか</h2>
+<p>並行稼働を設計する際、最初に思い浮かびがちなのが「アプリケーションのコード内で、旧 DB と新 DB の両方に書き込めばよいのではないか」というアプローチです。いわゆる <strong>デュアルライト（Dual Write / 二重書き）</strong> です。</p>
+<p>一見するとシンプルに見えるこの手法ですが、分散トランザクション（2相コミット: 2PC）を用いない限り、実務では極めて高い確率で破綻します<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。その理由は主に 3 つあります。</p>
+<h3 id="1-パーシャルフェイル部分的な書き込み失敗">1. パーシャルフェイル（部分的な書き込み失敗）</h3>
+<p>アプリケーションから「旧 DB に INSERT 成功 → 新 DB に INSERT 実行」という順で処理を行う場合、後者の新 DB への書き込みがネットワーク瞬断、タイムアウト、バリデーションエラーなどで失敗した瞬間に不整合が生じます。</p>
+<p>旧 DB 側はすでにコミットが完了しているため、アプリケーション側から自動でロールバックすることはできません。この結果、旧システムにしか存在しないレコードが生まれ、データの乖離（Data Drift）が始まります。</p>
+<h3 id="2-順序逆転race-conditions">2. 順序逆転（Race Conditions）</h3>
+<p>ほぼ同時に発生した 2 つの更新処理（例: ユーザーによる住所変更 A と、直後の再変更 B）が並行して実行された場合、スレッドのスケジューリングやネットワーク遅延により、書き込みの順序が入れ替わることがあります。</p>
+<p>旧 DB には <code>A → B</code> の順で適用され最終値が <code>B</code> になったにもかかわらず、新 DB には <code>B → A</code> の順で届いてしまい最終値が <code>A</code> に上書きされるケースです。エラーログには何も残らないため、後からデータが食い違っていることに気づくという最も厄介な障害を引き起こします。</p>
+<h3 id="3-リトライによる副作用の増幅">3. リトライによる副作用の増幅</h3>
+<p>新 DB への書き込みがタイムアウトした際、アプリケーション側で安易にリトライを行うと、さらに問題が複雑化します。「新 DB 側では書き込みが正常に完了していたが、完了応答のパケットだけがロストした」という状況でリトライを実行すると、重複レコードの作成や二重決済、二重引き当てといった深刻な副作用につながります。</p>
+<p>このように、アプリケーション層での素朴な二重書きは、分散環境におけるアトミック性と順序性を保証できないため、並行稼働の基礎設計として採用すべきではありません。</p>
+<h2 id="エンティティの特性で決める正system-of-recordの配置と移転順序">エンティティの特性で決める「正（System of Record）」の配置と移転順序</h2>
+<p>データ不整合の罠を避けるための大原則は、<strong>「Single Writer Principle（単一書き込み原則）」</strong> です。過渡期であっても、特定のエンティティに対する更新の「正（System of Record: SoR）」は常にどちらか一方のシステムに限定し、新旧両方から同時に書き込める状態（Multi-Writer）を絶対に作らない設計にします。</p>
+<p>EC や基幹業務システムで扱われる代表的な 3 つのエンティティ（会員・注文・在庫）は、更新頻度や整合性の要件が全く異なるため、エンティティごとに正マスタの配置と移行順序を撃ち分ける必要があります。</p>
+<h3 id="1-会員データusers-新先行--jit-パスワード移行">1. 会員データ（Users）: 「新先行 ＋ JIT パスワード移行」</h3>
+<p>会員プロフィールやログイン認証情報は、更新の衝突（コンフリクト）が起こりにくいデータです。同一ユーザーの情報が同時に別の場所から更新されるリスクが極めて低いため、比較的早い段階で新システム側を正（SoR）に昇格させることができます。</p>
+<p>ここで課題になるのが <strong>「パスワードのハッシュ移行」</strong> です。旧システムのハッシュ関数（例: MD5 や SHA-256）から、新システムで推奨される強固なハッシュ関数（例: Argon2id や bcrypt）へ切り替える場合、データベース管理者は平文のパスワードを保持していないため、事前に一括変換して移行することができません。</p>
+<p>この解決策として広く採用されているのが、<strong>Just-In-Time（JIT）パスワード移行（Lazy Migration）</strong> です<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<ol>
+<li>会員基本情報（ID、メールアドレスなど）は事前に旧 DB から新 DB へバックフィルしておく</li>
+<li>ユーザーが新システムでログインを試みた際、新 DB 内に新方式のパスワードハッシュが存在しなければ、入力された平文パスワードを使って裏側で旧システムの認証 API（または認証スクリプト）を呼び出す</li>
+<li>旧システム側で認証が成功した場合、その場で新ハッシュ関数を用いてパスワードハッシュを計算し、新 DB に保存する</li>
+<li>以降のログインは、新 DB 単独で認証が完結する</li>
+</ol>
+<p>一方向ハッシュ化されたパスワードは、アルゴリズムを完全に同じにしない限り、複数システム間で相互に参照・共有することは不可能です。そのため、新システムで一度ログインし新アルゴリズムでハッシュ化された会員データは、旧システム側へハッシュのまま逆同期して戻すことができなくなります。この不可逆なデータ変換の発生タイミングは、後述する切り戻し設計において極めて重要な境界となります。</p>
+<h3 id="2-注文データorders-切り替え日時の境界分割cut-off-seam">2. 注文データ（Orders）: 「切り替え日時の境界分割（Cut-off Seam）」</h3>
+<p>注文データは、基本的に一度作成されたら行自体が大幅に書き換わることのないイミュータブル（Append-Only）な特性を持っています。また、注文から決済、出荷、キャンセル・返品受付といった一連のライフサイクルは、通常数日から数週間で完了します。</p>
+<p>そのため、注文データは新旧間で複雑な双方向同期を組むのではなく、<strong>「切り替え日時 T による厳密な境界分割（Cut-off）」</strong> を行うのが最も安全です。</p>
+<ul>
+<li><strong>切り替え日時 T より前の注文</strong>: 旧システムが正（SoR）。出荷処理、キャンセル、返金、問い合わせ対応はすべて旧システムの管理画面で最後まで完結させる</li>
+<li><strong>切り替え日時 T 以降の注文</strong>: 新システムが正（SoR）。新しい決済・注文管理フローで処理する</li>
+</ul>
+<p>なお、ユーザーがマイページなどで過去の注文履歴を一覧表示したいという要件に対しては、過去注文データを「参照専用（Read-Only）」として新 DB に初期同期しておくか、参照専用の API 経由で旧データを取得して表示します。更新系トランザクションを旧システム側に閉じ込めておくことで、新旧を跨ぐ分散トランザクションを完全にゼロにできます。</p>
+<h3 id="3-在庫データinventory-最後まで旧集約または独立サービス先行切り出し">3. 在庫データ（Inventory）: 「最後まで旧集約、または独立サービス先行切り出し」</h3>
+<p>3 つの中で最も慎重な扱いが求められるのが在庫データです。在庫の引き当ては、高頻度な更新、厳密な排他制御（行ロック）、ACID トランザクションが必須であり、わずかな不整合も二重販売（オーバーセリング）や欠品という直接的な事業被害につながります。</p>
+<p>在庫データに関しては、<strong>「全機能の移行が完了する最終段階まで、旧システムの DB に正（SoR）を集約し続ける」</strong> か、あるいは移行の最初期に <strong>「在庫引き当て機能だけを独立したマイクロサービスとして切り出し、新旧両方からそのサービスを呼び出す」</strong> の二択にする必要があります。</p>
+<p>過渡期において新フロントエンドや新注文システムから購入が発生した場合でも、新システム側には在庫テーブルを持たせず、旧システムの在庫引き当て API を同期呼び出しする構成をとります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。これにより、過渡期であっても在庫の Single Writer が維持され、引き当ての不整合を確実に防ぐことができます。</p>
+<h2 id="並行稼働を安全に乗り切るデータ同期パターン">並行稼働を安全に乗り切るデータ同期パターン</h2>
+<p>エンティティごとの正マスタが決まったら、過渡期における新旧間のデータ同期方式を選択します。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>同期パターン</th><th>整合性の保証方式</th><th>実装・運用の複雑さ</th><th>主な適用先</th></tr></thead><tbody><tr><td><strong>パターンA: 片方向同期 ＋ 差分突合バッチ</strong></td><td>結果整合性（非同期・バッチ）</td><td>低〜中（追加インフラ不要）</td><td>中小規模の業務システム、EC</td></tr><tr><td><strong>パターンB: Transactional Outbox ＋ CDC</strong></td><td>イベント駆動による結果整合性</td><td>高（Kafka/Debezium などの運用が必要）</td><td>大規模トラフィック、高頻度更新システム</td></tr><tr><td><strong>パターンC: 共有データベース（Shared DB）</strong></td><td>強整合性（同一 DB へのアクセス）</td><td>低（ただしスキーマ密結合のリスク大）</td><td>短期間の移行、同一言語での書き換え</td></tr></tbody></table>
+<p>中小規模のシステムや、専任のインフラチームがいない環境では、高度なメッセージング基盤を組むよりも <strong>「パターンA: 片方向同期 ＋ 初期バックフィル ＋ 差分突合バッチ」</strong> が最も堅実で費用対効果の高い選択肢となります。</p>
+<h3 id="パターンa-片方向同期と差分突合バッチ現実解">パターンA: 片方向同期と差分突合バッチ（現実解）</h3>
+<p>片方向の非同期同期も、書き込みが片側で落ちうる点では二重書きと変わらないように見えます。しかし両者は決定的に違います。片方向同期の失敗は「正（SoR）から見て反映が遅れている」状態にすぎず、正を基準に再送・突合すれば必ず収束します。二重書きが致命的なのは、どちらが正しいかを決める基準そのものが存在せず、乖離したときの収束先を定義できない点にあります。</p>
+<p>正（SoR）となっているシステム側から、他方のシステムへ向けて片方向のみデータを流し込みます。</p>
+<ol>
+<li><strong>初期バックフィル</strong>: 移行開始時に、旧 DB のスナップショットを新 DB へ一括投入する</li>
+<li><strong>片方向レプリケーション</strong>: 旧システムで発生した更新を、定期バッチまたは非同期イベントで新システムへ反映する</li>
+<li><strong>差分突合バッチ（Reconciliation）</strong>: 毎晩深夜に、主キーや更新日時、レコードのハッシュ値を新旧間で突き合わせ、万が一乖離があれば自動修復またはアラート通知を行う</li>
+</ol>
+<h3 id="パターンb-transactional-outbox-パターンと-cdc大規模向け">パターンB: Transactional Outbox パターンと CDC（大規模向け）</h3>
+<p>更新頻度が高く、秒単位での準リアルタイム同期が求められる場合は、<strong>Transactional Outbox パターン</strong> と <strong>Change Data Capture（CDC）</strong> を組み合わせます<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>アプリケーションは、ビジネスデータの更新と同一のローカルデータベーストランザクション内で、<code>outbox</code> テーブルに変更イベントを INSERT します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#9CA0B0;font-style:italic">-- ビジネスデータの更新と同一トランザクションで実行</span></span>
+<span class="line"><span style="color:#8839EF">BEGIN</span><span style="color:#4C4F69">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">UPDATE</span><span style="color:#4C4F69"> users</span></span>
+<span class="line"><span style="color:#8839EF">SET</span><span style="color:#4C4F69"> email </span><span style="color:#179299">=</span><span style="color:#40A02B"> 'new-email@example.com'</span><span style="color:#4C4F69">, updated_at </span><span style="color:#179299">=</span><span style="color:#8839EF"> NOW</span><span style="color:#7C7F93">()</span></span>
+<span class="line"><span style="color:#8839EF">WHERE</span><span style="color:#4C4F69"> id </span><span style="color:#179299">=</span><span style="color:#40A02B"> 'usr_123'</span><span style="color:#4C4F69">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">INSERT INTO</span><span style="color:#4C4F69"> outbox (id, aggregate_type, aggregate_id, </span><span style="color:#8839EF">type</span><span style="color:#4C4F69">, payload)</span></span>
+<span class="line"><span style="color:#8839EF">VALUES</span><span style="color:#4C4F69"> (</span></span>
+<span class="line"><span style="color:#40A02B">  'evt_abc123'</span><span style="color:#4C4F69">,</span></span>
+<span class="line"><span style="color:#40A02B">  'User'</span><span style="color:#4C4F69">,</span></span>
+<span class="line"><span style="color:#40A02B">  'usr_123'</span><span style="color:#4C4F69">,</span></span>
+<span class="line"><span style="color:#40A02B">  'UserEmailUpdated'</span><span style="color:#4C4F69">,</span></span>
+<span class="line"><span style="color:#40A02B">  '{"email": "new-email@example.com"}'</span></span>
+<span class="line"><span style="color:#4C4F69">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">COMMIT</span><span style="color:#4C4F69">;</span></span>
+<span class="line"></span></code></pre>
+<p>データベースのトランザクションログ（PostgreSQL の WAL、MySQL の binlog）を Debezium などの CDC エンジンが直接監視し、コミットされたイベントだけを確実にメッセージブローカー（Kafka など）へストリーミング配信します<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup><sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<p>アプリケーション層での Dual Write を完全に排除できるため、パーシャルフェイルを起こさずに安全な非同期同期を実現できます。</p>
+<h3 id="締め処理日次売上確定棚卸が壊れる境界と対策">締め処理（日次売上確定・棚卸）が壊れる境界と対策</h3>
+<p>並行稼働中に最も破綻しやすいのが、深夜の日次売上締めや在庫棚卸といった「集計バッチ処理」です。</p>
+<p>非同期レプリケーションを採用している場合、わずか数秒のレプリケーション遅延（Replication Lag）であっても問題を引き起こします。例えば、23時59分50秒に新システム側で発生した注文が、数秒の遅延によって旧 DB にまだ届いていない状態で、旧システムの 23時59分59秒の締めバッチが走ってしまうケースです。この注文は当日の日次売上から漏れ、翌日分として計上されてしまい、会計上の売上不一致が発生します。</p>
+<p>この破綻を防ぐための鉄則は次の 2 つです。</p>
+<ul>
+<li><strong>締め処理の責任システムを一箇所に固定する</strong>: 新旧両方のデータベースから中途半端に部分集計した数字を後から足し合わせるようなバッチは絶対に作らない</li>
+<li><strong>同期遅延のゼロ確認（Watermark）</strong>: 締めバッチを起動する前に、レプリケーションの遅延がゼロであること（または締め時刻以降のタイムスタンプのデータが届いていること）をプログラムで検証してからバッチ処理を開始する</li>
+</ul>
+<h2 id="切り戻しロールバックを担保する逆同期とリストア戦略">「切り戻し（ロールバック）」を担保する逆同期とリストア戦略</h2>
+<p>ストラングラーフィグパターンの最大の利点は「問題が起きたらいつでも旧システムへ戻せる」という安心感にあります<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。しかし、トラフィックを新システムへ切り替えた後、新システムで発生した更新データを旧システムへ戻す <strong>「逆同期」</strong> が設計されていなければ、安全な切り戻しは成立しません。</p>
+<h3 id="1-逆同期新旧とエコーループ防止">1. 逆同期（新→旧）とエコーループ防止</h3>
+<p>ここで Single Writer 原則との関係を整理しておきます。原則が求めるのは「1 つのエンティティについて、ある時点の正（SoR）が常に片側だけであること」であり、逆同期はカットオーバーによって正が新システムへ移った結果、同期の向きが反転したものです。エンティティごとに移行フェーズが異なるため、システム全体を俯瞰すると旧→新と新→旧が同時に流れているように見えますが、エンティティ単位で見れば正は一意のままです。</p>
+<p>新システムへ本番トラフィックを切り替えた（Cutover）瞬間から、今度は「新システムで発生したデータ更新を旧システムへ書き戻す逆同期」を即座に稼働させ、旧システムを、いつでもリクエストを受け付けられる「ホットスタンバイ」状態に保ちます。</p>
+<p>ここで注意すべきが <strong>エコーループ（Echo Loop / ピンポン同期）</strong> です。「旧 DB の変更 → 新 DB へ同期」と「新 DB の変更 → 旧 DB へ逆同期」が同時に動いていると、同期ジョブによる書き込み自体が新たな変更イベントとして検知され、データが新旧間を無限に往復してしまいます。</p>
+<p>逆同期を実装する際は、同期ジョブによる書き込みトランザクションに <code>origin_source: "sync_job"</code> といったコンテキストメタデータを付与し、同期による変更はレプリケーションの検知対象から除外するフィルタリングが必須となります。</p>
+<h3 id="2-切り戻し不能点point-of-no-return-pnrの合意">2. 切り戻し不能点（Point of No Return: PNR）の合意</h3>
+<p>どれほど入念に逆同期を設計しても、<strong>「技術的に旧システムへ戻せなくなるデッドライン（Point of No Return: PNR）」</strong> は必ず存在します。</p>
+<p>代表例が、前述した「新ハッシュ関数で保存されたパスワード」や、「新システム特有の複雑なデータ構造（旧システムのテーブル定義にはマッピングできない新決済種別や新ポイントルール）」です。</p>
+<p>一度これらの不可逆なデータが新システムで発生した後は、旧システムへトラフィックを戻しても、ユーザーがログインできなくなったり注文データが壊れたりします。</p>
+<p>ここで注意したいのは、会員データを「新先行 ＋ JIT パスワード移行」で進める設計は、PNR を移行の早い段階へ前倒しする判断でもあるという点です。新システムで最初のユーザーがログインした瞬間から不可逆な変換が始まるため、「いつでも旧システムへ戻せる」期間は実質そこで終わります。切り戻しの猶予を長く取りたい場合は、会員の切り替えを移行の後半に回し、それまで認証を旧システムに残すという選択肢と天秤にかけてください。</p>
+<p>移行計画を立てる際は、<strong>「何が起きたら PNR に到達するか」</strong> をステークホルダー全員であらかじめ合意しておく必要があります。PNR に到達する前に重大障害が発生した場合は即座に旧システムへ切り戻し（Rollback）、PNR 到達以降に障害が発生した場合は、旧システムへ戻すのではなく新システム上で緊急パッチを適用して前進修復（Fix Forward）するという明確な運用基準を定めておきます。</p>
+<h3 id="3-最悪時のテーブル絞り込みリストア">3. 最悪時のテーブル絞り込みリストア</h3>
+<p>想定外のデータ破損が発生し、最悪の手段としてデータベースを移行前のスナップショットからリストアせざるを得ない事態も想定しておく必要があります。</p>
+<p>しかし、数 GB から数百 GB におよぶデータベース全体を一括でリストアしようとすると、数時間から数日単位のサービス停止が発生し、事業に致命的な打撃を与えます。</p>
+<p>そのため、リストア手順を準備する際は、全量復旧を前提とせず、<strong>「不整合が発生した対象テーブル（会員テーブルや特定マスタなど）に絞り込んでリストアし、差分を復旧する」</strong> 手順を確立しておくことが重要です。その際、RDBMS の外部キー制約（Foreign Key）によって不整合レコードの投入が阻害されないよう、関連テーブル群をまとめたリストア境界の設計や、一時的な制約無効化手順も含めて事前に検証しておきます。</p>
+<h2 id="faq-ストラングラーフィグのデータ移行に関するよくある質問">FAQ: ストラングラーフィグのデータ移行に関するよくある質問</h2>
+<h3 id="q1-なぜアプリケーション層の-dual-write二重書きは避けるべきなのか">Q1: なぜアプリケーション層の Dual Write（二重書き）は避けるべきなのか？</h3>
+<p><strong>A1</strong>: アプリケーション層での二重書きは、2相コミット（2PC）を用いない限りアトミック性を保証できません。片側書き込み失敗時のパーシャルフェイルや、ネットワーク遅延による書き込み順序の逆転（Race Conditions）によって、エラーログに残らないサイレントなデータ不整合（Data Drift）を引き起こすためです。</p>
+<h3 id="q2-新旧システムが並行稼働している期間中在庫データはどちらを正system-of-recordとすべきか">Q2: 新旧システムが並行稼働している期間中、在庫データはどちらを正（System of Record）とすべきか？</h3>
+<p><strong>A2</strong>: 在庫引き当ては二重販売（オーバーセリング）を防ぐための厳密な排他制御と ACID トランザクションが必要なため、新旧間で分散させず、移行プロセスの最終段階まで旧システムに正を一元集約するか、先行して独立した在庫専用 API サービスへ切り出して Single Writer を維持すべきです。</p>
+<h2 id="まとめ-移行計画にデータの正と境界を書き込む">まとめ: 移行計画に「データの正と境界」を書き込む</h2>
+<p>ストラングラーフィグパターンによる段階的移行の成否は、API Gateway のルーティング設定やフロントエンドの分離といった目に見える部分ではなく、過渡期における地味で堅実な <strong>「データの正（マスタ）の決定」「不可逆境界の把握」「切り戻し手順の確立」</strong> で決まります。</p>
+<p>移行計画を具体化する際は、以下のチェックリストを用いてチーム内の認識を点検してみてください。</p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 会員・注文・在庫などの主要エンティティごとに、過渡期の正（System of Record）がどちらか明確に定義されているか？</li>
+<li class="task-list-item"><input type="checkbox" disabled> アプリケーション層での素朴な二重書きを排除し、片方向同期または Transactional Outbox パターンを採用しているか？</li>
+<li class="task-list-item"><input type="checkbox" disabled> パスワードのハッシュ変更など不可逆な変換を特定し、切り戻し不能点（PNR）の到達条件が合意されているか？</li>
+<li class="task-list-item"><input type="checkbox" disabled> 日次締め処理や在庫引き当てのトランザクション境界が新旧を跨いで破壊されていないか？</li>
+<li class="task-list-item"><input type="checkbox" disabled> 万が一の障害発生時に、新→旧への逆同期やテーブル絞り込みリストアによる復旧手順が定義されているか？</li>
+</ul>
+<p>レガシーシステムの段階的移行や過渡期のデータ設計、実装境界の切り分けについてお悩みの方は、ぜひお気軽に <a href="/#contact">コンタクトフォーム</a> からご相談ください。貴社のシステム構成と業務フローに合わせた現実的な移行計画の策定を伴走支援いたします。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://martinfowler.com/articles/patterns-legacy-displacement/transitional-architecture.html">Transitional Architecture</a> Ian Cartwright, Rob Horn, James Lewis (Thoughtworks), 2021年4月12日。本記事では2箇所で参照している。並行稼働を「移行完了時には破棄される過渡的アーキテクチャ」と定義する箇所と、在庫の同期呼び出しのような一時的な同期機構を設計へ明示的に組み込む箇所の、いずれも同記事が説く「移行完了時に不要となる足場（scaffolding）を意図して設計する」という原則に依拠する。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html">Transactional outbox pattern</a> Amazon Web Services (AWS Prescriptive Guidance), 2022年。アプリ層での二重書き（Dual Write）が引き起こす分散整合性の欠如とパーシャルフェイルのメカニズムを解説。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://microservices.io/patterns/data/transactional-outbox.html">Pattern: Transactional outbox</a> Chris Richardson (microservices.io)。RDBMS のローカル ACID トランザクションと Outbox テーブルを組み合わせた整合性保証パターンの原典。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-lambda-migrate-user.html">Migrate user Lambda trigger</a> Amazon Web Services (Cognito Developer Guide), 2024年。初回ログイン時の平文パスワード検証と新ハッシュ再計算による透過的 JIT 移行仕様。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://microservices.io/patterns/data/transaction-log-tailing.html">Pattern: Transaction log tailing</a> Chris Richardson (microservices.io)。データベーストランザクションログ（WAL/binlog）監視による CDC レプリケーション手法。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://microservices.io/patterns/data/polling-publisher.html">Pattern: Polling publisher</a> Chris Richardson (microservices.io)。Outbox テーブルのポーリングによるメッセージ発行とトレードオフ。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://debezium.io/documentation/reference/stable/architecture.html">Debezium Architecture</a> Debezium Community (Red Hat), 2024年。ログベース Change Data Capture のアーキテクチャと Kafka Connect 連携。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://debezium.io/documentation/reference/stable/transformations/outbox-event-router.html">Outbox Event Router</a> Debezium Community (Red Hat), 2024年。Outbox テーブルレコードを Kafka トピックへルーティングする SMT の仕様。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/decompose-monolith-into-microservices-using-strangler-fig.html">Decompose a monolithic application into microservices by using the Strangler Fig pattern</a> Amazon Web Services (AWS Prescriptive Guidance), 2023年。Transform / Coexist / Eliminate の 3 フェーズライフサイクルと並行稼働。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

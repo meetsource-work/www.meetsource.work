@@ -1,0 +1,204 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>OpenClaw の後継、Nous Research「Hermes Agent」は本当に &quot;自己改善&quot; するのか | Meetsource</title><meta name="description" content="宣伝コピーとしての「自己改善」を実装レベルで解剖。Hermes Agent の SQLite+FTS5 永続メモリ、Skill Synthesis、OpenClaw 比較、セルフホスト時のリアルな運用コストを解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/hermes-agent-self-improving"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="OpenClaw の後継、Nous Research「Hermes Agent」は本当に &#34;自己改善&#34; するのか | Meetsource"><meta property="og:description" content="宣伝コピーとしての「自己改善」を実装レベルで解剖。Hermes Agent の SQLite+FTS5 永続メモリ、Skill Synthesis、OpenClaw 比較、セルフホスト時のリアルな運用コストを解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/hermes-agent-self-improving"><meta property="og:image" content="https://www.meetsource.work/blog/hermes-agent-self-improving-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-07-24T05:02:02.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="OpenClaw の後継、Nous Research「Hermes Agent」は本当に &#34;自己改善&#34; するのか | Meetsource"><meta name="twitter:description" content="宣伝コピーとしての「自己改善」を実装レベルで解剖。Hermes Agent の SQLite+FTS5 永続メモリ、Skill Synthesis、OpenClaw 比較、セルフホスト時のリアルな運用コストを解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/hermes-agent-self-improving-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"OpenClaw の後継、Nous Research「Hermes Agent」は本当に \"自己改善\" するのか","description":"宣伝コピーとしての「自己改善」を実装レベルで解剖。Hermes Agent の SQLite+FTS5 永続メモリ、Skill Synthesis、OpenClaw 比較、セルフホスト時のリアルな運用コストを解説します。","datePublished":"2026-07-24T05:02:02.000Z","image":"https://www.meetsource.work/blog/hermes-agent-self-improving-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/hermes-agent-self-improving"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-07-24T05:02:02.000Z" data-astro-cid-7jjqptxk> 2026.07.24 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#セルフホスト</span><span class="tag" data-astro-cid-7jjqptxk>#hermes-agent</span><span class="tag" data-astro-cid-7jjqptxk>#OpenClaw</span><span class="tag" data-astro-cid-7jjqptxk>#SRE</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>OpenClaw の後継、Nous Research「Hermes Agent」は本当に &quot;自己改善&quot; するのか</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/hermes-agent-self-improving-hero.webp" alt="OpenClaw の後継、Nous Research「Hermes Agent」は本当に &#34;自己改善&#34; するのか" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>日常業務で AI エージェントを使い込んでいるエンジニアほど、クラウド型サービス特有の「壁」に突き当たることが増えています。作業の節目ごとに発生するコンテキストのリセット、週次や月次のトークン上限、そして使えば使うほど嵩むランニングコストは、自律型エージェントの常駐運用における大きなハードルです。</p>
+<p>こうした背景から、自分のインフラ上で 24 時間稼働させられる「セルフホスト型 AI エージェント」への注目が急速に高まっています。2026 年初頭にマルチチャネル統合で話題を集めた OpenClaw に続き、Nous Research が公開した <strong>「Hermes Agent」</strong> は、単なるコマンド実行ツールにとどまらない <strong>「自己改善（Self-Improving）」</strong> や <strong>「永続メモリ」</strong> を前面に打ち出し、大きな関心を集めています。</p>
+<p>本記事では、Hermes Agent のアーキテクチャを実装レベルで分解し、「自己改善」の技術的実態、OpenClaw との設計思想の違い、そして SRE 目線でのリアルな運用コストやセキュリティリスクを検証します。</p>
+<hr>
+<h2 id="1-クラウド型aiエージェントに感じている-3-つの摩擦">1. クラウド型AIエージェントに感じている 3 つの摩擦</h2>
+<p>Claude Code をはじめとするクラウド依存型の AI エージェントは非常に強力ですが、実践的な業務で常用すると主に 3 つの摩擦が生じます。</p>
+<ol>
+<li><strong>コンテキストのリセット</strong>: セッションが途切れるたびにプロジェクトの背景や前提条件を再指示する必要があり、作業の連続性が損なわれる。</li>
+<li><strong>トークン制限とコスト</strong>: 大規模なリファクタリングや 24 時間監視を行おうとすると、週次・月次の利用上限に達しやすく、従量課金コストも増大する。</li>
+<li><strong>ローカル環境への権限委譲の制約</strong>: クラウド経由でのツール呼び出しにはセキュリティポリシー上の制約が多く、インフラに直接密着した自動化が難しい。</li>
+</ol>
+<p>当ブログの過去記事 <a href="/blog/claude-code-weekly-limit-promotion">Claude Code の週次制限プロモーション</a> で触れたように、クラウドサービスの枠組みの中でハーネスを工夫するアプローチがある一方で、「エージェントのランタイム自体を自分の手元（セルフホスト）で所有する」アプローチへの関心が広がっています。</p>
+<p>先行して登場した OpenClaw は TypeScript ベースの Gateway を中心とした Hub-and-Spoke 型アーキテクチャを採用し、接続性やオーケストレーションに強みを持っています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。これに対し、今回取り上げる Hermes Agent は <strong>「学習とメモリの蓄積」</strong> に焦点を当てたランタイムとして登場しました。</p>
+<hr>
+<h2 id="2-hermes-agent-とは何か--一言でいうと-永続ランタイム">2. Hermes Agent とは何か — 一言でいうと “永続ランタイム”</h2>
+<p>まず前提として、モデルとエージェントフレームワークの混同を解消しておく必要があります。</p>
+<ul>
+<li><strong>Hermes 3</strong>: Nous Research が開発・公開してきたオープンウェイトの LLM（指示チューニングモデル）。</li>
+<li><strong>Hermes Agent</strong>: 2026 年 2 月にオープンソース化された Python 3.10+ ベースのエージェント実行環境（ランタイム/フレームワーク）<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</li>
+</ul>
+<p>Hermes Agent は、MIT ライセンスで提供される OSS です<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。公式発表によると、単体で CLI、Gateway サーバー（Port 8642 の OpenAI 互換 API）、および独自の常駐スケジューラ（Cron 相当機能）を備えており、バックグラウンドで常駐しながら自動化タスクを実行する <strong>「永続ランタイム」</strong> として動作します。</p>
+<p>「Hermes Agent」という名称ですが、必ずしも Hermes 3 モデル専用というわけではなく、後述するように LiteLLM バインディングを介して様々な LLM をバックエンドとして指定できます。</p>
+<hr>
+<h2 id="3-アーキテクチャを分解する--agent-core--memory--skill-library--mcp">3. アーキテクチャを分解する — Agent Core / Memory / Skill Library / MCP</h2>
+<p>Hermes Agent の内部構造は、大きく 4 つの要素で捉えることができます。</p>
+<p><img src="/blog/hermes-agent-architecture.webp" alt="Hermes Agent のアーキテクチャ概略図"></p>
+<h3 id="31-agent-core--薄いハブに責務を集約する設計">3.1 Agent Core — 薄いハブに責務を集約する設計</h3>
+<p>エージェントの中心に位置するのが、<code>run_agent.py</code> 内に定義された <code>AIAgent</code> クラスです。
+このクラスは、ユーザーからのプロンプト構築、LLM プロバイダへのリクエスト送信、レスポンスのパース、および各種ツールのディスパッチ（実行）を一元的に管理します。</p>
+<p>筆者の観察としては、いわゆるナローウエスト（Narrow Waist）型の設計と呼べる構成です。CLI、Gateway サーバー、バックグラウンドスケジューラなど多様な入力インターフェースが存在しますが、すべてはこの薄い Core エンジンを通過するよう統一されています。</p>
+<h3 id="32-memory--3-層構造-実装層軸で整理">3.2 Memory — 3 層構造 (実装層軸で整理)</h3>
+<p>本記事では、Hermes Agent のメモリ構造を公式の時系列分類ではなく <strong>「実装層軸」</strong> で 3 層に整理して解説します。</p>
+<ol>
+<li><strong>システムプロンプト注入層</strong>: <code>MEMORY.md</code>（プロジェクト環境や不変ルール）および <code>USER.md</code>（ユーザーの嗜好）の 2 つのマークダウンファイル。毎ターンのシステムプロンプト冒頭に自動合成されます。</li>
+<li><strong>検索可能アーカイブ層</strong>: セッション対話ログやタスク実行結果を保持する <strong>SQLite + FTS5</strong> 全文検索データベース。毎ターン、過去の全ログを送信するのではなく、関連するキーワードや過去セッションのみを動的に抽出して注入します。</li>
+<li><strong>外部永続メモリプロバイダ層</strong>: プラグイン構造により、Mem0 や Honcho といった外部の長期的記憶サービスと連携可能な拡張口。</li>
+</ol>
+<p>全対話履歴をリクエストごとに送信するクラウド型エージェントとは異なり、SQLite+FTS5 による動的抽出を行うことで、コンテキストウィンドウの圧迫を抑えつつ長期的文脈の保持を実現しています。</p>
+<h3 id="33-skill-library--経験を-手続き-として蓄積する">3.3 Skill Library — 経験を “手続き” として蓄積する</h3>
+<p>Hermes Agent の最大の特徴の一つが <strong>Skill Library</strong> です。公式仕様によると、タスクを実行して成功した一連の手順やツール呼び出しのパターンは、<code>~/.hermes/skills/</code> ディレクトリ配下に再利用可能な Python スクリプトや Markdown ファイルとして自動保存されます。</p>
+<p>エラー発生時には試行錯誤を行い、修正されたコードをスキルとして再構築するループを備えています（本記事ではこの反復を Closed Learning Loop と呼ぶ）。保存されたスキルは次回以降の類似タスクでインデックス検索され、ツールとして再読み込みされます。</p>
+<h3 id="34-llm-バックエンドと-mcp--litellm-経由の多バックエンドと標準プロトコル">3.4 LLM バックエンドと MCP — LiteLLM 経由の多バックエンドと標準プロトコル</h3>
+<p>Hermes Agent は、LLM との接続に LiteLLM バインディングを採用しています。これにより、LiteLLM 側の対応数として 300 以上の LLM バックエンド（OpenAI、Anthropic、Google Gemini、および Ollama や vLLM によるローカルモデル）を簡単に切り替えることが可能です。</p>
+<p>また、Anthropic が提唱する <strong>MCP (Model Context Protocol)</strong> に対応しているため、サードパーティが提供する MCP サーバーをツールとして動的に取り込めます。さらに、Gateway モードでは Port 8642 で OpenAI 互換 API サーバーとして動作するため、既存の OpenAI クライアントや外部システムからの呼び出しも容易です。</p>
+<hr>
+<h2 id="4-自己改善は本当か--実装レベルで検証する">4. 「自己改善」は本当か — 実装レベルで検証する</h2>
+<p>「自己改善（Self-Improving）」という言葉を聞くと、モデル自体の重みが更新（ファインチューニング）されるような印象を受けるかもしれません。しかし、実装レベルで検証すると、その実態は <strong>「実行可能な手続き（コード・プロンプト）の抽出と動的再利用」</strong> です。</p>
+<p>何が学習され、何が学習されないのかの境界線を整理すると以下のようになります。</p>
+<ul>
+<li><strong>学習される（蓄積される）もの</strong>:
+<ul>
+<li><code>~/.hermes/skills/</code> に保存される Python スクリプトや実行手順 Markdown。</li>
+<li><code>MEMORY.md</code> や <code>USER.md</code> に追記される明示的な事実やユーザー嗜好。</li>
+<li>SQLite+FTS5 データベースに蓄積される過去ログと全文検索インデックス。</li>
+</ul>
+</li>
+<li><strong>学習されない（蓄積されない）もの</strong>:
+<ul>
+<li>LLM のモデル重み（ベースモデルの知能自体が変化するわけではない）。</li>
+<li>スキル化されなかった一回限りの操作における暗黙的な試行錯誤（公式に明記されているわけではありませんが、実装構造上、明示的にファイル化されない情報は次セッションに引き継がれません）。</li>
+</ul>
+</li>
+</ul>
+<p>Skill Library はローカルファイルシステム上の <code>~/.hermes/skills/</code> に独立したファイル群として出力されるため、ユーザー自身が Git 等で管理・バックアップ・チーム共有できる透明性を持っています。</p>
+<hr>
+<h2 id="5-openclaw-と-hermes-agent--設計思想の対比">5. OpenClaw と Hermes Agent — 設計思想の対比</h2>
+<p>2026 年のセルフホスト型エージェント界隈で注目を集める 2 大プロダクトですが、その設計思想は大きく異なります。筆者の見立てとしては、両者は「接続の広がり」と「経験の深まり」という直交する軸を担っていると整理できます。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="left">評価軸</th><th align="left">OpenClaw</th><th align="left">Hermes Agent (Nous Research)</th></tr></thead><tbody><tr><td align="left"><strong>主要実装言語</strong></td><td align="left">TypeScript</td><td align="left">Python (3.10+)</td></tr><tr><td align="left"><strong>アーキテクチャ</strong></td><td align="left">Gateway 中心の Hub-and-Spoke 型</td><td align="left">Agent Core (<code>AIAgent</code>) 中心の実行型</td></tr><tr><td align="left"><strong>設計の主眼</strong></td><td align="left"><strong>接続性・ルーティング・複数チャネル統制</strong></td><td align="left"><strong>メモリ蓄積・スキル自動生成・学習ループ</strong></td></tr><tr><td align="left"><strong>メモリ実装</strong></td><td align="left">チャンネル・セッション単位の状態管理</td><td align="left">3層構造 (MEMORY.md/USER.md + SQLite FTS5)</td></tr><tr><td align="left"><strong>拡張メカニズム</strong></td><td align="left">外部ツール・プラグイン接続特化</td><td align="left">Skill Synthesis (<code>~/.hermes/skills/</code>)</td></tr><tr><td align="left"><strong>適したユースケース</strong></td><td align="left">メッセージング連携、複数エージェントのルーティング</td><td align="left">24時間常駐タスク、長期プロジェクト、自動化スクリプト成長</td></tr></tbody></table>
+<p>接続の柔軟性やマルチチャネル制御を重視する場合は OpenClaw が適しており、作業手順の自律的な蓄積やローカルスクリプトの自動構築を重視する場合は Hermes Agent が強力な選択肢となります。</p>
+<hr>
+<h2 id="6-24-時間セルフホスト運用の現実--sre-目線のコストリスク">6. 24 時間セルフホスト運用の現実 — SRE 目線のコスト・リスク</h2>
+<p>セルフホスト運用を検討する際、SRE 的視点から無視できないのが「運用コスト」と「セキュリティ権限」です。</p>
+<h3 id="61-費用の-3-レイヤーで考える--インフラ--api--電気代">6.1 費用の 3 レイヤーで考える — インフラ / API / 電気代</h3>
+<p>費用は以下の 3 つのレイヤーに分解して見極める必要があります。</p>
+<ol>
+<li><strong>インフラ費</strong>: サーバー本体（VPS または自宅サーバー）。</li>
+<li><strong>LLM API 費</strong>: クラウド LLM API（Anthropic、OpenAI、OpenRouter 等）の利用料。</li>
+<li><strong>電気代</strong>: 自宅マシンでローカル LLM を 24 時間回す場合の消費電力。</li>
+</ol>
+<p>情報源によると、クラウド LLM API を主力バックエンドとし、Hermes Agent 自体は軽量な VPS で動作させる構成（推奨構成）の場合、1 CPU / 2〜4GB RAM 程度の小型 VPS で十分であり、インフラ費は <strong>月額 $5 〜 $10 程度</strong> に収まります<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。一方、ローカル LLM（RTX 3090 や A10G 相当の GPU）を自前で 24 時間稼働させる場合は、インフラ費・電気代を合わせて <strong>月額 $50 〜 $150 以上</strong> のオーダー感となります<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>クラウド API 利用時の <strong>月額 API 費</strong> は、入力トークンと出力トークンの単価差が大きいため、以下の試算式で入出力を分離して見積もることを推奨します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>【変数定義】</span></span>
+<span class="line"><span>  N_tasks       : 1 日あたりの平均タスク数</span></span>
+<span class="line"><span>  T_in_per_task : 1 タスクあたりの平均入力トークン数</span></span>
+<span class="line"><span>  T_out_per_task: 1 タスクあたりの平均出力トークン数</span></span>
+<span class="line"><span>  P_in_per_1M   : モデルの入力単価 (USD / 1M tokens)</span></span>
+<span class="line"><span>  P_out_per_1M  : モデルの出力単価 (USD / 1M tokens)</span></span>
+<span class="line"><span>  D             : 稼働日数 (通常 30)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>【月額 API 費の試算式 (USD)】</span></span>
+<span class="line"><span>  ≈ N_tasks × D × (</span></span>
+<span class="line"><span>      (T_in_per_task  × P_in_per_1M  / 1,000,000) +</span></span>
+<span class="line"><span>      (T_out_per_task × P_out_per_1M / 1,000,000)</span></span>
+<span class="line"><span>    )</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>例えば、1 日 30 タスク（<code>N_tasks = 30</code>）、1 タスクあたり入力 15,000 トークン / 出力 3,000 トークンの場合、選定するモデルの単価を当てはめることでリアルなコストが試算できます。なお、常駐スケジューラで定期タスクを回す場合は <code>N_tasks</code> にその実行回数が加算される点に注意が必要です。</p>
+<h3 id="62-権限サンドボックス要件">6.2 権限・サンドボックス要件</h3>
+<p>エージェントにローカルでの Shell コマンド実行権限（Tool Execution）を付与した瞬間から、セルフホスト環境は「便利な実験環境」から「本番相当の運用対象」へと変化します。</p>
+<p>Hermes Agent に限らず、OSS エージェントをセルフホスト運用する上での一般的な防衛線として、以下の要件を考慮すべきです。</p>
+<ul>
+<li><strong>Docker コンテナ化</strong>: ホスト環境のファイルシステムへの直接アクセスを断つ。</li>
+<li><strong>サンドボックス隔離</strong>: <code>bubblewrap</code> や <code>e2b</code> などの分離機構を用い、プロセスやネットワーク権限を制限する。</li>
+<li><strong>シークレット管理</strong>: ホストの全環境変数を引き継がせず、エージェント専用の <code>.env</code> ファイルに制限した API キーのみを注入する。</li>
+</ul>
+<h3 id="63-クラウド--セルフホストのハイブリッド運用">6.3 クラウド × セルフホストのハイブリッド運用</h3>
+<p>すべての作業をセルフホスト環境に寄せる必要はありません。過去記事 <a href="/blog/harness-engineering-agents-md">ハーネスエンジニアリング</a> で解説したような「適材適所のハーネス設計」が有効です。</p>
+<ul>
+<li><strong>セルフホスト (Hermes Agent)</strong>: 24 時間常駐の定期監視、情報の自動収集・整理、長期プロジェクトの文脈・スキル蓄積。</li>
+<li><strong>クラウド型 (Claude Code / Cursor 等)</strong>: リアルタイムな対話型開発、複雑なアーキテクチャ設計、大規模コードベースの初期生成。</li>
+</ul>
+<p>このように役割を分担させることで、コストと利便性の双方を最適化できます。</p>
+<hr>
+<h2 id="7-採用チェックリスト--試すべき人--まだ様子見でよい人">7. 採用チェックリスト — 試すべき人 / まだ様子見でよい人</h2>
+<p>ここまでの検証を踏まえ、Hermes Agent の採用判断基準をまとめました。</p>
+<h3 id="今すぐ試すべき人">今すぐ試すべき人</h3>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> Claude Code 等のコンテキストリセットに不満があり、長期プロジェクトで対話履歴やスキルを自動蓄積させたい。</li>
+<li class="task-list-item"><input type="checkbox" disabled> LiteLLM を活用し、複数の LLM バックエンド（クラウド API とローカルモデル等）を柔軟に切り替えて検証したい。</li>
+<li class="task-list-item"><input type="checkbox" disabled> VPS や Docker 環境を所有しており、サンドボックス隔離や環境変数管理などの運用設計を行うスキルがある。</li>
+</ul>
+<h3 id="まだ様子見でよい人">まだ様子見でよい人</h3>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 「自己改善」という言葉から、LLM 自体のモデル重みが自動ファインチューニングされることを期待している。</li>
+<li class="task-list-item"><input type="checkbox" disabled> コマンド実行権限を与えるリスクに対するサンドボックス環境やセキュリティ管理体制が準備できない。</li>
+<li class="task-list-item"><input type="checkbox" disabled> ローカル LLM の 24 時間自前運用を前提としており、高額な GPU インフラ費の試算が立っていない。</li>
+</ul>
+<hr>
+<h2 id="8-まとめ--接続の広がり-と-経験の深まり-は別軸">8. まとめ — “接続の広がり” と “経験の深まり” は別軸</h2>
+<p>OpenClaw と Hermes Agent は、どちらが優れているかという競合関係ではなく、「外部システムとの接続性（OpenClaw）」と「経験と記憶の蓄積（Hermes Agent）」という別々の価値を提供するプロダクトです。</p>
+<p>Hermes Agent の台頭は、AI エージェントの差別化要因が「モデルそのものの賢さ」から「コンテキストとスキルを保持するランタイムの設計」へと広がりつつあることを示しています。セルフホスト型エージェントの導入を検討する際は、まず「自分が解決したい課題が接続なのか、記憶・蓄積なのか」を明確にすることをお勧めします。</p>
+<hr>
+<h2 id="9-相談窓口">9. 相談窓口</h2>
+<p>セルフホスト型 AI エージェントの導入設計、Claude Code とのハイブリッド構成の検討、24 時間運用時のセキュリティやサンドボックス設計など、要件整理の段階からご相談を承っております。お気軽に <a href="/#contact">コンタクトフォーム</a> よりお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-2">
+<p><a href="https://github.com/openclaw/openclaw">openclaw/openclaw - GitHub</a> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-1">
+<p><a href="https://github.com/NousResearch/hermes-agent">NousResearch/hermes-agent - GitHub</a> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://github.com/NousResearch/hermes-agent/blob/main/LICENSE">NousResearch/hermes-agent LICENSE</a> <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://userorbit.com">userorbit.com - OpenClaw vs Hermes Agent Feature &#x26; Architecture Comparison</a> <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

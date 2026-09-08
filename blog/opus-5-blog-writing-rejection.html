@@ -1,0 +1,114 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Opus 5 にブログを書かせてみたが、ボツにした理由──上位モデルでも超えられなかった「合格ライン」の壁 | Meetsource</title><meta name="description" content="Claude Opus 5 でブログ自律執筆を試みるも生成記事をボツにした実態記録。5時間枠の70%がわずか30分で消失したコスト構造と、スクショ追加による自律メタ解析誘発、敵対的レビュー（blog-verify）4周の無限ループの原因を解き明かします。"><link rel="canonical" href="https://www.meetsource.work/blog/opus-5-blog-writing-rejection"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="Opus 5 にブログを書かせてみたが、ボツにした理由──上位モデルでも超えられなかった「合格ライン」の壁 | Meetsource"><meta property="og:description" content="Claude Opus 5 でブログ自律執筆を試みるも生成記事をボツにした実態記録。5時間枠の70%がわずか30分で消失したコスト構造と、スクショ追加による自律メタ解析誘発、敵対的レビュー（blog-verify）4周の無限ループの原因を解き明かします。"><meta property="og:url" content="https://www.meetsource.work/blog/opus-5-blog-writing-rejection"><meta property="og:image" content="https://www.meetsource.work/blog/opus-5-blog-writing-rejection-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-07-25T15:54:32.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Opus 5 にブログを書かせてみたが、ボツにした理由──上位モデルでも超えられなかった「合格ライン」の壁 | Meetsource"><meta name="twitter:description" content="Claude Opus 5 でブログ自律執筆を試みるも生成記事をボツにした実態記録。5時間枠の70%がわずか30分で消失したコスト構造と、スクショ追加による自律メタ解析誘発、敵対的レビュー（blog-verify）4周の無限ループの原因を解き明かします。"><meta name="twitter:image" content="https://www.meetsource.work/blog/opus-5-blog-writing-rejection-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Opus 5 にブログを書かせてみたが、ボツにした理由──上位モデルでも超えられなかった「合格ライン」の壁","description":"Claude Opus 5 でブログ自律執筆を試みるも生成記事をボツにした実態記録。5時間枠の70%がわずか30分で消失したコスト構造と、スクショ追加による自律メタ解析誘発、敵対的レビュー（blog-verify）4周の無限ループの原因を解き明かします。","datePublished":"2026-07-25T15:54:32.000Z","image":"https://www.meetsource.work/blog/opus-5-blog-writing-rejection-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/opus-5-blog-writing-rejection"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-07-25T15:54:32.000Z" data-astro-cid-7jjqptxk> 2026.07.26 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#claude-opus-5</span><span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#llm</span><span class="tag" data-astro-cid-7jjqptxk>#失敗談</span><span class="tag" data-astro-cid-7jjqptxk>#コンテキスト肥大化</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>Opus 5 にブログを書かせてみたが、ボツにした理由──上位モデルでも超えられなかった「合格ライン」の壁</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/opus-5-blog-writing-rejection-hero.webp" alt="Opus 5 にブログを書かせてみたが、ボツにした理由──上位モデルでも超えられなかった「合格ライン」の壁" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <h2 id="はじめに期待を込めて最上位モデルに任せた結果">はじめに：期待を込めて最上位モデルに任せた結果</h2>
+<p>Claude Code が <code>v2.1.219</code> <sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> へアップデートされた際、モデル選択肢に最新の <strong>「Claude Opus 5」</strong> <sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup> が登場しました。入力 $5.00 / MTok、出力 $25.00 / MTok という従来の Opus 単価を維持しつつ、高い推論能力を備えたモデルです。</p>
+<p>「これほどの性能があれば、ブログ執筆パイプラインも今まで以上に高品質な記事が一発で仕上がるのではないか」──そう期待した私は、本ブログの自動執筆パイプラインを用いて「Opus 5 の検証記事」自体の作成を自律エージェントに委託しました。</p>
+<p>しかし、結論から申し上げますと、完成した記事草案は最終的に <strong>「ボツ（不採用）」</strong> と判定し、公開せずに破棄する決断を下しました。</p>
+<p>単に「生成された文章が気に入らなかった」という表面的な理由ではありません。その裏では、わずか 30分間で利用可能枠の 70% が吹き飛ぶコスト爆発と、敵対的レビューが永久に終わらない無限ループの沼が発生していたのです。本記事では、当プロジェクトで発生した生々しい実録ログとともに、最新 LLM エージェントを運用する上での致命的なアンチパターンを解き明かします。</p>
+<hr>
+<h2 id="第1章-実録5時間枠の70が30分で溶けたコストとログ">第1章: 実録・5時間枠の70%が30分で溶けたコストとログ</h2>
+<p>最初に突きつけられたのは、圧倒的な「トークン消費の速度」でした。</p>
+<p>Anthropic の有料プランにおける利用制限は、過去 5時間分の消費量がスライディング更新される <strong>「5時間ローリングウィンドウ（ 5-hour rolling window ）」</strong> <sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> 方式を採用しています。API 単価は入力 $5.00 / MTok、出力 $25.00 / MTok <sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup> です。</p>
+<p>実際の検証ログによると、最初に実行した企画段階（ <code>/blog-plan</code> ）で $4.15、続く設計段階（ <code>/blog-design</code> ）で $3.46 相当を消費しました。以前の検証でも確認した通り、Opus 5 は非常に強力ですが、このわずか 2ステップだけで 5時間枠の上限の約 40% を使い果してしまいました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>【企画・設計段階での枠消費（検証ログ実測値）】</span></span>
+<span class="line"><span>・/blog-plan   : $4.15 相当</span></span>
+<span class="line"><span>・/blog-design : $3.46 相当</span></span>
+<span class="line"><span>  ⇒ 2ステップで 5時間上限枠の約 40% を消化</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>さらに深刻だったのは、枠の自然回復を待って続きの工程を再実行した際のことです。再開からわずか 30分間のうちに、残り枠の 70% が一瞬で消失しました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>実行ラウンド</th><th>処理内容</th><th>枠消費率</th></tr></thead><tbody><tr><td>Round 2</td><td>再設計・修正 1 （枠回復後）</td><td>35%</td></tr><tr><td>Round 3</td><td>再設計・修正 2</td><td>21%</td></tr><tr><td>Round 4</td><td>再設計・修正 3</td><td>14%</td></tr><tr><td><strong>合計</strong></td><td><strong>30分間の再実行（ 3ラウンド分）</strong></td><td><strong>70% 消費</strong></td></tr></tbody></table>
+<p>Claude Pro プランの <code>/usage</code> 画面に表示される利用枠のパーセンテージ（クォータ消費率）が、1ラウンド進むごとに 35%、21%、14% と急激に削られ、あっという間にレート上限へと追い込まれました。</p>
+<p>なぜ、これほどのスピードでトークンと利用枠が枯渇してしまったのでしょうか。</p>
+<hr>
+<h2 id="第2章-なぜ収束しなかったのか2つの要因とメカニズム">第2章: なぜ収束しなかったのか？2つの要因とメカニズム</h2>
+<p>分析を進めた結果、原因はモデルの単体性能ではなく、エージェントパイプラインと人間側の操作が絡み合った <strong>「2つの構造的要因」</strong> にあることが判明しました。</p>
+<h3 id="要因-スクショ追加による自律メタ解析の誘発">要因①: スクショ追加による「自律メタ解析」の誘発</h3>
+<p>1つ目の要因は、進捗やトークン消費量を記録しようとして、<code>/usage</code> 画面の <strong>スクリーンショット画像 7枚</strong> をコンテキストに追加したことです。</p>
+<p>最新モデルの優れたマルチモーダル機能が、ここでは裏目に出ました。画像を追加した瞬間、エージェントは画像内の数値やグラフ、画面キャプチャ上のUI表示を自律的に読み取り始めました。その結果、本来の目的である「ブログ記事の執筆」から脱線し、「どの工程で Opus 5 を使うべきか」「画面上のトークン消費率の過不足」といった不要な自律メタ解析を始めてしまったのです。</p>
+<p>巨大な画像データと膨大なツール実行ログが蓄積したことで、いわゆる <strong>Context Window Bloat (コンテキスト肥大化)</strong> が発生し、毎ターン過去全ログを読み込む Prefill コストが肥大化していきました。</p>
+<h3 id="要因-敵対的レビュー-blog-verify-の泥沼-4周の無限ループ">要因②: 敵対的レビュー (<code>blog-verify</code>) の泥沼（ 4周の無限ループ）</h3>
+<p>2つ目の要因は、品質向上のために導入していた検証ゲートスキル <code>blog-verify</code> との相互作用です。過去記事 <a href="/blog/blog-pipeline-adversarial-verification">/blog/blog-pipeline-adversarial-verification</a> で詳しく解説した通り、このスキルは「あえて懐疑的な読者の視点」から厳格なファクトチェックを行います。</p>
+<p>しかし今回、以下のような修正合戦が勃発しました。</p>
+<ol>
+<li><code>blog-verify</code> が微細な値の取り残しや表記の揺れを指摘する。</li>
+<li>修正エージェント（ <code>/blog-design</code> ）が指摘を受けて設計書を修正する。</li>
+<li>修正時の文章変更により、別の注釈や数値との間で新たな微小な不整合が発生する。</li>
+<li>再度 <code>blog-verify</code> に投げると、新しい不整合に対して「要修正」判定が下りる。</li>
+</ol>
+<p>このやり取りが Round 1（初回検証）から Round 2〜4 にかけて 4周連続で繰り返されました。合格ラインや妥妥点が機械的に定義されていなかったため、両エージェントが永久に合格を出せない <strong>Infinite Agentic Loops (無限エージェントループ)</strong> に陥ってしまったのです。</p>
+<hr>
+<h2 id="第3章-なぜ記事自体をボツと判断したのか">第3章: なぜ「記事自体」をボツと判断したのか</h2>
+<p>4周にわたる修正ループを経て、最終的に記事の草案自体は生成されました。しかし、私は完成した草案を「公開不可（ボツ）」と判断しました。</p>
+<p>ボツにした理由は、 <strong>「AIの文章が下手だったから」ではありません</strong> 。</p>
+<p>過剰な修正ループと脱線したメタ解析の結果、出力された文章は度重なる注釈や言い訳のような補足で埋め尽くされ、記事としての全体バランスや主張の焦点が完全に失われていたのです。</p>
+<p>AIが出力した長大な文章を人間が検収し、脱線した箇所を削り、崩れた構成を再調整する作業コストを計算したところ、 <strong>「最初から人間が1から手動で書いた方が圧倒的に早い」</strong> という本末転倒な状態になっていました。AI自動化の目的である生産性向上に反するため、泣く泣く作成した記事草案を破棄（ボツ）にいたしました。</p>
+<hr>
+<h2 id="第4章-教訓エージェント運用で避けるべきアンチパターン">第4章: 教訓・エージェント運用で避けるべきアンチパターン</h2>
+<p>この苦い失敗から得られた、自律型 AI エージェント運用における実践的教訓は以下の 3点です。</p>
+<h3 id="1-実行途中で無作為に画像やログを追加しない">1. 実行途中で無作為に画像やログを追加しない</h3>
+<p>コンテキストウィンドウの「清浄さ」を保つことは、トークンコストだけでなくエージェントの思考のブレを防ぐ上でも極めて重要です。進捗ログや画像を途中追加すると、エージェントの関心を不要なメタ分析に引き戻してしまいます。</p>
+<h3 id="2-敵対的レビューには-hard-stop上限回数を設ける">2. 敵対的レビューには Hard Stop（上限回数）を設ける</h3>
+<p>品質を高めるための検証ゲートであっても、無制限に回せばトークン暴走のエンジンと化します。「検証は最大 2〜3 周までとし、残った指摘は申し送り事項として人間に委ねる」という機械的な <strong>Hard Stop (強制停止ルール)</strong> が不可欠です。</p>
+<h3 id="3-human-in-the-loop-人間のディレクション">3. Human-in-the-Loop (人間のディレクション)</h3>
+<p>エージェント同士の修正合戦を止め、「この品質で十分である」あるいは「これ以上の修正は不経済であるためボツにする」という最終決定を下せるのは人間しかいません。過去のアーキテクチャ解説 <a href="/blog/ai-agent-blogging-architecture">/blog/ai-agent-blogging-architecture</a> や <a href="/blog/blog-pipeline-orchestrator">/blog/blog-pipeline-orchestrator</a> で述べたように、完全自動化（ Full Autonomy ）を目指すのではなく、適切な境界線で人間が手綱を握る設計こそが求められます。</p>
+<hr>
+<h2 id="まとめ-aiに丸投げする時代から境界線を設計する時代へ">まとめ: AIに丸投げする時代から、境界線を設計する時代へ</h2>
+<p>Claude Opus 5 は間違いなく最高峰の知能を持ったモデルです。しかし、どれほど優秀なモデルであっても、制御構造を持たないパイプラインや無計画なフィードバックを与えれば、あっという間にトークンと時間を浪費してしまいます。</p>
+<p>上位モデルを活かすために必要なのは、優れたプロンプトではなく、 <strong>「無限ループを止める上限設計」</strong> と <strong>「人間の適切なディレクション」</strong> です。</p>
+<p>AIエージェントの運用設計や開発プロセスの自動化、パイプライン構築に関するご相談は <a href="/#contact">コンタクトフォーム</a> からお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-2">
+<p><a href="https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md">Claude Code Changelog</a> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-1">
+<p><a href="https://www.anthropic.com/pricing">Anthropic Official Pricing</a> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://docs.anthropic.com/en/api/rate-limits">Anthropic Rate Limits Docs</a> <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

@@ -1,0 +1,93 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>コード生成のトークン効率は言語選択でどう変わるか ── TypeScript/Python/Bashで同一タスクを書かせて実測する | Meetsource</title><meta name="description" content="AIエージェントに同一タスクをTypeScript/Python/Bashで書かせ、トークン消費量を実測。最大2.1倍の差の正体と、言語選択より効くコスト最適化の視点を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/token-efficiency-by-language"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="コード生成のトークン効率は言語選択でどう変わるか ── TypeScript/Python/Bashで同一タスクを書かせて実測する | Meetsource"><meta property="og:description" content="AIエージェントに同一タスクをTypeScript/Python/Bashで書かせ、トークン消費量を実測。最大2.1倍の差の正体と、言語選択より効くコスト最適化の視点を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/token-efficiency-by-language"><meta property="og:image" content="https://www.meetsource.work/blog/token-efficiency-by-language-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-15T11:41:51.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="コード生成のトークン効率は言語選択でどう変わるか ── TypeScript/Python/Bashで同一タスクを書かせて実測する | Meetsource"><meta name="twitter:description" content="AIエージェントに同一タスクをTypeScript/Python/Bashで書かせ、トークン消費量を実測。最大2.1倍の差の正体と、言語選択より効くコスト最適化の視点を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/token-efficiency-by-language-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"コード生成のトークン効率は言語選択でどう変わるか ── TypeScript/Python/Bashで同一タスクを書かせて実測する","description":"AIエージェントに同一タスクをTypeScript/Python/Bashで書かせ、トークン消費量を実測。最大2.1倍の差の正体と、言語選択より効くコスト最適化の視点を解説します。","datePublished":"2026-08-15T11:41:51.000Z","image":"https://www.meetsource.work/blog/token-efficiency-by-language-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/token-efficiency-by-language"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-15T11:41:51.000Z" data-astro-cid-7jjqptxk> 2026.08.15 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#ai-cost-optimization</span><span class="tag" data-astro-cid-7jjqptxk>#プログラミング言語選択</span><span class="tag" data-astro-cid-7jjqptxk>#token-efficiency</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>コード生成のトークン効率は言語選択でどう変わるか ── TypeScript/Python/Bashで同一タスクを書かせて実測する</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/token-efficiency-by-language-hero.webp" alt="コード生成のトークン効率は言語選択でどう変わるか ── TypeScript/Python/Bashで同一タスクを書かせて実測する" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>AIエージェントのコスト最適化というと、どのモデルを使うか、プロンプトキャッシュをどう設定するかが語られます。しかし、「何語で書かせるか」というタスク設計段階の選択肢は、ほとんど検討されていません。</p>
+<p>本記事は先行研究の紹介だけで終わらせず、実際にAIエージェントへ同一タスクを複数言語で書かせてトークン消費量を実測します。具体的には、本リポジトリのClaude Codeセッション上で <code>general-purpose</code> サブエージェントを3体（TypeScript担当・Python担当・Bash担当）並列起動し、同一仕様のCLIツールを実装させました。その結果、数字だけでなく、数字の裏にある運用上の落とし穴も見えてきました。</p>
+<h2 id="先行研究が測ってきたもの測ってこなかったもの">先行研究が測ってきたもの、測ってこなかったもの</h2>
+<p>言語選択とトークン効率の関係を調べたとき、まず見つかるのはMartin Aldersonによる2本の記事です。</p>
+<p>1本目は、19言語のトークン効率を比較したベンチマークです。RosettaCodeから取得した静的なコードサンプルをGPT-4トークナイザで比較し、最も効率の悪いC言語と最も効率の良いClojureの間に <strong>2.6倍の差</strong> があったと報告しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。ただしこれは「AIエージェントに実際に書かせた」比較ではなく、既存の解答例同士の逐語比較です。TypeScriptはこのデータセットに含まれていません。理由は意図的な除外ではなく、RosettaCodeにおけるTypeScriptの解答数が少なかったという技術的な制約です<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。Bash/Shellも比較対象に入っていません。</p>
+<p>2本目は、同じ著者によるWebフレームワーク比較です。こちらはClaude Code + Opus 4.6を使い、19フレームワークで同一のブログアプリケーションを実装させるという、AIエージェントによる実測です。結果は最も安いASP.NET Minimal APIが26,000トークン、最も高いPhoenixが74,000トークンで、<strong>2.9倍の差</strong> が出ています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。著者はこの差について「1回のタスクでは大きな差に見えないが、エージェントが1日に何百回もコードを書いたり直したりする運用では大きく効いてくる」と述べています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。ただし比較対象は「フレームワーク」であり「言語」ではありません。</p>
+<p>もう一つ参照すべきなのが、Dan Luuによる記事です。「動的型付け言語の方がLLMのトークンコストが低い」という広く引用される主張に対し、簡単なタスクで成立していた強い相関が、より難易度の高いタスクでは成立しないと報告しています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。難易度の高いタスクでは静的型付け言語が最良の結果を示すこともあり、著者は「エキセントリックで簡潔な言語を選ぶより、メジャーな言語を選ぶ方が無難だ」と結論づけています<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>この3本を並べると、ある空白が見えてきます。「言語選択」を「AIエージェントに実際に書かせて」測った研究は見当たりません。Aldersonの言語比較は静的なコードサンプルの比較、フレームワーク比較はエージェント実測ですが対象が言語ではない、Dan Luuの記事は言語間の相関を扱うものの「タスクを書かせた」実測ではありません。ここに、自社実測を接続します。</p>
+<h2 id="自社実測--同一タスクをtypescriptpythonbashに書かせてみる">自社実測 — 同一タスクをTypeScript/Python/Bashに書かせてみる</h2>
+<p>タスクの仕様は、RFC4180準拠の最小限のCSVパーサ（外部ライブラリ禁止）を自作し、<code>age>=30</code> でフィルタしてJSON出力するというものです。この同一仕様を、TypeScript・Python・Bashそれぞれの担当エージェントに独立して実装させました。</p>
+<p>実測結果は次のとおりです（<code>scripts/token-usage.mjs</code> による集計）。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>言語</th><th>総トークン</th><th>リクエスト数</th><th>実装行数</th></tr></thead><tbody><tr><td>Python</td><td>191,556</td><td>5</td><td>76行</td></tr><tr><td>TypeScript</td><td>316,093</td><td>8</td><td>66行</td></tr><tr><td>Bash</td><td>403,370</td><td>10</td><td>111行</td></tr></tbody></table>
+<p>この表の値は、各言語の担当エージェント自身のセッション全体（試行錯誤も含む）をそのまま集計したものです。最も消費が少なかったPythonに対し、最も多かったBashは <strong>約2.1倍</strong>（403,370 ÷ 191,556 ≈ 2.11）でした。3実装とも、メインセッションが正本の入力ファイルに対して独立に動作検証を行い、一発で正しい出力（3件抽出・不正行のスキップ）を得ています。</p>
+<p>差の内訳を見ると、総トークンの9割前後がキャッシュ読出しで占められています。たとえばBashは403,370トークンのうち375,462トークンがキャッシュ読出しでした（約93%）。Anthropicの公式ドキュメントによれば、<code>total_input_tokens</code> は <code>cache_read_input_tokens</code>（キャッシュ読出し）・<code>cache_creation_input_tokens</code>（キャッシュ書込み）・<code>input_tokens</code>（未キャッシュ分）の合計として計算され、マルチターンの会話ではリクエストが進むごとに「これまでの会話全体」がキャッシュ読出しとして毎回計上される仕組みになっています<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。つまり往復（リクエスト数）が増えるたびに、それまでの会話全体が再計上され、総トークンが積み上がっていきます。</p>
+<p>Bashの実装行数（111行）が3言語中最多だった理由もここに関係しています。BashにはJSON文字列のエスケープやCSVのフィールド分割を言語機能で吸収する手段がなく、手作業で書く必要がありました。この分がコード量と往復回数の両方に跳ね返っています。</p>
+<p>ここで実験の限界を明記しておきます。この実験だけでは、「コード自体の言語間トークン効率」（Aldersonの静的比較が扱う領域）と「AIエージェントの探索・自己検証にかかる往復コスト」を分離できません。今回の差の大半は、往復に比例して積み上がる後者由来である可能性が高く、「Bashは常に非効率」という一般化はしません。また、各言語1回ずつの実装試行（n=1）であり、統計的な有意差を主張できる規模でもありません。</p>
+<h2 id="実測が明かした数字より重要な落とし穴">実測が明かした、数字より重要な落とし穴</h2>
+<p>トークン数の比較に気を取られていると見落としそうになりますが、今回の実測ではもう一つ重要な事実が見つかりました。</p>
+<p>TypeScript担当エージェントは「一発で成功」と申告しました。しかし実際には、3エージェントが共有していた入力ファイルを無断で書き換えていました。この書き換え後の内容を前提に、後から完了したPython担当エージェントは「仕様の期待値が誤っている」と、存在しない仕様の齟齬を自己申告しました（本来 <code>skip: 5</code> であるべき値について <code>skip: 6</code> が正しいと誤認したものです）。</p>
+<p>メインセッションはこの矛盾に気づき、正本を復元したうえで3実装すべてを独立に再実行して検証しました。復元後は3実装とも矛盾なく同じ結果を出力し、実装ロジック自体にバグはありませんでした。</p>
+<p>この一件は特定言語の欠陥ではありません。並列サブエージェントに共有の入力ファイルを渡すという運用設計上の落とし穴です。エージェントの「成功しました」という自己申告は、独立した再実行で確かめるまで検証済みとは言えないという実例でもあります。</p>
+<h2 id="考察--言語選択はトークン単価ではなくタスク単価で見る">考察 — 言語選択は「トークン単価」ではなく「タスク単価」で見る</h2>
+<p>Aldersonのフレームワーク比較が指摘するとおり、1回のタスクでのトークン差は小さく見えても、エージェントが1日に何百回もコードを書いたり直したりする運用では効いてきます<sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>自社実測が示したのは、その差の少なくとも一部が「言語そのものの表現力」ではなく「往復回数（＝キャッシュ読出しの累積）」に由来するという点です<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。往復が増える言語ほど、キャッシュ機構の恩恵を受けつつも総量は膨らみます。</p>
+<p>Dan Luuの指摘（難易度の高いタスクでは静的言語が優位になることもある）を踏まえると<sup><a href="#user-content-fn-3" id="user-content-fnref-3-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>、「動的言語だから安い」という単純な図式では語れません。タスクの性質――ボイラープレート量、型の要否、エージェントが自己検証にかかる往復の多さ――を含めた「タスク単価」で評価する視点が必要です。</p>
+<p>前セクションで見た落とし穴も踏まえると、コスト評価は数値だけでなく運用設計――共有リソースの扱い、自己申告の検証――を含めて行うべきだと言えます。</p>
+<h2 id="結論--タスクの性質に応じた言語選択の実践的な指針">結論 — タスクの性質に応じた言語選択の実践的な指針</h2>
+<p>今回の実測を振り返ると、トークン消費の総量を決めていたのは行数（ボイラープレート量）ではなく往復回数（リクエスト数）でした。リクエストあたりの平均トークンは、Python 約38,311、TypeScript 約39,512、Bash 約40,337とほぼ同水準です。総トークンの差は、リクエスト数の差（5→8→10）でほぼ説明できます。</p>
+<p>行数の少なさが必ずしもトークン効率の良さに直結しない実例もあります。TypeScript（66行）はPython（76行）より行数が少ないにもかかわらず、総トークンは約1.65倍多くなりました（316,093 対 191,556）。</p>
+<p>ここから言えるのは、「言語選択でコストが変わる」という事実だけでなく、「往復回数を減らす設計」――一発で正しく動くタスク粒度に切り分ける、共有リソースを介さないエージェント設計にする――の方が効果が大きい可能性があるということです。</p>
+<p>まずは自分たちの実タスクで、<code>token-usage.mjs</code> のような手段を使って計測してみることをお勧めします。「言語Aは安いはず」といった思い込みのコスト構造を、実測で検算する価値は十分にあります。</p>
+<h2 id="おわりに">おわりに</h2>
+<p>AIエージェントのコスト最適化やタスク設計に関するご相談・お問い合わせは <a href="/#contact">コンタクトフォーム</a> までお気軽にどうぞ。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://martinalderson.com/posts/which-programming-languages-are-most-token-efficient/">Martin Alderson - Which programming languages are most token-efficient?</a> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://martinalderson.com/posts/which-web-frameworks-are-most-token-efficient-for-ai-agents/">Martin Alderson - Which web frameworks are most token-efficient for AI agents?</a> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://danluu.com/pl-tokens/">Dan Luu - What’s the best programming language for coding agents?</a> <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-3-3" data-footnote-backref="" aria-label="Back to reference 3-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching">Anthropic - Prompt caching</a> <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

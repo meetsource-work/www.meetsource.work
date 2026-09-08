@@ -1,0 +1,118 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>プロンプトを磨くのはもうやめよう。「Context」を整え「小さなLoop」を回すAIエンジニアリング実践 | Meetsource</title><meta name="description" content="単発のプロンプト入力（Vibe Coding）に頼る開発は限界を迎えています。事前に適切な構造化文脈を与えるContext Engineeringと、機械的テストで自動検証するLoop Engineeringの導入手法を、20行のBashスクリプト等の具体例付きで解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/vibe-coding-to-loop-engineering"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="プロンプトを磨くのはもうやめよう。「Context」を整え「小さなLoop」を回すAIエンジニアリング実践 | Meetsource"><meta property="og:description" content="単発のプロンプト入力（Vibe Coding）に頼る開発は限界を迎えています。事前に適切な構造化文脈を与えるContext Engineeringと、機械的テストで自動検証するLoop Engineeringの導入手法を、20行のBashスクリプト等の具体例付きで解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/vibe-coding-to-loop-engineering"><meta property="og:image" content="https://www.meetsource.work/blog/vibe-coding-to-loop-engineering-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-07-22T17:13:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="プロンプトを磨くのはもうやめよう。「Context」を整え「小さなLoop」を回すAIエンジニアリング実践 | Meetsource"><meta name="twitter:description" content="単発のプロンプト入力（Vibe Coding）に頼る開発は限界を迎えています。事前に適切な構造化文脈を与えるContext Engineeringと、機械的テストで自動検証するLoop Engineeringの導入手法を、20行のBashスクリプト等の具体例付きで解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/vibe-coding-to-loop-engineering-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"プロンプトを磨くのはもうやめよう。「Context」を整え「小さなLoop」を回すAIエンジニアリング実践","description":"単発のプロンプト入力（Vibe Coding）に頼る開発は限界を迎えています。事前に適切な構造化文脈を与えるContext Engineeringと、機械的テストで自動検証するLoop Engineeringの導入手法を、20行のBashスクリプト等の具体例付きで解説します。","datePublished":"2026-07-22T17:13:00.000Z","image":"https://www.meetsource.work/blog/vibe-coding-to-loop-engineering-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/vibe-coding-to-loop-engineering"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-07-22T17:13:00.000Z" data-astro-cid-7jjqptxk> 2026.07.23 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#loop-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#context-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#システム設計</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>プロンプトを磨くのはもうやめよう。「Context」を整え「小さなLoop」を回すAIエンジニアリング実践</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/vibe-coding-to-loop-engineering-hero.webp" alt="プロンプトを磨くのはもうやめよう。「Context」を整え「小さなLoop」を回すAIエンジニアリング実践" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <h2 id="はじめにノリでプロンプトを打つvibe-codingの限界">はじめに──ノリでプロンプトを打つ「Vibe Coding」の限界</h2>
+<p>CursorやClaude Code、GitHub CopilotといったAIコーディングツールの登場により、ソフトウェア開発のスピードは劇的に向上しました。2025年初頭、元OpenAIのAndrej Karpathy氏が提唱した <strong>「Vibe Coding（雰囲気で自然言語指示を与え、コードを書かせる）」</strong> と呼ばれる手法<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>は、世界中の開発者に「思考のスピードでソフトを作る」体験をもたらしました。</p>
+<p>しかし、大規模なリファクタリングや複雑なプロダクト開発において、Vibe Codingをそのまま続けようとすると、すぐに強烈な壁に突き当たります。</p>
+<ul>
+<li>プロンプトを何度打ち直しても、AIが勝手な推測をして別箇所を破壊してしまう</li>
+<li>修正のたびに人間の目で差分を確認し、エラーが出るたびに手動でプロンプトを入力し直す徒労感</li>
+<li>曖昧な指示の繰り返しが招く、コードの肥大化・構造の破綻・入力バリデーション欠落などのセキュリティリスク</li>
+</ul>
+<p>ここで浮き彫りになるのは、 <strong>「人間（開発者）自身が指示出しと確認のボトルネック（Human in the Loop）になっている」</strong> という事実です。今、AI開発の現場では、プロンプトの「言い回し」を磨く段階を超えて、新しい開発手法への移行が進んでいます。</p>
+<h2 id="step-1-指示promptから文脈contextへ">Step 1: 指示（Prompt）から文脈（Context）へ</h2>
+<p>「AIが思い通りのコードを書かない」という悩みの多くは、プロンプトの工夫不足（Prompt Engineeringの限界）ではなく、AIに与えている前提情報（Context）の不足に起因しています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>「〜のプロエンジニアとして振る舞って」といった単発のプロンプトテクニックをいくら施しても、プロジェクト固有のディレクトリ構造、依存関係、セキュリティ要件、命名規約を知らなければ、AIは勝手な推測（ハルシネーション）をせざるを得ません。</p>
+<p>そこで登場したのが <strong>「Context Engineering（コンテキストエンジニアリング）」</strong> です。コードを書かせる前に、以下のような構造化ドキュメントをあらかじめリポジトリ内に配置し、AIの行動範囲と前提ルールを明確に規定します。</p>
+<ul>
+<li><strong><code>AGENTS.md</code></strong>: エージェントに対する行動規範・実行可能なコマンド・禁止事項の定義</li>
+<li><strong>PRD（製品要件定義）</strong>: 作成すべき機能の仕様と境界条件</li>
+<li><strong>アーキテクチャ・コーディング規約</strong>: ディレクトリ配置ルールやテスト手法</li>
+</ul>
+<p>AIに「どう書くか」をその都度指示するのではなく、「守るべき制約（Context）」を事前に与えることで、開発の一貫性は一気に高まります。</p>
+<h2 id="step-2-文脈contextから自律実行loopへ">Step 2: 文脈（Context）から自律実行（Loop）へ</h2>
+<p>コンテキストを整えた次のステップは、人間が手動でプロンプトを打ち続けるのをやめ、AIを自律的かつ安全に繰り返し実行させる仕組み── <strong>「Loop Engineering（ループエンジニアリング）」</strong> への移行です<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>Towards Devの解説記事によると、Claude Codeの制作者であるBoris Cherny氏は <strong>「もうClaudeに直接プロンプトを打つことはない。プロンプトを打つループを回している。私の仕事はループを書くことだ」</strong> と述べており、OpenClaw開発者のPeter Steinberger氏も同じ姿勢を示しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>AI開発における「ループ」は、以下の2つの層に分かれます。</p>
+<ol>
+<li><strong>Inner Loop（内側ループ）</strong>: AIモデル自身の思考・ツール実行サイクル（Plan → Act → Observe）。Claude Codeなどのツール内部で自動実行されます。</li>
+<li><strong>Outer Loop（外側ループ）</strong>: 人間が構築する自動化システム。AIの実行を1つのステップとして扱い、その前後で検証と状態管理を行います。</li>
+</ol>
+<h3 id="outer-loopを構成する5つの要素">Outer Loopを構成する5つの要素</h3>
+<p>堅牢な Outer Loop は、次の5つの要素で設計されます<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<ul>
+<li><strong>Trigger（起動）</strong>: CronやGit Hook、手動スクリプトなどの実行契機</li>
+<li><strong>Frame（枠組み）</strong>: 課題のコンテキスト化と対象タスクの抽出</li>
+<li><strong>Run（実行）</strong>: エージェント CLIの呼び出し</li>
+<li><strong>Verify（検証）</strong>: テストやビルドによる機械的チェック</li>
+<li><strong>Record（記録）</strong>: 成否に応じたコミット、ログ保存、次タスクへの状態更新</li>
+</ul>
+<h3 id="最重要鉄則verification-split検証の分離">最重要鉄則：Verification Split（検証の分離）</h3>
+<p>Loop Engineering において最も重要な原則は、 <strong>「成果物を生成したAI自身に、合格判定を行わせない（Verification Split）」</strong> ことです<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>AIは原理的に自身の出力に対して過剰な自信を持つ傾向があります。「修正が完了しました」というAIの自己申告を信用せず、<code>npm test</code> や <code>pytest</code> といった <strong>非AIの機械的な終了コード（Exit Code 0）</strong> だけを成功判定基準として採用します。</p>
+<h2 id="step-3-今すぐ試せる小さなouter-loopの実践パターン3選">Step 3: 今すぐ試せる「小さなOuter Loop」の実践パターン3選</h2>
+<p>「Loop Engineering」と聞くと、複雑なマルチエージェントフレームワークが必要に思えるかもしれませんが、決してそんなことはありません。20行程度のシェルスクリプトから始めることができます。</p>
+<p>前述した Outer Loop の5要素（Trigger / Frame / Run / Verify / Record）を組み込んだ、明日から試せる3つの実践パターンを紹介します。</p>
+<h3 id="パターン1-1ファイルずつの段階的リファクタリングgoal-loop">パターン1: 1ファイルずつの段階的リファクタリング（Goal Loop）</h3>
+<p>JavaScriptからTypeScriptへの移行や、Deprecated関数の置き換えを1ファイルずつ安全に行うループです。失敗時は <code>git restore</code> で対象ファイルのみを元に戻すことで、他の作業領域を破壊しない安全性を担保します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#EA76CB;font-style:italic">#!/bin/bash</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 1ファイルずつ段階的に型定義を追加する Goal Loop 例</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#4C4F69"> file </span><span style="color:#8839EF">in</span><span style="color:#7C7F93"> $(</span><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#40A02B"> unmigrated_files.txt</span><span style="color:#7C7F93">);</span><span style="color:#8839EF"> do</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  echo</span><span style="color:#40A02B"> "--- Processing: </span><span style="color:#4C4F69">$file</span><span style="color:#40A02B"> (Frame) ---"</span></span>
+<span class="line"><span style="color:#4C4F69">  </span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  # AIの実行 (Run)</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">  claude</span><span style="color:#40A02B"> -p</span><span style="color:#40A02B"> "Migrate </span><span style="color:#4C4F69">$file</span><span style="color:#40A02B"> to TypeScript. Do not change public API signatures."</span></span>
+<span class="line"><span style="color:#4C4F69">  </span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  # 機械的検証 (Verify): tsc と test の Exit Code 0 を確認</span></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#1E66F5;font-style:italic"> npx</span><span style="color:#40A02B"> tsc</span><span style="color:#40A02B"> --noEmit</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#1E66F5;font-style:italic"> npm</span><span style="color:#40A02B"> test</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    echo</span><span style="color:#40A02B"> "SUCCESS: </span><span style="color:#4C4F69">$file</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">    git</span><span style="color:#40A02B"> commit</span><span style="color:#40A02B"> -am</span><span style="color:#40A02B"> "refactor: migrate </span><span style="color:#4C4F69">$file</span><span style="color:#40A02B"> to TS"</span><span style="color:#9CA0B0;font-style:italic"> # 記録とコミット (Record)</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">    sed</span><span style="color:#40A02B"> -i</span><span style="color:#40A02B"> ''</span><span style="color:#40A02B"> "/^</span><span style="color:#4C4F69">$file</span><span style="color:#40A02B">$/d"</span><span style="color:#40A02B"> unmigrated_files.txt</span><span style="color:#9CA0B0;font-style:italic">     # キューの更新</span></span>
+<span class="line"><span style="color:#8839EF">  else</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    echo</span><span style="color:#40A02B"> "FAILED: </span><span style="color:#4C4F69">$file</span><span style="color:#40A02B">. Rolling back safe..."</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">    git</span><span style="color:#40A02B"> restore</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$file</span><span style="color:#40A02B">"</span><span style="color:#9CA0B0;font-style:italic"> # 対象ファイルのみを安全にロールバック (Record)</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    echo</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$file</span><span style="color:#40A02B">"</span><span style="color:#179299"> >></span><span style="color:#40A02B"> failure_log.txt</span></span>
+<span class="line"><span style="color:#8839EF">  fi</span></span>
+<span class="line"><span style="color:#8839EF">done</span></span>
+<span class="line"></span></code></pre>
+<h3 id="パターン2-テスト駆動の自動バグ修正hook--goal-loop">パターン2: テスト駆動の自動バグ修正（Hook / Goal Loop）</h3>
+<p>落としているテスト（Failing Test）のスタックトレースをAIに渡し、テストがグリーンになるまで再試行させるループです。</p>
+<ul>
+<li><strong>Trigger / Frame</strong>: <code>pytest</code> の失敗ログからスタックトレースを抽出。</li>
+<li><strong>Run / Verify</strong>: AIに最小限の修正を行わせ、<code>pytest path/to/test.py</code> の Exit Code をチェック。</li>
+<li><strong>Record / Safety</strong>: 最大3回（Hard Cap）試行しても成功しない場合は、<code>git restore .</code> で変更をすべて破棄し、エラーログを残してエスカレーションします。</li>
+</ul>
+<h3 id="パターン3-夜間cronによるlintエラー順次解消cron-loop">パターン3: 夜間CronによるLintエラー順次解消（Cron Loop）</h3>
+<p>毎晩Cronで自動起動し、コードベース内のLint警告を1件ずつ解消してプルリクエストを作成する運用例です。</p>
+<ul>
+<li><strong>Trigger</strong>: 毎晩午前2時のCronジョブ。</li>
+<li><strong>Frame</strong>: <code>eslint</code> の警告一覧から対象ファイルを特定し、既存の同名PRが存在しないことを確認した上で <code>git checkout -b fix/lint-$file</code> を作成。</li>
+<li><strong>Run / Verify</strong>: AIがLint修復を実行し、<code>npx eslint</code> および <code>npm test</code> が Exit Code 0 で通過するか検証。</li>
+<li><strong>Record</strong>: 検証成功時のみ <code>git commit</code> と <code>gh pr create</code> を実行し、失敗時はブランチを破棄します。</li>
+</ul>
+<h2 id="まとめai時代におけるエンジニアの本当の役割">まとめ──AI時代におけるエンジニアの本当の役割</h2>
+<p>AIネイティブ時代の開発において、エンジニアの価値は「プロンプトの言い回しをブラッシュアップすること」ではありません。</p>
+<ol>
+<li><strong>Context Engineering</strong>: リポジトリの制約・要件・規約（<code>AGENTS.md</code>）を明確に定義する</li>
+<li><strong>Loop Engineering</strong>: 機械的テスト（Exit Code 0）を軸とした自動検証ループを設計する</li>
+</ol>
+<p>プロンプトを打ち続けるキーボード作業員から脱却し、コンテキストと検証ループをデザインする <strong>「システムデザイナー」</strong> へと進化することこそが、これからのAIエンジニアリングの本質です。</p>
+<p>まずは手元のプロジェクトで、1ファイルのリファクタリングを回す20行のスクリプトを書くことから始めてみませんか？</p>
+<hr>
+<p>Meetsourceでは、AIエージェントを活用した開発プロセスの設計・自動化支援や、安全な品質ガバナンス（AI Operations）の導入支援を行っています。自動化ループの構築や開発プロセスの標準化についてご関心がある方は、ぜひ <a href="/#contact">コンタクトフォーム</a> からお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-3">
+<p><a href="https://medium.com/@gauravshanker0206/vibe-coding-is-over-heres-what-comes-next-3919ee5688f0">Medium - Vibe coding is over. Here’s what comes next</a> (Gaurav Shanker, 2026) <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://medium.com/@wahaboladimeji99/i-stopped-prompting-ai-better-i-started-giving-it-better-context-e784a251d0ea">Medium - I Stopped Prompting AI Better. I Started Giving It Better Context.</a> (Wahab Oladimeji, 2026) <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-1">
+<p><a href="https://towardsdev.com/the-creator-of-claude-code-doesnt-prompt-it-anymore-bf2ac2e404d3">Towards Dev - The Creator of Claude Code Doesn’t Prompt It Anymore</a> (Saurabh Singh, 2026-07) <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 3-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 3-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

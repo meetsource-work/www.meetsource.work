@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>AIエージェントに複数選択を迫らせると会話コストが増える理由 — 選択肢ラベルの二重化事故 | Meetsource</title><meta name="description" content="AIエージェントや支援ツールとの対話で、複数確認時に選択肢番号が重複する「ラベル二重化事故」と画面がブロックされるモーダルUIの課題を解説。一問一答原則と「直交ラベル命名規則」により1打鍵で即答できるプロンプトUI設計を提案します。"><link rel="canonical" href="https://www.meetsource.work/blog/agent-option-label-duplication"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="AIエージェントに複数選択を迫らせると会話コストが増える理由 — 選択肢ラベルの二重化事故 | Meetsource"><meta property="og:description" content="AIエージェントや支援ツールとの対話で、複数確認時に選択肢番号が重複する「ラベル二重化事故」と画面がブロックされるモーダルUIの課題を解説。一問一答原則と「直交ラベル命名規則」により1打鍵で即答できるプロンプトUI設計を提案します。"><meta property="og:url" content="https://www.meetsource.work/blog/agent-option-label-duplication"><meta property="og:image" content="https://www.meetsource.work/blog/agent-option-label-duplication-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-06T10:36:30.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="AIエージェントに複数選択を迫らせると会話コストが増える理由 — 選択肢ラベルの二重化事故 | Meetsource"><meta name="twitter:description" content="AIエージェントや支援ツールとの対話で、複数確認時に選択肢番号が重複する「ラベル二重化事故」と画面がブロックされるモーダルUIの課題を解説。一問一答原則と「直交ラベル命名規則」により1打鍵で即答できるプロンプトUI設計を提案します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/agent-option-label-duplication-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"AIエージェントに複数選択を迫らせると会話コストが増える理由 — 選択肢ラベルの二重化事故","description":"AIエージェントや支援ツールとの対話で、複数確認時に選択肢番号が重複する「ラベル二重化事故」と画面がブロックされるモーダルUIの課題を解説。一問一答原則と「直交ラベル命名規則」により1打鍵で即答できるプロンプトUI設計を提案します。","datePublished":"2026-08-06T10:36:30.000Z","image":"https://www.meetsource.work/blog/agent-option-label-duplication-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/agent-option-label-duplication"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-06T10:36:30.000Z" data-astro-cid-7jjqptxk> 2026.08.06 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#prompt-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#ui-ux</span><span class="tag" data-astro-cid-7jjqptxk>#human-in-the-loop</span><span class="tag" data-astro-cid-7jjqptxk>#システム設計</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>AIエージェントに複数選択を迫らせると会話コストが増える理由 — 選択肢ラベルの二重化事故</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/agent-option-label-duplication-hero.webp" alt="AIエージェントに複数選択を迫らせると会話コストが増える理由 — 選択肢ラベルの二重化事故" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>AIエージェントやコーディング支援ツールを日常的に使っていると、ふとした確認のタイミングで「文字を打つのが急に面倒くさくなる」瞬間に直面することがあります。</p>
+<p>本来ならキーボードの <code>1</code> を1個だけ叩いて Enter を押せば済むはずの確認応答なのに、エージェント側の問いかけ方のせいで「1問目は1、2問目は2です」といった説明文を入力させられる。あるいは、画面全体がポップアップでロックされ、裏でツールが停止したまま待たされる——。</p>
+<p>本記事では、AIエージェントとの対話で人間のテンポを奪う「選択肢ラベルの二重化事故」とブロッキング UI の問題を実務ログをもとに解剖します。その上で、認知負荷を最小化する「一問一答原則」と「直交ラベル命名規則（Orthogonal Option Labeling）」の実践的なプロンプト設計を解説します。</p>
+<hr>
+<h2 id="導入-人間とaiエージェントの対話テンポを奪う無駄な1文">導入: 人間とAIエージェントの対話テンポを奪う「無駄な1文」</h2>
+<p>対話型AIエージェントのインターフェース設計では、「会話コスト（Keystroke Cost）」の削減がユーザー体験の鍵を握ります。</p>
+<p>例えば、選択肢が提示された際、本来の理想は <strong>単一キー入力（2打鍵 / 2 Byte）</strong> です。しかし、エージェントの問いかけに対して「1問目の答えは1で、2問目は2です」と文脈を補正する文章を手打ちさせられると、<strong>文脈補正入力（30〜40打鍵 / 約60 Byte）</strong> が発生し、打鍵コストは約 15〜20 倍に膨れ上がります。</p>
+<p>人間の認知・操作モデルである KLM (Keystroke-Level Model) で計算すると、単一キー入力時間（精神的準備時間 M = 1.35秒 + 打鍵 K = 0.2秒 で約 1.55 秒）に対し、補正文章の入力時間（M + 15K + M で約 5.7 秒以上）が必要となり、作業所要時間は約 3.7 倍に化けてしまいます。</p>
+<p>また、ユーザーインターフェースの形態に関しても大切な観点があります。画面をポップアップダイアログ等で一時停止させるモーダル UI（<code>ask_question</code> 等のツール呼び出し）は、一見すると構造化されたフォームに見えますが、裏でシステムがブロッキング待機状態になり「画面を占有して待たされている」というストレスを与えがちです。開発者の運用フィードバックにおいても、画面をブロックしないチャットや CLI 上のインラインなテキスト提示で、軽快に1文字応答できる対話スタイルが好まれる傾向があります。</p>
+<p>Microsoft の Human-AI Interaction Guidelines (Guideline G1/G11)<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup> でも示されている通り、AIシステムが人間へ指示や選択を求める際は、ユーザーのメンタルモデルを阻害せず、意図と選択肢を明瞭に提示することが求められます。</p>
+<hr>
+<h2 id="実測ケーススタディ選択提示3回中2回で起きた選択肢ラベル二重化事故">【実測ケーススタディ】選択提示3回中2回で起きた選択肢ラベル二重化事故</h2>
+<p>では、なぜユーザーは「1問目は1です」といった冗長な補正文を打たざるを得なくなるのでしょうか。その元凶が <strong>「選択肢ラベルの二重化事故（Option Label Duplication）」</strong> です。</p>
+<p>当方の実務対話ログ<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>から、AIエージェントとの実際の確認セッションを分析したケーススタディをご紹介します。</p>
+<p>ある対話セッションでユーザーが発話した 6 回のうち、エージェント側から確認用の選択肢提示が行われた発話は 3 回ありました。そのうち <strong>3回中2回</strong> において、全質問に対して「1, 2, 3」という同一番号インデックスが使い回される選択肢提示が発生していました。</p>
+<h3 id="事故が起きた対話の構造">事故が起きた対話の構造</h3>
+<p>エージェントが一括で複数の確認を行おうとした際、以下のようなメッセージが生成されました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>【確認1: 修正方針】</span></span>
+<span class="line"><span>1. 仕組み化してルールにする</span></span>
+<span class="line"><span>2. 今回のみ手動修正</span></span>
+<span class="line"><span>3. 保留</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>【確認2: 実行タイミング】</span></span>
+<span class="line"><span>1. 今すぐセッション内で実行</span></span>
+<span class="line"><span>2. 次回へ延期</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>このとき、ユーザーが「1」とだけ返答すると、「確認1の1」なのか「確認2の1」なのかをエージェントが判定できません。結果として、同一ターン内で <strong>「シンボル空間の衝突（Symbol/Namespace Collision）」</strong> が発生し、ユーザーは自衛のために以下のような文脈補正テキストを入力させられました。</p>
+<ul>
+<li>ユーザーの実際の入力例: <strong>「1は仕組み化したい」</strong></li>
+<li>ユーザーの実際の入力例: <strong>「1はB。2,3は今は触らない」</strong></li>
+</ul>
+<p>一方で、選択提示が行われた残りの 1 回（単一の質問に対して 1〜4 の選択肢を提示したケース）では、ユーザーは <strong>「2」</strong> と 1 文字入力するだけで即座にやり取りが完了していました。</p>
+<p><img src="/blog/agent-option-label-duplication-diagram-label-collision.webp" alt="選択肢ラベルの二重化事故と直交ラベル命名規則の比較図解"></p>
+<hr>
+<h2 id="対話設計の原則-基本は一問一答と直交ラベル命名規則">対話設計の原則: 基本は「一問一答」と「直交ラベル命名規則」</h2>
+<p>このような選択肢の曖昧さとユーザーの入力ストレスを解消するために、AIエージェントの対話UI設計では以下の2つの原則を組み合わせることが有効です。</p>
+<h3 id="原則1-一問一答1ターン1質問">原則1: 一問一答（1ターン1質問）</h3>
+<p>最も根本的で強力な対策は、関連する確認項目であっても一括で問い詰めず、<strong>「1ターンにつき1つの質問だけを行う」</strong> という一問一答設計です。</p>
+<p>ヒアリングツールやインタビュアー形式の対話スタイルのように、1つの確認に対して 1文字で「1」と答えさせ、その回答を受けてから次の質問に進むことで、シンボル空間の衝突そのものを回避できます。</p>
+<h3 id="原則2-直交ラベル命名規則orthogonal-option-labeling">原則2: 直交ラベル命名規則（Orthogonal Option Labeling）</h3>
+<p>設定値の一括確定など、やむを得ず 1 つのメッセージ内で複数の質問を一括提示する場合は、同一メッセージ内の全選択肢に対して <strong>「互いに重複しない（Orthogonal / Disjoint）シンボル空間」</strong> を割り振る「直交ラベル命名規則」を適用します。</p>
+<h4 id="パターンa-記号種別分離">パターンA: 記号種別分離</h4>
+<p>質問ごとに使用する記号の種類を変えるパターンです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>【確認1: 修正方針】</span></span>
+<span class="line"><span>[A] 仕組み化してルールにする</span></span>
+<span class="line"><span>[B] 今回のみ手動修正</span></span>
+<span class="line"><span>[C] 保留</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>【確認2: 実行タイミング】</span></span>
+<span class="line"><span>[1] 今すぐセッション内で実行</span></span>
+<span class="line"><span>[2] 次回へ延期</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>ユーザーの入力例: <strong>「A 1」</strong> （確認1は A、確認2は 1 を選択）</p>
+<h4 id="パターンb-連番インデックス分離">パターンB: 連番インデックス分離</h4>
+<p>全質問を通して単一の通し番号を付与するパターンです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>【確認1: 修正方針】</span></span>
+<span class="line"><span>[1] 仕組み化してルールにする</span></span>
+<span class="line"><span>[2] 今回のみ手動修正</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>【確認2: 実行タイミング】</span></span>
+<span class="line"><span>[3] 今すぐセッション内で実行</span></span>
+<span class="line"><span>[4] 次回へ延期</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>ユーザーの入力例: <strong>「1 3」</strong></p>
+<p>いずれのパターンでも、ユーザーは <code>A 1</code> や <code>1 3</code> といった 2〜3 文字の最小入力だけで、曖昧さなく全選択を即座に完了できます。</p>
+<hr>
+<h2 id="一括確認用プロンプトの実践設計とエージェント制御">一括確認用プロンプトの実践設計とエージェント制御</h2>
+<p>直交ラベル命名規則をエージェントに自律適用させるには、システムプロンプトに「制約ルール」と「回答例（Few-Shot）」のペアを明記することが効果的です。</p>
+<p>以下は、自作のエージェントハーネスや LLM システムプロンプトに組み込むことができるプロンプト設定例です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#FE640B">## ユーザー確認・選択肢提示のルール (Interaction &#x26; Labeling Rules)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#179299">1.</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">一問一答の原則</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">:</span></span>
+<span class="line"><span style="color:#4C4F69">   ユーザーに確認を行う際は、原則として1ターンに1つの質問のみを行ってください。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#179299">2.</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">複数質問時における直交ラベルの強制 (Orthogonal Option Labeling)</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">:</span></span>
+<span class="line"><span style="color:#4C4F69">   やむを得ず1メッセージ内で複数の質問・確認を同時に提示する場合は、選択肢番号の重複を絶対に避けてください。</span></span>
+<span class="line"><span style="color:#179299">   -</span><span style="color:#4C4F69"> 1つ目の質問 (Q1) には、アルファベット大文字 </span><span style="color:#40A02B">`[A]`</span><span style="color:#4C4F69">, </span><span style="color:#40A02B">`[B]`</span><span style="color:#4C4F69">, </span><span style="color:#40A02B">`[C]`</span><span style="color:#4C4F69"> を使用する。</span></span>
+<span class="line"><span style="color:#179299">   -</span><span style="color:#4C4F69"> 2つ目の質問 (Q2) には、アラビア数字 </span><span style="color:#40A02B">`[1]`</span><span style="color:#4C4F69">, </span><span style="color:#40A02B">`[2]`</span><span style="color:#4C4F69">, </span><span style="color:#40A02B">`[3]`</span><span style="color:#4C4F69"> を使用する。</span></span>
+<span class="line"><span style="color:#179299">   -</span><span style="color:#4C4F69"> 3つ目の質問 (Q3) には、小文字 </span><span style="color:#40A02B">`[a]`</span><span style="color:#4C4F69">, </span><span style="color:#40A02B">`[b]`</span><span style="color:#4C4F69">, </span><span style="color:#40A02B">`[c]`</span><span style="color:#4C4F69"> を使用する。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#179299">3.</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">最小回答ガイドの提示</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">:</span></span>
+<span class="line"><span style="color:#4C4F69">   メッセージの末尾に、ユーザーが最小打鍵数で回答できる入力例（例: 「A 1」とご回答ください）を必ず添えてください。</span></span>
+<span class="line"></span></code></pre>
+<p>プロンプト内で「制約」と「回答例」をペアで提示することにより、主要な LLM などのモデルにおいて、期待する出力フォーマットを高い精度で誘導できるようになります。</p>
+<hr>
+<h2 id="まとめ-エージェントの聴き方一つで人間のストレスはゼロになる">まとめ: エージェントの「聴き方」一つで人間のストレスはゼロになる</h2>
+<p>AIエージェントの導入において、レスポンス速度やモデル性能と同等に重要なのが <strong>「人間側の入力コストをどこまで下げられるか」</strong> という対話 UI/UX の視点です。</p>
+<p>モーダルダイアログによる画面ブロッキングや、番号重複による文章補正入力のストレスを排除するために、以下のチェックリストを導入時に活用してみてください。</p>
+<div class="callout" data-callout="note" data-collapsible="false"><div class="callout-title"><div class="callout-title-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="2" x2="22" y2="6"></line><path d="M7.5 20.5 19 9l-4-4L3.5 16.5 2 22z"></path></svg></div><div class="callout-title-text">Note</div></div><div class="callout-content"><h3 id="エージェント対話設計チェックリスト">エージェント対話設計チェックリスト</h3><ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 原則として 1 ターン 1 質問（一問一答）で会話が設計されているか？</li>
+<li class="task-list-item"><input type="checkbox" disabled> 一括確認時、1 メッセージ内で選択肢の番号・記号が重複していないか？</li>
+<li class="task-list-item"><input type="checkbox" disabled> 質問ごとに <code>Q1: A/B/C</code>, <code>Q2: 1/2/3</code> のように直交するラベルが割り当てられているか？</li>
+<li class="task-list-item"><input type="checkbox" disabled> ユーザーが「A 1」等の最小文字数で即答できる回答ガイド例を提示しているか？</li>
+<li class="task-list-item"><input type="checkbox" disabled> 画面をロックするモーダル対話に頼らず、インラインテキストで軽快に応答できるか？</li>
+</ul></div></div>
+<p>エージェント側の「聴き方」をほんの少し整えるだけで、人間は思考のスピードを落とすことなく、快適に AI との協働を続けることができます。</p>
+<p>AIエージェントのプロンプト設計や対話UI開発、Human-in-the-loop システム構築に関するご相談は <a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://doi.org/10.1145/3290605.3300233">Microsoft Guidelines for Human-AI Interaction (ACM CHI 2019 Paper / DOI: 10.1145/3290605.3300233)</a> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://www.microsoft.com/en-us/research/publication/guidelines-for-human-ai-interaction/">Microsoft Research: Guidelines for Human-AI Interaction Paper Page</a> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p>当方の実務対話ログ（2026-08-05セッション） <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

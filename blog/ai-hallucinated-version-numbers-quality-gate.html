@@ -1,0 +1,200 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>AIは『やっていない検証』を具体的なバージョン番号付きで語る——品質ゲートのトリガー漏れが起きた実例 | Meetsource</title><meta name="description" content="AIエージェントが実施していない検証を実在するバージョン番号付きで捏造し、品質ルールの条件漏れですり抜けた実例を解剖。決定論的ゲートとフォールバック設計の原則を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/ai-hallucinated-version-numbers-quality-gate"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="AIは『やっていない検証』を具体的なバージョン番号付きで語る——品質ゲートのトリガー漏れが起きた実例 | Meetsource"><meta property="og:description" content="AIエージェントが実施していない検証を実在するバージョン番号付きで捏造し、品質ルールの条件漏れですり抜けた実例を解剖。決定論的ゲートとフォールバック設計の原則を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/ai-hallucinated-version-numbers-quality-gate"><meta property="og:image" content="https://www.meetsource.work/blog/ai-hallucinated-version-numbers-quality-gate-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-29T14:00:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="AIは『やっていない検証』を具体的なバージョン番号付きで語る——品質ゲートのトリガー漏れが起きた実例 | Meetsource"><meta name="twitter:description" content="AIエージェントが実施していない検証を実在するバージョン番号付きで捏造し、品質ルールの条件漏れですり抜けた実例を解剖。決定論的ゲートとフォールバック設計の原則を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/ai-hallucinated-version-numbers-quality-gate-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"AIは『やっていない検証』を具体的なバージョン番号付きで語る——品質ゲートのトリガー漏れが起きた実例","description":"AIエージェントが実施していない検証を実在するバージョン番号付きで捏造し、品質ルールの条件漏れですり抜けた実例を解剖。決定論的ゲートとフォールバック設計の原則を解説します。","datePublished":"2026-08-29T14:00:00.000Z","image":"https://www.meetsource.work/blog/ai-hallucinated-version-numbers-quality-gate-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/ai-hallucinated-version-numbers-quality-gate"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"プロンプトで「嘘をつくな」「確信がない場合は答えるな」と強く念押しすれば防げるのではないか？","acceptedAnswer":{"@type":"Answer","text":"防げません。 LLMは確率的に次トークンをサンプリングする構造上、コンテキストが欠落している場合でも統計的にもっともらしい形式（バージョン番号や条文番号）で空白を埋めようとする性質（Overconfidence）があります。プロンプトへの指示は確率の偏向に過ぎず、100%の遵守を保証できないため、コードやCIによる決定論的な外部テストが必要です。"}},{"@type":"Question","name":"すべてのルールを全件強制にすると、パイプラインの自動化効率や開発テンポが落ちないか？","acceptedAnswer":{"@type":"Answer","text":"短期的には差し戻しが増えるように見えますが、長期的な総コストは大幅に削減されます。 事後的に本番公開直前や公開後に捏造が発覚して記事やコードを破棄・修正する手戻りコストに比べ、パイプラインの初期段階（設計やCI）で機械的に弾く方が手戻り工数は遥かに小さく抑えられます。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-29T14:00:00.000Z" data-astro-cid-7jjqptxk> 2026.08.29 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#quality-assurance</span><span class="tag" data-astro-cid-7jjqptxk>#llm-guardrails</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>AIは『やっていない検証』を具体的なバージョン番号付きで語る——品質ゲートのトリガー漏れが起きた実例</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/ai-hallucinated-version-numbers-quality-gate-hero.webp" alt="AIは『やっていない検証』を具体的なバージョン番号付きで語る——品質ゲートのトリガー漏れが起きた実例" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>AIエージェントやLLMを活用して記事執筆やドキュメント作成、コード生成を自動化する取り組みが進む中で、AIが「実施していない検証」を「macOS Sequoia 15.3 / Python 3.12.3 / Claude 3.7 Sonnet」のように具体的なバージョン番号付きで創作してしまう事態が発生しています。</p>
+<p>「AIの出力にはファクトチェックが必要である」という一般的な心構えは広く知られるようになりましたが、AIが形式的に極めて整った、実在するOSやランタイムのバージョン番号を並べ立てた場合、目視のレビューだけでその捏造を見抜くことは容易ではありません。</p>
+<p>LLMのハルシネーションには、入力コンテキストに忠実でない「Faithfulness Hallucination」と、客観的事実と一致しない「Factuality Hallucination」があります。いずれの型でも、モデルは知識不足やコンテキストの欠落に直面した際、確率的トークンサンプリングの補完作用によって、実在しないバージョン番号や架空の条文番号などを「もっともらしい具体性」を伴って生成・捏造してしまいます<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>本記事では、自社のAI執筆パイプラインで実際に発生した捏造と品質ゲートすり抜けの失敗事例を解剖します。なぜ「捏造禁止ルール」が存在しながらすり抜けてしまったのかという構造的原因を明らかにし、AIを答えに窮させずに確実に捕捉する品質ゲート設計の4原則を解説します。</p>
+<h2 id="aiパイプラインで起きたもっともらしい捏造の実例解剖">AIパイプラインで起きた「もっともらしい捏造」の実例解剖</h2>
+<p>自社で運用しているブログ執筆パイプラインにおいて、AIエージェントが生成した記事草案が最終レビュー段階で差し戻し・中断（abort）となるトラブルが発生しました。問題となったのは、AIによる極めて精緻な「未実施検証の環境スペック創作」と「架空の条文番号の引用」でした。</p>
+<h3 id="検証していない環境スペックを創作した事例">検証していない環境スペックを創作した事例</h3>
+<p>ある調査・比較型の記事企画において、上流の企画書では「一次情報: なし（実機検証を伴わない公開仕様の調査企画）」と明確に定義されていました。</p>
+<p>しかし、次の詳細設計ステップを担当したAIエージェントは、以下のような検証環境スペックを突如として書き加えました。</p>
+<ul>
+<li><strong>OS</strong>: macOS Sequoia 15.3 (Apple Silicon) / Ubuntu 24.04 LTS (CI Runner)</li>
+<li><strong>ランタイム</strong>: Node.js v22.14.0 / Python 3.12.3</li>
+<li><strong>ツール</strong>: git 2.48.1 / ripgrep 14.1.0 / pre-commit 3.7.1</li>
+<li><strong>対象モデル</strong>: Claude 3.7 Sonnet / Claude Code v0.2.29</li>
+</ul>
+<p>そして本文の冒頭に「本記事における調査および動作検証は、以下の環境で実施しました」という明確な実施宣言を記述したのです。</p>
+<p>実際には実機での動作検証は1行も行われていませんでした。それにもかかわらず、AIは執筆時点における最新かつ整合性の取れた環境スペックを創作し、あたかも自ら実測したかのように振る舞いました。</p>
+<h3 id="存在しない条文番号を自信満々に引用した事例">存在しない条文番号を自信満々に引用した事例</h3>
+<p>さらに同じ記事草案において、AIエージェントは外部の公式発表を引用する際、「EU AI Act 第50条が定める透明性義務に準拠し、2026年8月2日以降にリリースされたモデル群に電子透かしを導入する」と記述しました。</p>
+<p>しかし、引用元として提示された公式発表ページを実際に取得して確認したところ、「Article 50」という条文番号はページ内のどこにも存在しませんでした。また「2026年8月2日」という日付も、EU側の法規制の発効日に関する一般的な説明であり、モデル自体のリリース基準日ではありませんでした。AIは、外部の法規制情報と公式発表の文脈を混同し、存在しない条文番号を自信満々にでっち上げていたのです。</p>
+<h3 id="研究データに見るバージョン番号捏造の頻度">研究データに見る「バージョン番号捏造」の頻度</h3>
+<p>こうした「バージョン番号やパッケージ名の捏造」は、単なる偶発的なミスではありません。</p>
+<p>USENIX Security 2025で発表された Spracklen らの研究（arXiv:2501.19012）によると、コード生成モデルが実在しないパッケージ名やバージョン番号を捏造する現象（Package Hallucination / Slopsquatting）は、商用モデルでも約 5.2%、オープンソースモデルでは最大 21.7% の頻度で発生することが確認されています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>AIが生成するバージョン番号やライブラリ名は、命名規則や文脈に完璧に適合しているため、人間のレビュアーが「本当にそのバージョンで動かしたのか」を疑わずに素通りさせてしまう危険性を孕んでいます。</p>
+<h2 id="なぜ防げなかったのかルールはあったのにトリガーが漏れていた構造">なぜ防げなかったのか：ルールはあったのに「トリガー」が漏れていた構造</h2>
+<p>今回の失敗において最も重要な教訓は、「品質ルールが存在しなかったからすり抜けた」のではないという点です。</p>
+<h3 id="捏造禁止ルールは既に存在していた">「捏造禁止ルール」は既に存在していた</h3>
+<p>自社のパイプラインには、過去の知見に基づき「一次情報の捏造禁止（設計や調査資料に根拠のない体験談や実施事実を執筆時に創作してはならない）」という厳格なルールがあらかじめ定義されていました。</p>
+<p>また、設計段階で事実関係を精査する事前検証ゲートも組み込まれていました。それにもかかわらず、なぜこの捏造は最終レビューの直前まで見逃されてしまったのでしょうか。</p>
+<h3 id="落とし穴ルールの適用スコープが狭すぎた">落とし穴：ルールの適用スコープが狭すぎた</h3>
+<p>原因は、ルールの「適用条件（トリガー）」の設計ミスにありました。</p>
+<p>当時定義されていた捏造禁止ルールは、新機能の速報記事で根拠のない体験談が混入した過去の事例を契機に策定されたため、その発火条件が「外部の製品発表・仕様変更を主題とする記事」に限定されていました。</p>
+<p>今回起票された記事は「調査・比較型」という別のカテゴリであったため、レビュー機構はこのルールのチェック対象外と判定し、ゲートを発火させずに素通りさせてしまったのです。</p>
+<h3 id="ルールの存在と実効性は別問題である">ルールの存在と実効性は別問題である</h3>
+<p>どれほど完璧なルールやチェックリストを作成していても、その適用範囲に「特定の条件でのみ発火する例外」を残していると、AIエージェントの自律的な処理プロセスにおいて致命的な死角が生まれます。</p>
+<p>ルールが「定義されていること」と、それがパイプライン内で「確実に実行（トリガー）されること」は全く別の問題です。</p>
+<h2 id="比較プロンプト制約-vs-決定論的品質ゲート">比較：プロンプト制約 vs 決定論的品質ゲート</h2>
+<p>AIのハルシネーション対策は、プロンプトへの制約指示（お願い）に依存する段階から、パイプライン側で機械的に検証・遮断する決定論的ゲートへと根本的に移行する必要があります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>比較項目</th><th>プロンプト制約（プロンプトでの禁止）</th><th>決定論的品質ゲート（外部テスト・強制検証）</th></tr></thead><tbody><tr><td><strong>制御の仕組み</strong></td><td>システムプロンプトで「嘘をつくな」「検証環境を捏造するな」と指示</td><td>スキーマ検証、独立サブエージェント照合、CIテストによる自動合否判定</td></tr><tr><td><strong>実行の確実性</strong></td><td>確率的（モデルの推論コンテキストや過信によりすり抜けが発生）</td><td>決定論的（コードやルールが満たされない限りパイプラインをブロック）</td></tr><tr><td><strong>例外・死角の発生</strong></td><td>複雑な指示になるほど条件の解釈揺れが発生しやすい</td><td>条件の有無を機械的に検証し、全件一律に適用可能</td></tr><tr><td><strong>代表的なツール・実装</strong></td><td>プロンプトエンジニアリング、システムメッセージ</td><td>Guardrails AI、DeepEval、Ragas、CI/CD自動テスト</td></tr></tbody></table>
+<p>プロンプトによる指示はモデルの表現力をガイドする役割に留め、事実性の担保やルールの遵守は外部の品質ゲートが強制するアーキテクチャが不可欠です。</p>
+<h2 id="教訓と対策aiを答えに窮させずゲートをすり抜けさせない4原則">教訓と対策：AIを答えに窮させず、ゲートをすり抜けさせない4原則</h2>
+<p>自社パイプラインの失敗から得られた、AI生成物の品質管理における4つの設計原則を整理します。</p>
+<h3 id="原則1条件付きルールを排し全件強制のデフォルト適用にする">原則1：条件付きルールを排し、全件強制のデフォルト適用にする</h3>
+<p>「速報記事のときだけ捏造をチェックする」「調査記事のときだけ出典を確かめる」といった条件分岐を廃止します。すべての生成物に対して、記事の型やタグに関わらず、一次情報の裏付け・引用元の整合性を一律で検証するデフォルト強制のパイプラインを構築します。</p>
+<h3 id="原則2主張の出自を強制的にタグ付け追跡する">原則2：主張の出自を強制的にタグ付け・追跡する</h3>
+<p>企画・調査・設計の各段階において、記述が「検証済みの一次情報」なのか、「調査結果」なのか、「意見・推測」なのかを出自タグによって機械的に分離・追跡します。</p>
+<p>上流で「一次情報: なし」とマークされている企画において、下流で検証環境スペックのような一次情報が書き込まれた場合、差分検知で即座にビルドエラーとする仕組みを整えます。</p>
+<h3 id="原則3独立した検証サブエージェントと決定論的テストを組み合わせる">原則3：独立した検証サブエージェントと決定論的テストを組み合わせる</h3>
+<p>生成を行ったエージェント自身にレビューをさせると、自己評価バイアスによって自らの捏造を肯定してしまいます。</p>
+<p>執筆を担当したエージェントとは別の「独立した検証サブエージェント」を配置し、本文の主張と引用文献・ログの逐語照合を担当させます。さらに、DeepEval（<code>HallucinationMetric</code>）<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> や Ragas（<code>Faithfulness</code>）<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup> を活用し、CIパイプライン上でスコア閾値による自動デプロイブロックを導入します。</p>
+<h3 id="原則4答えがない時はなしでよいフォールバックを設計する">原則4：答えがない時は「なし」でよいフォールバックを設計する</h3>
+<p>ハルシネーションは、AIが知識不足やコンテキストの欠落によって「答えに窮した時」に、確率的にもっともらしい形式で空白を埋めようとする現象です。</p>
+<p>RGBベンチマーク（Chenら）でも示されている通り、LLMは「情報が存在しない場合に回答を拒絶する能力（Negative Rejection）」に本質的な弱点を抱えています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>そのため、プロンプトやパイプラインのインターフェース設計において、「情報がない場合は『未検証』『該当なし』と出力してよい」「無理に数値を埋めるな」という明確なフォールバックの逃げ道を用意し、AIが答えに窮する状況そのものを作らない設計が極めて有効です。</p>
+<h2 id="コード例guardrails-ai-による出力検証ゲートの実装">コード例：Guardrails AI による出力検証ゲートの実装</h2>
+<p>プロンプト指示に依存せず、コードレベルで出力のファクトチェックを行う決定論的ゲートの実装例です。Guardrails AI <sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup> を使用して、生成テキストが事前に確認されたコンテキストに基づいているかを検証します。</p>
+<h3 id="1-検証ゲートの実装コード">1. 検証ゲートの実装コード</h3>
+<p>Guardrails AI 本体と <code>ProvenanceV1</code> バリデータをインストールします。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">pip</span><span style="color:#40A02B"> install</span><span style="color:#40A02B"> guardrails-ai</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">guardrails</span><span style="color:#40A02B"> hub</span><span style="color:#40A02B"> install</span><span style="color:#40A02B"> hub://guardrails/provenance_llm</span></span>
+<span class="line"></span></code></pre>
+<p>以下のスクリプトは、生成テキストに含まれる文章が正解コンテキストに裏付けられているかを文単位で検証し、未検証の主張が含まれている場合に例外をスローして処理を中断します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># ファイル: scripts/verify_hallucination_guard.py</span></span>
+<span class="line"><span style="color:#40A02B">"""Guardrails AI を用いて出力のファクトチェックと未検証主張の遮断を行う品質ゲート."""</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">from</span><span style="color:#4C4F69"> guardrails </span><span style="color:#8839EF">import</span><span style="color:#4C4F69"> Guard</span></span>
+<span class="line"><span style="color:#8839EF">from</span><span style="color:#4C4F69"> guardrails</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">hub </span><span style="color:#8839EF">import</span><span style="color:#4C4F69"> ProvenanceV1</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 正解コンテキスト（企画書や調査フェーズで確認済みの事実）</span></span>
+<span class="line"><span style="color:#4C4F69">verified_context </span><span style="color:#179299">=</span><span style="color:#40A02B"> """</span></span>
+<span class="line"><span style="color:#40A02B">企画書: 不可視文字のサニタイズ設計</span></span>
+<span class="line"><span style="color:#40A02B">一次情報: なし（実機での動作検証は行わない）</span></span>
+<span class="line"><span style="color:#40A02B">調査対象: 公式ドキュメントの電子透かし仕様</span></span>
+<span class="line"><span style="color:#40A02B">"""</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 出力に対するファクトチェック Guard を定義</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 根拠のない主張が含まれている場合は即座に例外を発生させる</span></span>
+<span class="line"><span style="color:#4C4F69">guard </span><span style="color:#179299">=</span><span style="color:#1E66F5"> Guard</span><span style="color:#7C7F93">().</span><span style="color:#1E66F5">use</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#1E66F5">    ProvenanceV1</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        validation_method</span><span style="color:#179299">=</span><span style="color:#40A02B">"sentence"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        llm_callable</span><span style="color:#179299">=</span><span style="color:#40A02B">"gpt-4o-mini"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        threshold</span><span style="color:#179299">=</span><span style="color:#FE640B">0.8</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        on_fail</span><span style="color:#179299">=</span><span style="color:#40A02B">"exception"</span></span>
+<span class="line"><span style="color:#7C7F93">    ),</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">    on</span><span style="color:#179299">=</span><span style="color:#40A02B">"output"</span></span>
+<span class="line"><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># AIエージェントが生成したテキスト（捏造が含まれる例）</span></span>
+<span class="line"><span style="color:#4C4F69">unverified_output </span><span style="color:#179299">=</span><span style="color:#40A02B"> """</span></span>
+<span class="line"><span style="color:#40A02B">本記事における動作検証は macOS Sequoia 15.3 および Node.js v22.14.0 で実施しました。</span></span>
+<span class="line"><span style="color:#40A02B">"""</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">try</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">    print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"品質ゲートの検証を実行中..."</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">    guard</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">validate</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#4C4F69">        unverified_output</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        metadata</span><span style="color:#179299">=</span><span style="color:#7C7F93">{</span><span style="color:#40A02B">"pass_on_invalid"</span><span style="color:#7C7F93">:</span><span style="color:#8839EF"> False</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "reference_context"</span><span style="color:#7C7F93">:</span><span style="color:#4C4F69"> verified_context</span><span style="color:#7C7F93">}</span></span>
+<span class="line"><span style="color:#7C7F93">    )</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">    print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"検証成功: すべての主張がコンテキストに裏付けられています。"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">except</span><span style="color:#FE640B;font-style:italic"> Exception</span><span style="color:#8839EF"> as</span><span style="color:#4C4F69"> e</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">    print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"品質ゲートで遮断されました (Validation Failed):</span><span style="color:#EA76CB">\n{</span><span style="color:#4C4F69">e</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span></code></pre>
+<h3 id="2-実行結果と出力ログ">2. 実行結果と出力ログ</h3>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">python</span><span style="color:#40A02B"> scripts/verify_hallucination_guard.py</span></span>
+<span class="line"></span></code></pre>
+<p>未検証の環境スペックを含むテキストに対して上記スクリプトを実行すると、以下のようにゲートが即座に違反を検知して例外を出力します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>品質ゲートの検証を実行中...</span></span>
+<span class="line"><span>品質ゲートで遮断されました (Validation Failed):</span></span>
+<span class="line"><span>Validation failed for field with errors: The following sentences are not supported by the context:</span></span>
+<span class="line"><span>- 本記事における動作検証は macOS Sequoia 15.3 および Node.js v22.14.0 で実施しました。</span></span>
+<span class="line"><span></span></span></code></pre>
+<h3 id="3-重要箇所の解説">3. 重要箇所の解説</h3>
+<ul>
+<li><strong><code>ProvenanceV1</code> の活用</strong>: 各文が <code>reference_context</code> に含まれる根拠に裏付けられているかを個別にスコアリングします。</li>
+<li><strong><code>on_fail="exception"</code> の設定</strong>: 閾値を下回った（未検証の主張が含まれる）場合、警告で済ませずに例外を発生させてパイプラインの進行を即座にブロックします。</li>
+<li><strong>プロンプト非依存の保証</strong>: LLMの出力結果を後段のテストステップで決定論的に検査するため、モデルの気まぐれによるすり抜けを防止できます。</li>
+</ul>
+<h2 id="faqaiパイプラインの品質ゲート設計に関するよくある疑問">FAQ：AIパイプラインの品質ゲート設計に関するよくある疑問</h2>
+<h3 id="プロンプトで嘘をつくな確信がない場合は答えるなと強く念押しすれば防げるのではないか">プロンプトで「嘘をつくな」「確信がない場合は答えるな」と強く念押しすれば防げるのではないか？</h3>
+<p><strong>防げません。</strong></p>
+<p>LLMは確率的に次トークンをサンプリングする構造上、コンテキストが欠落している場合でも統計的にもっともらしい形式（バージョン番号や条文番号）で空白を埋めようとする性質（Overconfidence）があります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。プロンプトへの指示は確率の偏向に過ぎず、100%の遵守を保証できないため、コードやCIによる決定論的な外部テストが必要です。</p>
+<h3 id="すべてのルールを全件強制にするとパイプラインの自動化効率や開発テンポが落ちないか">すべてのルールを全件強制にすると、パイプラインの自動化効率や開発テンポが落ちないか？</h3>
+<p><strong>短期的には差し戻しが増えるように見えますが、長期的な総コストは大幅に削減されます。</strong></p>
+<p>事後的に本番公開直前や公開後に捏造が発覚して記事やコードを破棄・修正する手戻りコストに比べ、パイプラインの初期段階（設計やCI）で機械的に弾く方が手戻り工数は遥かに小さく抑えられます。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本記事で解説したAI品質ゲート設計の要点は以下の通りです。</p>
+<ol>
+<li><strong>AIは「やっていない検証」を具体的すぎるバージョン番号付きで捏造する</strong>: 知識や実測データが欠落している時ほど、形式的に完璧な嘘をつく傾向があります。</li>
+<li><strong>ルールの存在と実効性は別物である</strong>: 「特定の条件のみで適用する」というルールは、自律パイプラインにおいて致命的なすり抜けの穴になります。</li>
+<li><strong>プロンプト制約に頼らず、決定論的外部ゲートを構築する</strong>: ルールは全件強制とし、独立サブエージェントやCIテストで機械的に合否判定を行います。</li>
+<li><strong>AIを答えに窮させないフォールバックを用意する</strong>: 「情報がない時はなしでOK」という逃げ道を設計に組み込むことで、ハルシネーションの根本原因を断ちます。</li>
+</ol>
+<p>AI Operations の導入設計、AIエージェントを活用した安全な自動化パイプラインの構築や品質ゲートの再設計について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://arxiv.org/abs/2311.05232">A Survey on Hallucination in Large Language Models</a> Lei Huang et al., arXiv:2311.05232, 2023年11月公開。LLMのハルシネーション分類（Factuality/Faithfulness）および次トークン補完における過信（Overconfidence）のメカニズム解説。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://arxiv.org/abs/2501.19012">Importing Phantoms: Measuring LLM Package Hallucination Vulnerabilities</a> Spracklen et al., USENIX Security 2025 / arXiv:2501.19012, 2025年1月公開。コード生成モデルにおけるパッケージ・バージョン捏造率（商用モデル約5.2%、OSS最大21.7%）の実測データは pp.1-4。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://docs.confident-ai.com/docs/metrics-hallucination">DeepEval Hallucination Metric Documentation</a> Confident AI, 公式ドキュメント, 2026年確認。CI/CDパイプラインにおけるハルシネーション定量評価メトリクスおよび合否判定の仕組み。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://github.com/explodinggradients/ragas">Ragas Framework</a> Exploding Gradients, GitHub リポジトリ, 2026年確認。LLM生成パイプラインにおけるFaithfulness評価とGitHub Actions自動テスト統合。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://arxiv.org/abs/2309.01431">Benchmarking Large Language Models in Retrieval-Augmented Generation</a> Jiawei Chen et al., arXiv:2309.01431, 2023年9月公開。LLMにおけるNegative Rejection（情報欠落時の回答拒絶）の弱点とフォールバック設計の検証データは pp.3-6。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://github.com/guardrails-ai/guardrails">Guardrails AI Framework</a> Guardrails AI, GitHub リポジトリ（v0.5系）, 2026年確認。プロンプト指示に依存しない決定論的バリデータ（<code>Guard</code>, <code>on_fail</code>）の設計・コード例。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 
