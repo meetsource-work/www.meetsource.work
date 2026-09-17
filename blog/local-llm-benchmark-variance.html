@@ -1,0 +1,191 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ローカルLLMのベンチマークは何回測るべきか ── 16回連続測定で分かった「1回測定」の罠と分散表記のすすめ | Meetsource</title><meta name="description" content="同一の Mac とプロンプト条件で 16 回測定したところ、推論速度が 4.3〜11.9 tok/s（2.77倍）も動揺しました。スワップや熱などの探求プロセスを開示し、1回測定の危険性と「複数回試行＋分散表記」の標準テンプレートを提案します。"><link rel="canonical" href="https://www.meetsource.work/blog/local-llm-benchmark-variance"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="ローカルLLMのベンチマークは何回測るべきか ── 16回連続測定で分かった「1回測定」の罠と分散表記のすすめ | Meetsource"><meta property="og:description" content="同一の Mac とプロンプト条件で 16 回測定したところ、推論速度が 4.3〜11.9 tok/s（2.77倍）も動揺しました。スワップや熱などの探求プロセスを開示し、1回測定の危険性と「複数回試行＋分散表記」の標準テンプレートを提案します。"><meta property="og:url" content="https://www.meetsource.work/blog/local-llm-benchmark-variance"><meta property="og:image" content="https://www.meetsource.work/blog/local-llm-benchmark-variance-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-06T13:31:47.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="ローカルLLMのベンチマークは何回測るべきか ── 16回連続測定で分かった「1回測定」の罠と分散表記のすすめ | Meetsource"><meta name="twitter:description" content="同一の Mac とプロンプト条件で 16 回測定したところ、推論速度が 4.3〜11.9 tok/s（2.77倍）も動揺しました。スワップや熱などの探求プロセスを開示し、1回測定の危険性と「複数回試行＋分散表記」の標準テンプレートを提案します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/local-llm-benchmark-variance-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"ローカルLLMのベンチマークは何回測るべきか ── 16回連続測定で分かった「1回測定」の罠と分散表記のすすめ","description":"同一の Mac とプロンプト条件で 16 回測定したところ、推論速度が 4.3〜11.9 tok/s（2.77倍）も動揺しました。スワップや熱などの探求プロセスを開示し、1回測定の危険性と「複数回試行＋分散表記」の標準テンプレートを提案します。","datePublished":"2026-08-06T13:31:47.000Z","image":"https://www.meetsource.work/blog/local-llm-benchmark-variance-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/local-llm-benchmark-variance"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-06T13:31:47.000Z" data-astro-cid-7jjqptxk> 2026.08.06 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#ローカルLLM</span><span class="tag" data-astro-cid-7jjqptxk>#ベンチマーク</span><span class="tag" data-astro-cid-7jjqptxk>#Mac</span><span class="tag" data-astro-cid-7jjqptxk>#AI開発</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>ローカルLLMのベンチマークは何回測るべきか ── 16回連続測定で分かった「1回測定」の罠と分散表記のすすめ</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/local-llm-benchmark-variance-hero.webp" alt="ローカルLLMのベンチマークは何回測るべきか ── 16回連続測定で分かった「1回測定」の罠と分散表記のすすめ" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>ローカルLLMの新しい推論エンジンやモデルを試した際、ブログやSNSに「M1 Macで <strong>8.5 tok/s</strong> 出ました！」といった測定結果を投稿したり、社内の技術選定資料にまとめた経験はないでしょうか。</p>
+<p>その測定、本当に何回か測って確認した数値でしょうか？</p>
+<p>コミュニティの標準ベンチマーク規約では、固定シード・固定プロンプト・固定温度に加えて1回のウォームアップ破棄が定められ、提出形式としては「5回の試行の中央値（Median of five runs）」が推奨されています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。ところが実運用では、ウォームアップ後に1回だけ測った単一の数値（single number）が「そのマシンの絶対的な推論速度」として流通しています。ここに大きな罠が潜んでいます。</p>
+<p>自分の手元で出た値と他人の報告値が食い違ったとき、私たちはつい「機体差」や「個体差」という言葉で納得しがちです。しかし実際には、同一のマシン・同一の入力プロンプトであっても、1回測定の数値は大きく揺らぎます。</p>
+<p>この記事では、同一環境で入力条件を揃えて 16 回連続測定した実測データをもとに、なぜ1回測定が危険なのか、そして今後どのように計測・報告すべきかを解説します。</p>
+<h2 id="16ランの実測データが示す277倍ブレの現実">16ランの実測データが示す「2.77倍ブレ」の現実</h2>
+<p>まずは、実際に同一の Mac 上で入力条件を完全に固定し、16 回連続で推論を走らせた結果をご覧ください。</p>
+<p><a href="/blog/expert-streaming-local-llm-variance">前回の記事</a> で検証した TurboFieldfare エンジンを用い、MacBook Pro（M1 Pro 8コア / RAM 16GB / macOS 26.5.2 / 内蔵 512GB SSD）上で Gemma 4 26B-A4B 4bit モデル（実測 14.29GB）を動かした際の記録です。入力プロンプト（prefill 61 tokens）、生成上限（511 tokens）、サンプリングパラメータ（<code>Temperature=0.2</code>, <code>top-k=64</code>, <code>top-p=0.95</code>, <code>context=4096</code>）はすべて全ランで厳格に統一しています。</p>
+<p>16 回の測定結果を集計すると、以下のようになりました。</p>
+<ul>
+<li><strong>サンプル数 (n)</strong>: 16</li>
+<li><strong>最小速度</strong>: <strong>4.298 tok/s</strong></li>
+<li><strong>最大速度</strong>: <strong>11.884 tok/s</strong></li>
+<li><strong>最速 ÷ 最遅</strong>: <strong>2.77倍</strong></li>
+<li><strong>中央値 (Median)</strong>: <strong>9.495 tok/s</strong></li>
+</ul>
+<p>まったく同じプロンプトを同じマシンに投入しているにもかかわらず、推論速度は <strong>4.298 tok/s から 11.884 tok/s まで 2.77 倍も動揺</strong> しました。</p>
+<p>時系列の推移を辿ると、さらに興味深い傾向が見えてきます。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>時刻</th><th>tok/s</th><th>状態・備考</th></tr></thead><tbody><tr><td>12:16</td><td>10.124</td><td>インストール直後の初回実行</td></tr><tr><td>12:37</td><td><strong>11.884</strong></td><td>16ラン中の最高速</td></tr><tr><td>12:40</td><td>9.921</td><td></td></tr><tr><td>12:45</td><td><strong>4.298</strong></td><td>16ラン中の最低速</td></tr><tr><td>12:50</td><td>6.666</td><td>連続実行ブロック</td></tr><tr><td>12:52</td><td>5.281</td><td>連続実行ブロック</td></tr><tr><td>13:11</td><td>10.630</td><td>15分アイドル後（計装あり）</td></tr><tr><td>13:12</td><td>11.191</td><td>15分アイドル後（計装あり）</td></tr><tr><td>16:23〜16:31</td><td>8.729 〜 9.831</td><td>3時間10分空けた後の8連続実行（平均 9.36 tok/s）</td></tr></tbody></table>
+<p>12:37 に <strong>11.884 tok/s</strong> を記録したわずか 8 分後の 12:45 には、<strong>4.298 tok/s</strong> まで落ち込んでいます。もし開発者が 12:37 の 1 回測定だけで「11.9 tok/s 出る」と社内に報告していたら、あるいは 12:45 の 1 回測定だけで「4.3 tok/s しか出ない遅いエンジンだ」と判断していたら、どちらも真実の半分しか捉えていないことになります。</p>
+<h3 id="先行報告値との比較">先行報告値との比較</h3>
+<p>この実測データは、オープンソースコミュニティにおける先行報告と突き合わせることで、さらに味わい深くなります。</p>
+<p>例えば、GitHub の Issue #37 で報告されている同型機（M1 Pro 16GB）での測定値は <strong>9.477 tok/s</strong> でした<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。本計測の 16 ラン中央値（<strong>9.495 tok/s</strong>）や後半 8 ランの平均値（9.36 tok/s）と見事に合致しています。報告者は非常に誠実な計測を行ったと考えられます。しかし、単発の測定で偶然 4.3 tok/s や 11.9 tok/s を引き当てて報告していた可能性も否定できません。</p>
+<p>また、M4 Mac mini（16GB RAM / 256GB SSD）のユーザーコミュニティでは、ある報告者が「5 tok/s 程度しか出ない」と述べたのに対し、別の報告者（Issue #23）が「8.43〜11.38 tok/s 出ている」と報告しており、2つの数値が併存しています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。同一型番・同一ストレージ容量であっても、測定タイミングや試行回数によって見えている数値が2倍以上食い違う典型例です。</p>
+<h2 id="ブレの要因を探った記録と探求の限界">ブレの要因を探った記録と探求の限界</h2>
+<p>「なぜ同じ入力なのに 2.77 倍もブレるのか？」の原因を突き止めるべく、考えられる仮説をひとつずつ検証しました。</p>
+<h3 id="1-スワップ説否定">1. スワップ説（否定）</h3>
+<p>物理メモリを超えたことによるスワップ増大（Swap death spiral）が原因ではないかと疑いましたが、これは明確に否定されました。</p>
+<p>推論中の Peak RSS は 1,521.5 〜 1,551.3 MB で安定して常駐し、計装を行った 4 ランの Swap Used は <code>1061.38 → 1053.38 MB</code>（むしろ 8MB 減少）で、<strong>スワップの増加はゼロ</strong> でした。物理メモリ枯渇による書き込みスパイクは発生していません。</p>
+<h3 id="2-空きram説説明不能">2. 空きRAM説（説明不能）</h3>
+<p>次に「他のプロセスがメモリを圧迫して空きRAMが減ったのではないか」と疑いましたが、空きRAM量と tok/s には直感的な相関がありませんでした。</p>
+<ul>
+<li>空きRAM 1.1GB（69,872 pages）時 → <strong>10.630 tok/s</strong>（高速）</li>
+<li>空きRAM 3.4GB（219,595 pages）時 → <strong>11.191 tok/s</strong>（最高速クラス）</li>
+<li>空きRAM 3.0GB 前後推移時 → <strong>4.298 tok/s</strong>（最低速が発生）</li>
+</ul>
+<p>空きRAMが多いから速い、少ないから遅い、という単調な関係にはなっていません。macOS では、<code>Pages free</code> にファイルキャッシュ（file-backed pages）が含まれないため、空きページ数が少ないことはむしろ「ファイルキャッシュが充足している」ことを意味する場合があります。作者自身も Show HN のコメントで「メモリ圧迫時に 35 tok/s から 27 tok/s に落ちた」と述べており、ページキャッシュの充足度が大きく影響していることが分かります<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<h3 id="3-サーマル熱説判定不可能">3. サーマル（熱）説（判定不可能）</h3>
+<p>「連続実行による熱スロットリングではないか」を検証するため、<code>sudo powermetrics</code> を走らせて 6 分 06 秒間（74サンプル）の CPU/GPU 熱動態を記録しました。</p>
+<p>Thermal Pressure Level は 74 サンプルすべてで <strong><code>Nominal</code></strong>（正常）であり、警報は一度も出ませんでした。GPU P-state も全サンプルで最上段の 1296 MHz に到達しており、クロックの上限自体は解放されていました。HW Active Frequency の微減（644.9 → 615.3 MHz, -4.1%）と tok/s の微減（9.359 → 8.796 tok/s, -6.0%）の方向性は一致したものの、観測窓の 6 分間では 4.3 tok/s の低速フェーズが発生しなかったため、サーマル要因の完全な肯定も否定もできませんでした。</p>
+<h3 id="4-ioオフロードと構造的待機">4. I/Oオフロードと構造的待機</h3>
+<p>SSD オフロード型の推論エンジンでは、GPU 計算と SSD からの重み読み出しが交互に実行され、互いの完了を待つ短時間の待機（brief idle periods）が発生します<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。MoE（Mixture of Experts）モデルの SSD オフロード推論に関する学術論文（arXiv:2508.06978）でも、Decode ステージでのトークンあたりエネルギーが HBM 比で 3.8〜12.5 倍に増大することが示されています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>ファイルキャッシュの乗り具合、SSD 読み出しのわずかなレイテンシ変化、GPU の周波数遷移タイミングが複雑に噛み合うことで、この大きな振れ幅が生じていると考えられます。そして重要なのは、<strong>エンドユーザーが日常の Mac 環境でこの原因を100%特定しコントロールすることは実質不可能</strong> という点です。</p>
+<h2 id="採用すべき計測手順と標準報告テンプレート">採用すべき計測手順と標準報告テンプレート</h2>
+<p>ブレの原因を完全に制御できないからこそ、私たちが取るべきアプローチは「1回の結果で一喜一憂するのをやめ、統計的かつ再現可能な手順で計測・報告する」ことです。</p>
+<h3 id="ベンチマーク計測の4原則">ベンチマーク計測の4原則</h3>
+<p>今後ローカルLLMの性能を測る際は、以下の4原則を徹底することを推奨します。</p>
+<ol>
+<li><strong>ウォームアップ除去</strong>: 初回のモデルロードやコンパイルを含む 1〜2 回の実行データは必ず計測結果から破棄する。</li>
+<li><strong>複数回試行（Minimum 5 runs）</strong>: ウォームアップ除去後、最低 5 回（できれば 10 回以上）の試行を行い、外れ値を平滑化する。</li>
+<li><strong>測定条件の厳格な固定</strong>: 入力プロンプト長、生成トークン上限、サンプリング設定（<code>Temperature=0</code> または固定値, <code>top_p</code>, <code>top_k</code>）、コンテキスト長を明記・固定する。</li>
+<li><strong>Prefill（TTFT）と Decode（tok/s）の分離</strong>: 初頭応答時間（Time to First Token: TTFT）と、トークン生成速度（Decode tok/s）を分けて評価する<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</li>
+</ol>
+<h3 id="ローカルllm性能報告テンプレート">ローカルLLM性能報告テンプレート</h3>
+<p>社内資料や技術ブログで推論速度を報告する際は、以下のフォーマットのように「中央値」と「レンジ（最小〜最大）」を併記してください。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#DF8E1D">### ローカルLLM 推論パフォーマンス報告</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">#### 1. 測定環境</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">OS / 機種</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">: macOS 26.5.2 / MacBook Pro (M1 Pro, 16GB RAM)</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">ストレージ</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">: 内蔵 Apple NVMe SSD (512GBクラス)</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">推論エンジン</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">: TurboFieldfare v0.x (Release Build)</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">対象モデル</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">: Gemma 4 26B-A4B 4-bit (14.3GB)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">#### 2. 測定条件</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">試行回数</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">: 5回（ウォームアップ1回破棄）</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">プロンプト長 / 生成トークン数</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">: 61 tokens / 511 tokens</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">サンプリング設定</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">: Temperature=0.2, Top-P=0.95, Top-K=64</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">バックグラウンド</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">: アイドル状態</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">#### 3. 測定結果</span></span>
+<span class="line"><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> メトリクス </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 中央値 (Median) </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> レンジ (Min - Max) </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 備考 </span><span style="color:#7C7F93">|</span></span>
+<span class="line"><span style="color:#7C7F93">|---|---|---|---|</span></span>
+<span class="line"><span style="color:#7C7F93">|</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">Decode Speed</span><span style="color:#7C7F93">**</span><span style="color:#7C7F93"> |</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">9.50 tok/s</span><span style="color:#7C7F93">**</span><span style="color:#7C7F93"> |</span><span style="color:#4C4F69"> 4.30 - 11.88 tok/s </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 16ラン連続計測時 </span><span style="color:#7C7F93">|</span></span>
+<span class="line"><span style="color:#7C7F93">|</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">TTFT (初頭応答時間)</span><span style="color:#7C7F93">**</span><span style="color:#7C7F93"> |</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">10.45 sec</span><span style="color:#7C7F93">**</span><span style="color:#7C7F93"> |</span><span style="color:#4C4F69"> 10.20 - 10.70 sec </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> Prefill 61 tokens </span><span style="color:#7C7F93">|</span></span>
+<span class="line"><span style="color:#7C7F93">|</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">Peak RSS (メモリ)</span><span style="color:#7C7F93">**</span><span style="color:#7C7F93"> |</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">1.53 GB</span><span style="color:#7C7F93">**</span><span style="color:#7C7F93"> |</span><span style="color:#4C4F69"> 1.52 - 1.55 GB </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 常駐メモリ </span><span style="color:#7C7F93">|</span></span>
+<span class="line"><span style="color:#7C7F93">|</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">Swap 増加量</span><span style="color:#7C7F93">**</span><span style="color:#7C7F93"> |</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">0 MB</span><span style="color:#7C7F93">**</span><span style="color:#7C7F93"> |</span><span style="color:#4C4F69"> 0 - 0 MB </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 増加なし </span><span style="color:#7C7F93">|</span></span>
+<span class="line"></span></code></pre>
+<h3 id="自動計測ツールの活用">自動計測ツールの活用</h3>
+<p><code>llama.cpp</code> コミュニティが提供する <code>llama-bench</code> などの標準ツールを使用する場合は、<code>-r</code> オプションで複数回試行を指定し、JSON 出力で分散を集計するのが効果的です<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># llama-bench を用いた 5回試行の自動集計例</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">./llama-bench</span><span style="color:#40A02B"> -m</span><span style="color:#40A02B"> models/gemma-26b-q4.gguf</span><span style="color:#40A02B"> -p</span><span style="color:#FE640B"> 512</span><span style="color:#40A02B"> -n</span><span style="color:#FE640B"> 128</span><span style="color:#40A02B"> -r</span><span style="color:#FE640B"> 5</span><span style="color:#40A02B"> -o</span><span style="color:#40A02B"> json</span><span style="color:#179299"> ></span><span style="color:#40A02B"> benchmark_result.json</span></span>
+<span class="line"></span></code></pre>
+<h2 id="結論--単一の数字から分散の報告へ">結論 ── 単一の数字から「分散の報告」へ</h2>
+<p>ローカルLLMの実効速度を考える際、用途によって求められる速度の基準は異なります。</p>
+<p>一般に、人間の平均的な日本語読書速度の目安は <strong>7〜8 tok/s</strong> と言われています<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。本計測の中央値である <strong>9.5 tok/s</strong> であれば、インタラクティブなチャットや要約用途として十分に実用的です。しかし、下振れして <strong>4.3 tok/s</strong> になった瞬間、読書速度を下回り体感待機時間が急増します。</p>
+<p>さらに、AIエージェントのようにモデルを自動で複数回往復させる用途（「働かせる用途」）では、prefill 61 tokens であっても 10 秒以上の TTFT がかかり、回数ごとの速度ブレが積算されていくため、1 回の最高速度（11.9 tok/s）だけを前提にシステムを設計すると深刻なスループット未達に直面します。</p>
+<p>単一の数字は、その瞬間の一片のスナップショットに過ぎません。</p>
+<p>「1回測って終わり」を卒業し、「複数回測って分散を報告する」文化を定着させること。それこそが、ローカルLLMという変化の激しい領域で、自分とチームを守る最も確実なベンチマークの手法です。</p>
+<hr>
+<p>ローカルLLMの導入・パフォーマンス評価や、社内AIインフラの最適化についてご相談があれば、<a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://github.com/drumih/turbo-fieldfare/blob/main/docs/COMMUNITY_BENCHMARKS.md">COMMUNITY_BENCHMARKS.md (turbo-fieldfare)</a> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://github.com/drumih/turbo-fieldfare/issues/37">Benchmark: M1 Pro, 16 GB, macOS 26.5.2 (turbo-fieldfare Issue #37)</a> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://github.com/drumih/turbo-fieldfare/issues/23">Benchmark: Apple M4, 16 GB RAM / 256 GB SSD (turbo-fieldfare Issue #23)</a> <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://news.ycombinator.com/item?id=49109034">Show HN: TurboFieldfare (Page cache comment)</a> <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://news.ycombinator.com/item?id=49101935">Show HN: TurboFieldfare (I/O &#x26; GPU alternating comment)</a> <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://arxiv.org/abs/2508.06978">SSD Offloading for LLM Mixture-of-Experts Weights (arXiv:2508.06978)</a> <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://github.com/ray-project/llmperf">ray-project/llmperf (LLM Performance Metrics)</a> <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://github.com/ggml-org/llama.cpp/tree/master/tools/llama-bench">ggerganov/llama.cpp (llama-bench tool)</a> <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://zenn.dev/znet/articles/2026-best-mac-247-local-llm">24/365稼働の自分用ローカルLLMに最適なMacは? (Zenn)</a> <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

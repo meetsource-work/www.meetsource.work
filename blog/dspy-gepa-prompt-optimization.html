@@ -1,0 +1,211 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>DSPy + GEPA 入門 ── 遺伝的アルゴリズムでプロンプトを自動最適化する | Meetsource</title><meta name="description" content="DSPyとGEPA（Genetic-Pareto Prompt Evolution）によるプロンプト自動最適化の仕組みと、多観点スコア・自然言語フィードバックを組み合わせた評価関数設計の急所をPythonコードとともに解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/dspy-gepa-prompt-optimization"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="DSPy + GEPA 入門 ── 遺伝的アルゴリズムでプロンプトを自動最適化する | Meetsource"><meta property="og:description" content="DSPyとGEPA（Genetic-Pareto Prompt Evolution）によるプロンプト自動最適化の仕組みと、多観点スコア・自然言語フィードバックを組み合わせた評価関数設計の急所をPythonコードとともに解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/dspy-gepa-prompt-optimization"><meta property="og:image" content="https://www.meetsource.work/blog/dspy-gepa-prompt-optimization-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-26T16:27:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="DSPy + GEPA 入門 ── 遺伝的アルゴリズムでプロンプトを自動最適化する | Meetsource"><meta name="twitter:description" content="DSPyとGEPA（Genetic-Pareto Prompt Evolution）によるプロンプト自動最適化の仕組みと、多観点スコア・自然言語フィードバックを組み合わせた評価関数設計の急所をPythonコードとともに解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/dspy-gepa-prompt-optimization-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"DSPy + GEPA 入門 ── 遺伝的アルゴリズムでプロンプトを自動最適化する","description":"DSPyとGEPA（Genetic-Pareto Prompt Evolution）によるプロンプト自動最適化の仕組みと、多観点スコア・自然言語フィードバックを組み合わせた評価関数設計の急所をPythonコードとともに解説します。","datePublished":"2026-08-26T16:27:00.000Z","image":"https://www.meetsource.work/blog/dspy-gepa-prompt-optimization-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/dspy-gepa-prompt-optimization"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"GEPAを利用するには大量の教師データが必要ですか？","acceptedAnswer":{"@type":"Answer","text":"大量のデータは不要です。 GEPA は失敗理由を自然言語で振り返る Reflective Prompt Mutation を採用しているため、従来の強化学習が数万ステップのロールアウトを要するのに対し、GEPA はわずか数百ロールアウトで最高性能に到達する高いサンプル効率を実証しています。"}},{"@type":"Question","name":"MIPROv2とGEPAはどのように使い分けるべきですか？","acceptedAnswer":{"@type":"Answer","text":"デモ事例を含めた網羅探索には MIPROv2、指示文の深い言語的洗練には GEPA が適しています。 Few-Shot のデモ選定と指示文を Optuna で同時に組み合わせ探索したい場合は MIPROv2 を、エラーログや自然言語フィードバックを与えて指示文を論理的に進化させたい場合は GEPA を選択してください。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-26T16:27:00.000Z" data-astro-cid-7jjqptxk> 2026.08.27 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#dspy</span><span class="tag" data-astro-cid-7jjqptxk>#prompt-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#llm</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>DSPy + GEPA 入門 ── 遺伝的アルゴリズムでプロンプトを自動最適化する</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/dspy-gepa-prompt-optimization-hero.webp" alt="DSPy + GEPA 入門 ── 遺伝的アルゴリズムでプロンプトを自動最適化する" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>LLM を組み込んだプロダクトを開発・運用する現場において、プロンプトチューニングはエンジニアにとって大きな工数負担となっています。指示文の調整は属人化しやすく、あるエッジケースを修正するためにプロンプトを変更すると別のケースで精度が低下する「リグレッション（いたちごっこ）」が発生し、調整作業に数日〜数週間の試行錯誤を要することも珍しくありません。</p>
+<p>こうした課題に対し、プロンプトを手動で書き直すのではなく、プログラムとして体系的に自動最適化するアプローチが注目されています。なかでも <strong>GEPA（Genetic-Pareto Prompt Evolution）</strong> とは、LLM による推論トレースの言語的反省（Reflective Prompt Mutation）とパレート最適化を組み合わせ、プロンプトの指示文を自動的に進化・最適化するアルゴリズムです。</p>
+<p>本記事では、DSPy と GEPA によるプロンプト自動最適化の仕組み、多観点スコアと自然言語フィードバックを組み合わせた評価関数設計の急所、そして LLM-as-a-Judge の一貫性限界やプロンプト肥大化といった実務上のトレードオフを解説します。</p>
+<h2 id="調査範囲と一次資料">調査範囲と一次資料</h2>
+<p>本記事は、LINEヤフー株式会社による技術カンファレンス Tech-Verse 2026 の実践記事<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>、ICLR 2026 Oral に採択された GEPA の原著論文<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>、DSPy の原著論文<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>、および公式リポジトリの実装仕様<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>を一次資料として整理した技術調査記事です。</p>
+<p>実務におけるプロンプト自動最適化の挙動、工数削減効果、評価関数の設計指針、および直面した課題と制約について、一次資料の客観的な記述と検証データに基づいて解説します。</p>
+<h2 id="dspyのプログラミングモデルとプロンプト最適化の全体像">DSPyのプログラミングモデルとプロンプト最適化の全体像</h2>
+<p>スタンフォード大学を中心に開発されている <strong>DSPy（Declarative Self-improving Python）</strong> は、LLM アプリケーションを「手動のプロンプトエンジニアリング」ではなく「宣言的なプログラミング」として構築するためのフレームワークです<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>DSPy は、LLM アプリケーションを以下の 3 つの階層に分離して設計します。</p>
+<ol>
+<li><strong>Signature（入出力仕様の宣言）</strong>: 入力フィールドと出力フィールドの型や意図をクラスとして定義します。プロンプトの具体的な言い回しはここには記述せず、入出力のインターフェースのみを固定します。</li>
+<li><strong>Module（処理ロジックの組み立て）</strong>: Signature を受け取り、推論を実行する構成要素です。単純な呼び出しを行う <code>dspy.Predict</code> や、思考ステップを出力させる <code>dspy.ChainOfThought</code>、ツール呼び出しを伴う <code>dspy.ReAct</code> などを組み合わせてパイプラインを構築します。</li>
+<li><strong>Optimizer（自動最適化エンジン）</strong>: データセットと評価関数（Metric）に基づき、各 Module 内のプロンプト指示文（Instructions）、Few-Shot 事例、またはモデルの重みを自動探索・最適化します。</li>
+</ol>
+<p>このプログラミングモデルにより、開発者は「プロンプトの文言を直接修正する作業」から「入出力インターフェースと評価基準（ポリシー）を定義し、プロンプト調整を AI に委譲するアプローチ」へとシフトできます。</p>
+<h2 id="gepaの進化ループと自然言語リフレクションの仕組み">GEPAの進化ループと自然言語リフレクションの仕組み</h2>
+<p>DSPy に公式オプティマイザーとして統合されている <strong>GEPA（Genetic-Pareto Prompt Evolution）</strong> は、遺伝的アルゴリズム（Genetic Algorithm）の枠組みで候補プロンプトを進化させる最適化手法です<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>GEPA の最適化サイクルは、以下の 4 つのステップで構成されます。</p>
+<ol>
+<li><strong>候補プロンプトの初期生成（Proposal）</strong>: ベースとなる初期プロンプトから、複数の候補プロンプト（集団: Population）を生成します。</li>
+<li><strong>評価とパレート選択（Pareto-based Selection）</strong>: 評価データセットに対して各候補プロンプトを実行し、スコアを算出します。単一のスカラー値のみで一列に順位付けするのではなく、評価データ点ごとに最高スコアを記録した候補を集合として保持することで、単一の「勝者」に絞り込まず、局所解（局所最適）への収束を防止します。</li>
+<li><strong>言語的反省（Reflective Prompt Mutation）</strong>: ここが GEPA の最大の核心です。Reflection LM（反省用の LLM）が各候補の実行トレース、エラー内容、および評価関数から渡された「自然言語フィードバック」を読み込み、「なぜ失敗したのか」「どの制約を満たせなかったのか」を言語的に分析し、次世代に向けた具体的な改善指示文を変異（Mutation）として生成します。</li>
+<li><strong>世代交代の反復</strong>: この評価・選択・反省・変異のループを数世代から数十世代繰り返すことで、プロンプトを進化させます。</li>
+</ol>
+<p>従来の強化学習（RL）ベースの最適化手法（GRPO 等）では、スカラー報酬のみを手がかりに探索するため数万ステップのロールアウトが必要でした。これに対し GEPA は、エラーの言語的な意味を理解してピンポイントに修正するため、わずか数百ロールアウト（数世代）で最高性能に到達する高いサンプル効率を実証しています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h2 id="dspyの主要optimizer比較bootstrapfewshotmiprov2gepa">DSPyの主要Optimizer比較：BootstrapFewShot・MIPROv2・GEPA</h2>
+<p>DSPy には目的に応じて複数の Optimizer が用意されています。タスクの性質や利用可能なフィードバックの種類に応じて、適切なアルゴリズムを選択する必要があります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Optimizer</th><th>主な最適化対象</th><th>探索メカニズム</th><th>フィードバック形式</th><th>サンプル効率・計算コスト</th><th>最適なユースケース</th></tr></thead><tbody><tr><td><strong>BootstrapFewShot</strong></td><td>Few-Shot デモ事例</td><td>成功した推論トレースの抽出と登録</td><td>スカラー値（0 または 1）</td><td>最も軽量・高速</td><td>少量のデータで手軽にベースラインを構築したい場合</td></tr><tr><td><strong>MIPROv2</strong></td><td>指示文 ＋ Few-Shot デモ</td><td>ベイズ最適化（Optuna）による同時探索</td><td>スカラー値（精度・スループット）</td><td>中程度（評価回数に依存）</td><td>指示文とデモ事例の最適な組み合わせを探索したい場合</td></tr><tr><td><strong>GEPA</strong></td><td>指示文（Instructions）</td><td>パレート選択 ＋ 言語的反省変異</td><td>多観点スコア ＋ <strong>自然言語フィードバック</strong></td><td>高いサンプル効率（数百試行）</td><td>複雑な推論・ポリシー準拠・Agentic タスクで深い改善を狙う場合</td></tr></tbody></table>
+<p>MIPROv2 が指示文と Few-Shot 事例の組み合わせをベイズ最適化で探索するのに対し、GEPA は自然言語によるリフレクションを活用して指示文そのものを論理的に洗練させます。そのため、詳細な判定理由や改善指示を言語化できるタスクにおいて、GEPA は特に強力な効果を発揮します。</p>
+<h2 id="pythonによるdspy--gepaの実践実装">PythonによるDSPy + GEPAの実践実装</h2>
+<p>ここでは、医療相談の一次受け付け（診断行為を避けつつ適切な受診案内を行うタスク）を題材に、DSPy と GEPA を用いたプロンプト自動最適化の最小実装コードを示します<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<h3 id="実装コード">実装コード</h3>
+<p>以下のコードでは、入出力の Signature 定義、多観点スコアと自然言語フィードバックを返す評価関数（Metric）の構築、および <code>dspy.GEPA</code> オプティマイザーによる最適化の実行手順を記載しています。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># ファイル: optimize_gepa.py</span></span>
+<span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> os</span></span>
+<span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> dspy</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 1. 言語モデルの設定 (Task LM と Reflection LM)</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 推論を実行するモデルと、失敗を分析してプロンプトを進化させる Reflection モデルを指定します</span></span>
+<span class="line"><span style="color:#4C4F69">task_lm </span><span style="color:#179299">=</span><span style="color:#4C4F69"> dspy</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">LM</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"openai/gpt-4o-mini"</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> api_key</span><span style="color:#179299">=</span><span style="color:#4C4F69">os</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">environ</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"OPENAI_API_KEY"</span><span style="color:#7C7F93">))</span></span>
+<span class="line"><span style="color:#4C4F69">reflection_lm </span><span style="color:#179299">=</span><span style="color:#4C4F69"> dspy</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">LM</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"openai/gpt-4o"</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> api_key</span><span style="color:#179299">=</span><span style="color:#4C4F69">os</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">environ</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"OPENAI_API_KEY"</span><span style="color:#7C7F93">))</span></span>
+<span class="line"><span style="color:#4C4F69">dspy</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">configure</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">lm</span><span style="color:#179299">=</span><span style="color:#4C4F69">task_lm</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 2. Signature と Module の定義</span></span>
+<span class="line"><span style="color:#8839EF">class</span><span style="color:#DF8E1D;font-style:italic"> MedicalQASignature</span><span style="color:#7C7F93">(</span><span style="color:#DF8E1D;font-style:italic">dspy</span><span style="color:#7C7F93">.</span><span style="color:#DF8E1D;font-style:italic">Signature</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#40A02B">    """ユーザーの医療相談に対し、診断行為を避けつつ正確で分かりやすい助言を提供します。"""</span></span>
+<span class="line"><span style="color:#4C4F69">    query</span><span style="color:#7C7F93">:</span><span style="color:#FE640B;font-style:italic"> str</span><span style="color:#179299"> =</span><span style="color:#4C4F69"> dspy</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">InputField</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">desc</span><span style="color:#179299">=</span><span style="color:#40A02B">"患者・ユーザーからの症状相談"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">    response</span><span style="color:#7C7F93">:</span><span style="color:#FE640B;font-style:italic"> str</span><span style="color:#179299"> =</span><span style="color:#4C4F69"> dspy</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">OutputField</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">desc</span><span style="color:#179299">=</span><span style="color:#40A02B">"医療ポリシーを遵守した助言文"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">class</span><span style="color:#DF8E1D;font-style:italic"> MedicalQAModule</span><span style="color:#7C7F93">(</span><span style="color:#DF8E1D;font-style:italic">dspy</span><span style="color:#7C7F93">.</span><span style="color:#DF8E1D;font-style:italic">Module</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#8839EF">    def</span><span style="color:#04A5E5;font-style:italic"> __init__</span><span style="color:#7C7F93">(</span><span style="color:#D20F39;font-style:italic">self</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        super</span><span style="color:#7C7F93">().</span><span style="color:#04A5E5;font-style:italic">__init__</span><span style="color:#7C7F93">()</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">        self</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">prog </span><span style="color:#179299">=</span><span style="color:#4C4F69"> dspy</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">ChainOfThought</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">MedicalQASignature</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">    def</span><span style="color:#1E66F5;font-style:italic"> forward</span><span style="color:#7C7F93">(</span><span style="color:#D20F39;font-style:italic">self</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> query</span><span style="color:#7C7F93">:</span><span style="color:#FE640B;font-style:italic"> str</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#8839EF">        return</span><span style="color:#D20F39;font-style:italic"> self</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">prog</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">query</span><span style="color:#179299">=</span><span style="color:#4C4F69">query</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 3. 多観点スコアと自然言語フィードバックを返す評価関数の定義</span></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> medical_metric</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">example</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> pred</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> trace</span><span style="color:#179299">=</span><span style="color:#8839EF">None</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # 観点1: 診断行為の排除 (ルールベース判定)</span></span>
+<span class="line"><span style="color:#4C4F69">    has_diagnosis </span><span style="color:#179299">=</span><span style="color:#FE640B;font-style:italic"> any</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">word </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> pred</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">response </span><span style="color:#8839EF">for</span><span style="color:#4C4F69"> word </span><span style="color:#8839EF">in</span><span style="color:#7C7F93"> [</span><span style="color:#40A02B">"〜と断定します"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "〜病です"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "間違いなく"</span><span style="color:#7C7F93">])</span></span>
+<span class="line"><span style="color:#4C4F69">    safety_score </span><span style="color:#179299">=</span><span style="color:#FE640B"> 0.0</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> has_diagnosis </span><span style="color:#8839EF">else</span><span style="color:#FE640B"> 1.0</span></span>
+<span class="line"><span style="color:#4C4F69">    </span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # 観点2: 適切な文字量と具体性</span></span>
+<span class="line"><span style="color:#4C4F69">    clarity_score </span><span style="color:#179299">=</span><span style="color:#FE640B"> 1.0</span><span style="color:#8839EF"> if</span><span style="color:#FE640B;font-style:italic"> len</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">pred</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">response</span><span style="color:#7C7F93">)</span><span style="color:#179299"> >=</span><span style="color:#FE640B"> 60</span><span style="color:#8839EF"> else</span><span style="color:#FE640B"> 0.5</span></span>
+<span class="line"><span style="color:#4C4F69">    </span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # 総合スコア（スカラー値）の算出</span></span>
+<span class="line"><span style="color:#4C4F69">    total_score </span><span style="color:#179299">=</span><span style="color:#7C7F93"> (</span><span style="color:#4C4F69">safety_score </span><span style="color:#179299">*</span><span style="color:#FE640B"> 0.7</span><span style="color:#7C7F93">)</span><span style="color:#179299"> +</span><span style="color:#7C7F93"> (</span><span style="color:#4C4F69">clarity_score </span><span style="color:#179299">*</span><span style="color:#FE640B"> 0.3</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">    </span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # 自然言語フィードバックの生成 (GEPA の Reflection LM に渡す文章)</span></span>
+<span class="line"><span style="color:#4C4F69">    feedback_msgs </span><span style="color:#179299">=</span><span style="color:#7C7F93"> []</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> safety_score </span><span style="color:#179299">&#x3C;</span><span style="color:#FE640B"> 1.0</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">        feedback_msgs</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">append</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"診断と受け取れる断定表現が含まれています。病名を断定せず、可能性の示唆と専門医の受診推奨に留めてください。"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> clarity_score </span><span style="color:#179299">&#x3C;</span><span style="color:#FE640B"> 1.0</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">        feedback_msgs</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">append</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"助言内容が短く具体性に欠けます。受診時の持ち物や緊急性の目安など、具体的な次の行動指針を追加してください。"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">        </span></span>
+<span class="line"><span style="color:#4C4F69">    feedback_text </span><span style="color:#179299">=</span><span style="color:#40A02B"> " "</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">join</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">feedback_msgs</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> feedback_msgs </span><span style="color:#8839EF">else</span><span style="color:#40A02B"> "医療ポリシーを満たした良好な出力です。"</span></span>
+<span class="line"><span style="color:#4C4F69">    </span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # スカラー値とテキストフィードバックの両方を Prediction オブジェクトで返却</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#4C4F69"> dspy</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">Prediction</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">score</span><span style="color:#179299">=</span><span style="color:#4C4F69">total_score</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> feedback</span><span style="color:#179299">=</span><span style="color:#4C4F69">feedback_text</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 4. GEPA Optimizer によるコンパイルと最適化実行</span></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#4C4F69"> __name__ </span><span style="color:#179299">==</span><span style="color:#40A02B"> "__main__"</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # 訓練用データセットの準備</span></span>
+<span class="line"><span style="color:#4C4F69">    trainset </span><span style="color:#179299">=</span><span style="color:#7C7F93"> [</span></span>
+<span class="line"><span style="color:#4C4F69">        dspy</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">Example</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">query</span><span style="color:#179299">=</span><span style="color:#40A02B">"急に激しい頭痛と吐き気がします。何の病気でしょうか？"</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">with_inputs</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"query"</span><span style="color:#7C7F93">),</span></span>
+<span class="line"><span style="color:#4C4F69">        dspy</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">Example</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">query</span><span style="color:#179299">=</span><span style="color:#40A02B">"子どもが38度の熱を出していますが、お風呂に入れても大丈夫ですか？"</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">with_inputs</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"query"</span><span style="color:#7C7F93">),</span></span>
+<span class="line"><span style="color:#7C7F93">    ]</span></span>
+<span class="line"><span style="color:#4C4F69">    </span></span>
+<span class="line"><span style="color:#4C4F69">    program </span><span style="color:#179299">=</span><span style="color:#1E66F5"> MedicalQAModule</span><span style="color:#7C7F93">()</span></span>
+<span class="line"><span style="color:#4C4F69">    </span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # GEPA オプティマイザーの初期化</span></span>
+<span class="line"><span style="color:#4C4F69">    gepa_optimizer </span><span style="color:#179299">=</span><span style="color:#4C4F69"> dspy</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">GEPA</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        metric</span><span style="color:#179299">=</span><span style="color:#4C4F69">medical_metric</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        reflection_lm</span><span style="color:#179299">=</span><span style="color:#4C4F69">reflection_lm</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        max_metric_calls</span><span style="color:#179299">=</span><span style="color:#FE640B">30</span></span>
+<span class="line"><span style="color:#7C7F93">    )</span></span>
+<span class="line"><span style="color:#4C4F69">    </span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # 最小構成のため trainset をそのまま評価用にも流用しています。</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # 実務では GEPA のパレート選択が過学習しないよう、trainset とは別に valset を用意して渡すのが望ましい構成です。</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">    print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"=== GEPA 最適化を開始します ==="</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">    optimized_program </span><span style="color:#179299">=</span><span style="color:#4C4F69"> gepa_optimizer</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">compile</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">student</span><span style="color:#179299">=</span><span style="color:#4C4F69">program</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> trainset</span><span style="color:#179299">=</span><span style="color:#4C4F69">trainset</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">    print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"=== 最適化完了 ==="</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">    </span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # 最適化済みプログラムによる推論テスト</span></span>
+<span class="line"><span style="color:#4C4F69">    test_query </span><span style="color:#179299">=</span><span style="color:#40A02B"> "頭の片側がズキズキ痛みます。"</span></span>
+<span class="line"><span style="color:#4C4F69">    result </span><span style="color:#179299">=</span><span style="color:#1E66F5"> optimized_program</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">query</span><span style="color:#179299">=</span><span style="color:#4C4F69">test_query</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">    print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">質問: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">test_query</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">    print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"回答:</span><span style="color:#EA76CB">\n{</span><span style="color:#4C4F69">result</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">response</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span></code></pre>
+<h3 id="想定される挙動の解説">想定される挙動の解説</h3>
+<p>上記スクリプトは、GEPA の最適化サイクル（前節参照）をそのままコードに落とした構成になっています。実行すると、GEPA は初期プロンプトで訓練データを実行し、<code>medical_metric</code> から返された <code>feedback</code>（例: 「病名を断定せず、専門医の受診推奨に留めてください」）を <code>reflection_lm</code> に渡す、という流れになります。</p>
+<p><code>reflection_lm</code> は指摘された問題点を分析し、プロンプトの指示文を修正する変異候補を生成します。LINEヤフーの実務検証記事<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>では、この過程を経て最適化後のプロンプトに「役割定義」「出力禁止表現」「推奨する回答ステップ」といった章構造が自動的に追加されたことが報告されており、本コード例でも同様の傾向が期待できます。ただし実際の収束挙動（何世代で章構造化に至るか等）は <code>trainset</code> の件数や <code>max_metric_calls</code> の設定に依存するため、一律の結果を保証するものではありません。</p>
+<h2 id="評価関数設計の急所と実務運用のトレードオフ">評価関数設計の急所と実務運用のトレードオフ</h2>
+<p>自動プロンプト最適化を導入すると、プロンプトチューニングの作業から解放される一方で、成否のボトルネックは <strong>評価関数（Metric）の設計品質</strong> へと移行します。</p>
+<h3 id="1-評価関数設計こそが開発者の注力すべき判断業務">1. 評価関数設計こそが開発者の注力すべき判断業務</h3>
+<p>GEPA に渡す評価関数では、複数の評価観点を 1 つのスカラー値にまとめる必要がありますが、単に平均値を取ると個別の重大な失敗（例: 安全性違反）がスコアの陰に埋もれてしまいます。</p>
+<p>これを防ぐためには、<code>dspy.Prediction(score=..., feedback=...)</code> を通じて、問題のあった観点を具体的な自然言語テキストとして <code>feedback</code> に残す設計が不可欠です。どの観点を優先し、どのような振る舞いを違反とするかというポリシーの言語化こそが、開発者が本来注力すべき判断業務となります。</p>
+<h3 id="2-llm-as-a-judge-の一貫性限界と対処法">2. LLM-as-a-Judge の一貫性限界と対処法</h3>
+<p>評価関数内で複雑な品質評価を行う場合、LLM を評価者として用いる「LLM-as-a-Judge」が広く用いられますが、LLM-as-a-Judge には一貫性の課題が存在します<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>先行研究や実務事例では、同一の入力や基準であっても、前後の文脈や表現の微妙な差異によって LLM-as-a-Judge の判定が揺れる現象が報告されています<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。たとえば、「髄膜炎による頭痛は…ほぼ必ず同時に現れ」という文言について、初期プロンプトの出力では診断行為と判定された一方、最適化後の類似文脈では非診断行為と判定されたといったスコアの揺らぎが発生します。</p>
+<p>この一貫性の限界に対処するためには、完全自動化に過度の信頼を置かず、<strong>「自動最適化 → 人手によるサンプリング確認 → 評価プロンプト自体の修正」</strong> という多段階の検証サイクルを運用に組み込むことが重要です。</p>
+<h3 id="3-実務導入におけるトレードオフ文字数の肥大化">3. 実務導入におけるトレードオフ：文字数の肥大化</h3>
+<p>LINEヤフーの実務検証記事では、手動で数日〜数週間かかっていたプロンプト調整作業が約 1 時間に短縮され、指示文が体系的な章立て構造へと自動整理される大きな成果が得られました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>一方で、最適化によってプロンプトの文字数が <strong>5,521文字から8,561文字（約55%増）へと大幅に肥大化</strong> したことが報告されています。プロンプトが長文化すると、API のトークン消費コストが増加し、推論レイテンシが延びるトレードオフが生じます。実務プロダクトへ投入する際は、精度向上と推論コストのバランスを評価する必要があります。</p>
+<p>また今後の展望として、直前と現在のプロンプト・推論結果の差分（Diff）を分析して無駄な長文化を抑えつつ改善箇所を特定する最新手法の研究も進められています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-5" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-gepaを利用するには大量の教師データが必要ですか">Q: GEPAを利用するには大量の教師データが必要ですか？</h3>
+<p><strong>A: 大量のデータは不要です。</strong> GEPA は失敗理由を自然言語で振り返る Reflective Prompt Mutation を採用しているため、従来の強化学習が数万ステップのロールアウトを要するのに対し、GEPA はわずか数百ロールアウトで最高性能に到達する高いサンプル効率を実証しています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-4" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h3 id="q-miprov2とgepaはどのように使い分けるべきですか">Q: MIPROv2とGEPAはどのように使い分けるべきですか？</h3>
+<p><strong>A: デモ事例を含めた網羅探索には MIPROv2、指示文の深い言語的洗練には GEPA が適しています。</strong> Few-Shot のデモ選定と指示文を Optuna で同時に組み合わせ探索したい場合は MIPROv2 を、エラーログや自然言語フィードバックを与えて指示文を論理的に進化させたい場合は GEPA を選択してください。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本記事で解説した DSPy + GEPA によるプロンプト自動最適化の要点は以下の通りです。</p>
+<ul>
+<li><strong>プロンプトチューニングの自動化</strong>: 手動調整に数日〜数週間かかっていたプロンプト改善を約 1 時間で完了し、属人化を解消できる。</li>
+<li><strong>言語的反省による高いサンプル効率</strong>: GEPA はパレート選択と自然言語リフレクションにより、少ない試行回数で指示文を進化させる。</li>
+<li><strong>評価関数設計の重要性</strong>: 多観点スコアの集約だけでなく、<code>dspy.Prediction(feedback=...)</code> による具体的な言語フィードバックの提供が最適化の成否を分ける。</li>
+<li><strong>実務上の制約と検証サイクル</strong>: LLM-as-a-Judge の判定揺らぎやプロンプト文字数肥大化（推論コスト増）を前提とし、人手チェックと評価プロンプト改善のループを設計する必要がある。</li>
+</ul>
+<p>自社プロダクトへの LLM 導入における評価設計や、AI Operations の仕組み化・標準化についてのご相談は、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://techblog.lycorp.co.jp/ja/techverse2026-60">プロンプトは人手チューニングからAIチューニングへ：遺伝的アルゴリズムで回す自動最適化と高速化</a> 中野 佑哉（LINEヤフー株式会社）, Tech-Verse 2026 公式技術ブログ, 2026年。工数約1時間への短縮、文字数55%肥大化（5,521→8,561文字）、評価関数の feedback 設計、LLM-as-a-Judge の判定揺らぎ実例、差分活用（古賀ら, 2026）への言及。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-1-5" data-footnote-backref="" aria-label="Back to reference 1-5" class="data-footnote-backref">↩<sup>5</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://arxiv.org/abs/2507.19457">GEPA: Reflective Prompt Evolution Can Outperform Reinforcement Learning</a> Agrawal, L. A. et al., ICLR 2026 Oral, arXiv:2507.19457, 2026年。パレート選択・進化的アルゴリズム理論、Reflective Prompt Mutation のメカニズム、RL比較で最大20%性能向上・サンプル効率の証明。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-2-4" data-footnote-backref="" aria-label="Back to reference 2-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://arxiv.org/abs/2310.03714">DSPy: Compiling Declarative Language Model Calls into Self-Improving Pipelines</a> Khattab, O. et al., arXiv:2310.03714, 2023年。DSPy の Signatures, Modules (Predict/ChainOfThought), Teleprompters/Optimizers の3層アーキテクチャ定義。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://github.com/gepa-ai/gepa/blob/main/README.md">gepa-ai/gepa README</a> GEPA Team, 公式 GitHub リポジトリ README, 2026年。<code>dspy.GEPA</code> の API 仕様、<code>dspy.Prediction(feedback=...)</code> の受け渡し構文。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://arxiv.org/abs/2411.15594">A Survey on LLM-as-a-Judge</a> Gu, J. et al., arXiv:2411.15594, 2024年。LLM-as-a-Judge における一貫性の欠如、位置バイアス・冗長性バイアス・自己好感バイアスの体系的指摘。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 
