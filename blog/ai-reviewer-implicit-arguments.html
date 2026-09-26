@@ -1,0 +1,143 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>レビュー役に「まず読め」と書いた1行が、答えを渡していた ── 同じ漏洩が経路を変えて3回起きた | Meetsource</title><meta name="description" content="レビュー用サブエージェントに「まず◯◯を読め」と書いた1行が、検証中の仮説をそのまま渡していました。断定 → 禁止の理由文 → 必読ファイルと経路を変えて3回届いた漏洩の記録と、ファイルを読ませる運用ごとやめた設計判断です。"><link rel="canonical" href="https://www.meetsource.work/blog/ai-reviewer-implicit-arguments"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="レビュー役に「まず読め」と書いた1行が、答えを渡していた ── 同じ漏洩が経路を変えて3回起きた | Meetsource"><meta property="og:description" content="レビュー用サブエージェントに「まず◯◯を読め」と書いた1行が、検証中の仮説をそのまま渡していました。断定 → 禁止の理由文 → 必読ファイルと経路を変えて3回届いた漏洩の記録と、ファイルを読ませる運用ごとやめた設計判断です。"><meta property="og:url" content="https://www.meetsource.work/blog/ai-reviewer-implicit-arguments"><meta property="og:image" content="https://www.meetsource.work/blog/ai-reviewer-implicit-arguments-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-09-20T18:10:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="レビュー役に「まず読め」と書いた1行が、答えを渡していた ── 同じ漏洩が経路を変えて3回起きた | Meetsource"><meta name="twitter:description" content="レビュー用サブエージェントに「まず◯◯を読め」と書いた1行が、検証中の仮説をそのまま渡していました。断定 → 禁止の理由文 → 必読ファイルと経路を変えて3回届いた漏洩の記録と、ファイルを読ませる運用ごとやめた設計判断です。"><meta name="twitter:image" content="https://www.meetsource.work/blog/ai-reviewer-implicit-arguments-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"レビュー役に「まず読め」と書いた1行が、答えを渡していた ── 同じ漏洩が経路を変えて3回起きた","description":"レビュー用サブエージェントに「まず◯◯を読め」と書いた1行が、検証中の仮説をそのまま渡していました。断定 → 禁止の理由文 → 必読ファイルと経路を変えて3回届いた漏洩の記録と、ファイルを読ませる運用ごとやめた設計判断です。","datePublished":"2026-09-20T18:10:00.000Z","image":"https://www.meetsource.work/blog/ai-reviewer-implicit-arguments-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/ai-reviewer-implicit-arguments"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"サブエージェントに分ければ、レビューの独立性は保証されるのですか？","acceptedAnswer":{"@type":"Answer","text":"保証されるのは「親の会話履歴と既読ファイルを引き継がない」ところまでです。公式ドキュメントも、サブエージェントは新しい隔離されたコンテキストウィンドウで開始し、会話履歴も、すでに呼び出したスキルも、すでに読んだファイルも見えないと明記しています（親の会話を引き継ぐ fork は例外です）。ただし、そのサブエージェントに Read ツールを与えて「まず ◯◯ を読め」と書けば、隔離は自分の手で破ったことになります。"}},{"@type":"Question","name":"「この情報は判定に使わないでください」と書けば十分ではないですか？","acceptedAnswer":{"@type":"Answer","text":"不十分な場合があります。判定役に文脈メタデータとして入れた事前スコアは評点を系統的に動かし、「無視せよ」という警告でも Chain-of-Thought でも総効果は減らなかったと報告されています（測られたのは数値スコアのアンカーです。同じ論文は、条件によっては警告が改善したとも書いています）。加えて、禁止の理由を書き添えると、その理由文が禁じたい命題そのものを運びます。こちらは効き目以前の話で、その命題が文面に書かれているという事実自体は、禁止が効くかどうかとは別に決まります。"}},{"@type":"Question","name":"判定役に参照解答や資料を渡すのは常に間違いですか？","acceptedAnswer":{"@type":"Answer","text":"違います。LLM-as-a-Judge の評価研究では、参照解答を判定役に与える手法が判定方式の1つとして提案されています。線を引くべきは資料の量ではなく身分です ── 判断基準にしてよい確定事項と、実験で検証中の命題は別に扱います。"}},{"@type":"Question","name":"読ませるのをやめると、何が犠牲になりますか？","acceptedAnswer":{"@type":"Answer","text":"司令塔側の手間です。資料を読ませておけば自動で追随した部分を、明示的な1行の引数に畳んで渡し直す必要があります。調査タスクの委任についての報告ですが、詳細なタスク記述を欠くとエージェントが作業を重複させたり抜けを作ったりすることが知られており、渡す1行の質がそのまま結果を左右する点は査読の委任でも変わりません。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-09-20T18:10:00.000Z" data-astro-cid-7jjqptxk> 2026.09.21 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#context-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#品質管理</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>レビュー役に「まず読め」と書いた1行が、答えを渡していた ── 同じ漏洩が経路を変えて3回起きた</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/ai-reviewer-implicit-arguments-hero.webp" alt="レビュー役に「まず読め」と書いた1行が、答えを渡していた ── 同じ漏洩が経路を変えて3回起きた" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>コンテキストを分離した独立のサブエージェントにレビューを任せたはずなのに、その判定役が「これから判定すべき仮説」を先に知った状態で評価している。そういう事故があります。判定役エージェントにとって、<strong>「まず ◯◯ を読め」と書かれた指示は、引数を渡したのと同じ</strong> です。レビュー用サブエージェントの独立性は、渡した引数だけでなく、読ませた資料まで数えないと判定できません。</p>
+<p>分離それ自体は仕様として保証されています。Claude Code のサブエージェントは独立したコンテキストウィンドウで動き、公式ドキュメントは「それぞれのサブエージェントは新しい隔離されたコンテキストウィンドウで開始する。あなたの会話履歴も、すでに呼び出したスキルも、Claude がすでに読んだファイルも見えない」と明記しています（親の会話を引き継ぐ fork は例外です）<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>それでも、同じ命題が <strong>経路を変えて3回</strong> 判定役に届いていました。1回目は判定役の定義そのものへの断定、2回目はその断定を禁じたときに添えた理由文、3回目は「まず読め」と必読を指示したファイルの中身です。最終的には「ファイルを読ませる」運用ごとやめ、判断に必要な情報を1行の引数に畳みました。明示的に渡してはいないのに結果としてコンテキストへ入っている情報を、本記事では <strong>暗黙の引数</strong> と呼びます（公式の用語ではありません）。</p>
+<h2 id="読ませる資料が答えを渡すまで--同じ漏洩が経路を変えて3回起きた">「読ませる資料」が答えを渡すまで ── 同じ漏洩が経路を変えて3回起きた</h2>
+<p>舞台は、連載記事の企画と本文を査読するパイプラインです。判定役は「この回は読んだ人が相談したくなる仕事の証明になるか」の一点だけを見る単機能レビュアーとして新設しました。関心事は1つで、それをいくつかの観点に分けて見ます。そしてその連載には、実験として検証中の命題がありました ── 「読者本人に呼びかける文言と、読者が上長へ渡せる形の文言では、どちらが効くか」。記事末のフォーマット部品に「検証する仮説」として明記してあったものです。この命題を判定役が事実として持っていると、実験の比較が成立しません。</p>
+<p>先に断っておきます。この判定役は結局一度も起動しないまま作り直したので、<strong>偏った判定を出した実例は存在しません</strong>。以下は判定が歪んだ記録ではなく、命題が届く経路が開いていた記録です。</p>
+<h3 id="1回目--判定役の定義に検証中の命題を断定で書いた">1回目 ── 判定役の定義に、検証中の命題を断定で書いた</h3>
+<p>新設した時点の判定役の定義は、観点3がこう始まっていました。</p>
+<blockquote><h3 id="3-決裁権のない読者が持ち出せる形になっているか">3. 決裁権のない読者が持ち出せる形になっているか</h3><p>読者層が <code>mid-level</code> 以下の場合、読者本人は多くの場合決裁権を持ちません。</p></blockquote>
+<p>同じ命題を、記事末のフォーマット部品は「検証する仮説」の2つ目として立てていました。中堅層の読者は多くの場合決裁権を持たないはずだから、後半のいくつかの回では上長へ渡せる形の文言を試す、という組み立てです。実験で確かめようとしている命題を、その実験を査読する側に事実として持たせていたことになります。</p>
+<p>発覚したのは、書き手の見直しではありませんでした。別モデル（Gemini）による独立レビューが拾っています。しかもそのレビューは「偏った一般化」として重大度を「中」で出しており、突き合わせた側が「実験で確かめようとしている仮説を、企画を査読するエージェントに事実として持たせた」と評価し直して「高」へ上げました。外部レビューが付けた重大度をそのまま採らない運用については、<a href="/blog/orchestrator-downgrade-subagent-severity">サブエージェントの「高」判定を、そのまま信じない</a> に書いたとおりです。</p>
+<h3 id="2回目--禁止に添えた理由が同じ命題を渡していた">2回目 ── 禁止に添えた「理由」が、同じ命題を渡していた</h3>
+<p>1回目の修正は、断定を中立形に直したうえで、禁止条項を <strong>新たに追加</strong> しました。追加した文がこれです。</p>
+<blockquote><p><strong>どちらの経路が主かを決めつけないこと。</strong> 読者層のラベル（<code>junior</code> / <code>mid-level</code> / <code>advanced</code>）から決裁権の有無を推定してはいけません——<strong>その推定自体が、このシリーズが実験で確かめようとしている当の命題</strong> であり、査読する側が答えを持っていると実験の比較が成立しません。</p></blockquote>
+<p>次の巡回で、この禁止条項そのものが指摘されました ── 「禁止に理由を書いて、自分で立てた原則を破った」。禁じたはずの命題が、禁止の理由文としてそのまま本文に書かれています。</p>
+<p>2回目の修正で、方向が反転します。禁止を強めるのではなく、推定の材料である読者層のラベルを引数から撤去しました。知らないものは推定できないので、禁止条項は不要になり、削除しました。なお「禁止という書き方そのものがモデルの出力に与える影響」は別の層の話で、後段の「『禁止指示は無力』とまでは言えない」節で扱います。</p>
+<h3 id="3回目--引数から外してもまず読めと書いた先に載っていた">3回目 ── 引数から外しても、「まず読め」と書いた先に載っていた</h3>
+<p>引数を撤去した直後のレビューで、別軸のサブエージェントが最も重い指摘を返しました。読者層を引数から外しても仮説は渡っている、判定役の定義は記事末のフォーマット部品を必読と指示しており、その部品に検証中の仮説が逐語で書かれている、という内容です。</p>
+<p>実際、引数を外した時点の判定役の定義には、査読に入る前の手順としてこの1行が残っていました。文中の「アーク」は連載の区切り（数回ぶんのまとまり）を指す語です。</p>
+<blockquote><p>まず記事末フォーマット部品を読み、<strong>今回のアークに割り当てられた文言の方向性</strong>（問いかけ型／事実提示型／診断の申し出型／置き換えの相談型 など）を確認してから査読に入ります。</p></blockquote>
+<p>書き手の受け止めはこうでした ── 「渡していないつもりの命題を、別ファイル経由で読ませていました」。そしてこの3巡とも、漏洩を拾ったのは書き手の自己チェックではなく、別モデルか別軸のサブエージェントでした。</p>
+<p>ここで定式化が出てきます。</p>
+<blockquote><p><strong>「読め」と指示したファイルの中身は、引数で渡したのと同じである。</strong> 分離できているかは、渡した引数だけでなく、読ませた資料まで数えて判定する。</p></blockquote>
+<p>3回の経路を並べると、対処が毎回「その経路だけ」を塞いでいたことがわかります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>回</th><th>命題が判定役へ届いた経路</th><th>そのときの対処</th><th>なぜ足りなかったか</th></tr></thead><tbody><tr><td>1回目</td><td>判定役の定義に、命題を <strong>断定文</strong> として書いた</td><td>断定を中立形へ書き換え、禁止条項を追加</td><td>禁止文に理由を添えたため、理由文が命題を運んだ</td></tr><tr><td>2回目</td><td>禁止条項に添えた <strong>理由文</strong></td><td>禁止ごと削除し、推定の材料（引数）を撤去</td><td>引数以外の経路を数えていなかった</td></tr><tr><td>3回目</td><td>「まず読め」と指示した <strong>参照ファイル</strong></td><td>対象以外を開かせず、必要な情報を1行の引数に畳む</td><td>（ここで閉じた）</td></tr></tbody></table>
+<p>毎回「渡していないつもり」で、渡す経路だけが変わっていました。</p>
+<h2 id="なぜ禁止するではなく渡さないを選んだのか">なぜ「禁止する」ではなく「渡さない」を選んだのか</h2>
+<p>選んだ方針は単純です。<strong>推定の材料を渡さない。渡していない情報について、禁止文を書く必要はない。</strong></p>
+<p>最終形では、判定役の定義ファイルの入力欄から3項目を削除しました。連載全体の設定ファイルのパス、記事末のフォーマット部品のパス、今回の話数です。代わりに司令塔（サブエージェントを呼ぶ親側）が、今回の導線ブロック（記事末に置く数行の相談導線）の文言の方向性を1行の引数として渡します（たとえば <code>診断の申し出型 — 持ち込んでもらえれば一緒に見る、という申し出の形</code>）。そして「まず読め」の1行は、査読対象そのもの以外のファイルを開かないこと、設定ファイル類は読まず、判断に要るものはすべて引数で受け取ること、という指示に置き換えました。副産物として、話数の引数も要らなくなりました。話数はもともと、どの区切りに属するかを表から引くためだけのものだったからです。</p>
+<p>引数に畳んだだけで、なぜ閉じたと言えるのか。渡している1行は「今回の回にどの方向性を割り当てたか」という <strong>確定事項</strong> であって、実験で確かめようとしている命題（読者層のラベルから決裁権の有無を推定してよいか）ではないからです。判断基準にしてよい確定事項と、判断基準にしてはいけない検証中の命題は身分が違います。必読ファイルの経路で渡っていたのは後者でした。</p>
+<p>最後に残った1行が禁止文であることも確かです。Read ツールごと取り上げれば経路は物理的に閉じますが、この判定役は査読対象そのものを開いて読むので、それはできません。ただし、この禁止が背負っているのは「自分から探しに行かない」ことだけで、探す先のパス自体はもう入力にありません。2回目の修正で読者層のラベルを撤去したのと同じ、材料を渡さない側の手当てです。</p>
+<p>似た形の話が、別の材料で測られています。判定役に「文脈メタデータとして入れただけ」の事前スコアが評点を系統的に動かすことが、192,000 回規模の試行（成功 185,271 回）で報告されており、Chain-of-Thought でも「このメタデータを無視せよ」という警告でも総効果は減らなかったと述べられています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。CIKM ‘26 に採録予定の論文です。ただし同じ1文は <code>although</code> 節で、産業データの実験では警告がベースライン比で対の正確性（paired accuracy）への効果を改善したとも書いています。そして測られたアンカーは <strong>数値スコア</strong> であって、検証中の命題ではありません。渡っていたものの種類が違います。</p>
+<p>ここで自社の記録と外部の実測との間に線を引いておきます。この一件で示せるのは、<strong>命題が届く経路が3回とも開いていた</strong> ところまでです。判定役は起動実績ゼロのまま作り直したので、偏った判定を出した出力そのものが存在しません。「届くと評点が動く」のほうは外部の実験結果であって、こちらの実測ではありません。</p>
+<h2 id="メリットの裏にあるトレードオフと適用限界">メリットの裏にあるトレードオフと適用限界</h2>
+<h3 id="禁止指示は無力とまでは言えない">「禁止指示は無力」とまでは言えない</h3>
+<p>査読済みの研究（ICML 2023）が、算数問題に無関係な情報を混ぜたとき、解答する側のモデルが引きずられることを示し、緩和策の1つとして「無関係な情報を無視せよ」という指示をプロンプトに足すことを挙げています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。ただし測ったのは判定役ではなく算数問題を解く側のモデルで、しかも禁止指示ではなく「無視せよ」指示です。アブストラクトは緩和策として挙げるところまでで、効果量は示していません。したがってここから言えるのは、注意を促す指示が緩和策として提案されている領域はある、というところまでです。</p>
+<p>同じことが、先ほどの判定役の実験の中にも書かれています。警告でも Chain-of-Thought でも総効果は減らなかったと述べた同じ1文が、<code>although</code> 節で「ただし産業データの実験では、警告がベースライン比で対の正確性への効果を改善した」と続きます<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。条件によっては警告が効いたとも書いている、というのが読み取れる範囲です。</p>
+<p>そこで、本記事の主張は2点に限定します。</p>
+<ol>
+<li><strong>禁止指示は効き目が保証されない。</strong> 緩和策として提案されている側が算数問題を解くモデルでの報告<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>、総効果が減らなかった側が判定役に入れたメタデータの報告<sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>であり、両者を分けるのは査読の有無ではなく測った対象です。</li>
+<li><strong>禁止に理由を添えると、その理由文が材料そのものを運ぶ。</strong> これは効き目の問題ではなく、文面の構成の問題です。</li>
+</ol>
+<p>2点目について、外部に同じ形の測定は見当たりません。近いところでは、7B 級のオープンウェイトモデル1本（Qwen2.5-7B-Instruct）を対象にした統制実験で、禁止語を書くこと自体がその語を priming してしまうという <strong>モデルの出力挙動</strong> までが測られています<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>（著者自身が全モデルへの一般化は主張しないと書いています）。測られているのはモデルの挙動であって、人が書いた文面の構成ではありません。理由を書けば理由の中身が渡る、というのは測定の問題ではなく文面の問題です。</p>
+<h3 id="判定役に答えを渡すなと一般化はできない">「判定役に答えを渡すな」と一般化はできない</h3>
+<p>LLM-as-a-Judge の代表的な評価研究は、<strong>参照解答を判定役にあえて与える reference-guided grading</strong> を判定方式の1つとして提案しています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。これは、判定役が採点しようとしている「評価対象として提示された解答」の誤りに引きずられて誤判定する（原典の言い方では “it was misled by the provided answers”）という、数学・推論問題での限界への対処です。判定役に自分で独立に解かせた参照解答を渡すことで、失敗率が 70% から 15% へ下がったと報告されています（母数は数学 10 問）。答えを渡すこと自体が悪いのではありません。</p>
+<p>引くべき線は、次の1文です。</p>
+<blockquote><p><strong>実験で検証中の命題を、その実験を査読する側に渡さない。</strong>
+前提（判断基準にしてよい確定事項）と、検証中の仮説（判断基準にしてはいけない命題）は身分が違う。</p></blockquote>
+<h3 id="手間は消えず司令塔へ移る">手間は消えず、司令塔へ移る</h3>
+<p>「読ませない」代わりに、渡す1行の質が全責任を負います。調査タスクをサブエージェントへ委任する運用についての報告では、「詳細なタスク記述がないと、エージェントは作業を重複させ、抜けを作り、必要な情報を見つけられない」と述べられています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。あちらが困っているのは調査の網羅性、こちらが守ろうとしているのは査読の独立性で、「委任の記述が薄いと困る」という形は同じでも困る中身は違います。それでも、渡す1行の質がそのまま結果を左右するという形は共通します。</p>
+<p>実務上のコストもはっきりしています。連載の区切りや文脈が変わるたびに、司令塔側で1行を作り直す必要があります。資料を読ませておけば自動で追随した部分を、明示的な受け渡しに置き換えたからです。</p>
+<p>そして効果は測っていません。作り直したあとの起動実績がこの記録の期間内になく、「漏洩が止まった」ことを事後に観測してはいないからです。示せるのは経路を閉じたところまでです。なお同じ変更で、判定役を <code>lead-reviewer</code> から <code>inquiry-reviewer</code> へ改名しました。兄弟にあたる <code>reader-reviewer</code> / <code>continuity-reviewer</code> が関心事を名乗っているのに <code>lead</code> だけが役職名にも読める、という不揃いを直したものです。</p>
+<h3 id="検出は外部に依存している">検出は外部に依存している</h3>
+<p>この一件では、3巡とも漏洩を拾ったのは書き手の自己チェックではありませんでした（母数は3巡）。別モデルか、別軸のサブエージェントです。</p>
+<p>同じ「外部の目」でも、拾える欠陥の種類は違いました。単一の正本から派生した設計文書の追従漏れは、差分を見るレビューでは原理的に拾えません。ただしこれは仮説の漏洩とは別の欠陥種別での観察であって、3回目の漏洩を拾った経路とは別の事象です。別モデルのレビューの得手不得手については <a href="/blog/ai-code-review-additive-bias">別モデルのコードレビューは「欠陥の所在」を当てるが「修正案」は逆を向く</a> に書きました。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p><strong>読ませ口は1つではありません。</strong> Claude Code のサブエージェントの初期コンテキストには、システムプロンプト・タスクメッセージ・CLAUDE.md・Git status に加えて、<code>skills</code> フィールドで指定したスキルの全文が入ります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。明示的な必読指示を消しても、仕様上はここが同じ経路になると読めます。この経路で実際に命題が漏れたことを測ってはいませんが、点検の対象からは外せません。</p>
+<p><strong>モデルが強くなれば禁止が効くようになるのか。</strong> 否定制約の失敗を機構レベルで調べた研究が示したのは 7B 級1モデルでの結果であり、規模や系統が変われば違いうると著者自身が書いています<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。ただし「効くようになる」に賭ける設計と、「渡さない」で閉じる設計とでは、外したときのコストが違います。</p>
+<p><strong>判定役が資料を読むべき場面も、当然あります。</strong> 参照解答を渡す評価設計<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>のように、渡すことが前提の判定タスクでは、この記事の結論は当てはまりません。分けるべきは「渡してよい確定事項」と「渡してはいけない検証中の命題」であって、資料の量ではありません。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-サブエージェントに分ければレビューの独立性は保証されるのですか">Q. サブエージェントに分ければ、レビューの独立性は保証されるのですか？</h3>
+<p><strong>A.</strong> 保証されるのは「親の会話履歴と既読ファイルを引き継がない」ところまでです。公式ドキュメントも、サブエージェントは新しい隔離されたコンテキストウィンドウで開始し、会話履歴も、すでに呼び出したスキルも、すでに読んだファイルも見えないと明記しています（親の会話を引き継ぐ fork は例外です）<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。ただし、そのサブエージェントに Read ツールを与えて「まず ◯◯ を読め」と書けば、隔離は自分の手で破ったことになります。</p>
+<h3 id="q-この情報は判定に使わないでくださいと書けば十分ではないですか">Q. 「この情報は判定に使わないでください」と書けば十分ではないですか？</h3>
+<p><strong>A.</strong> 不十分な場合があります。判定役に文脈メタデータとして入れた事前スコアは評点を系統的に動かし、「無視せよ」という警告でも Chain-of-Thought でも総効果は減らなかったと報告されています（測られたのは数値スコアのアンカーです。同じ論文は、条件によっては警告が改善したとも書いています）<sup><a href="#user-content-fn-2" id="user-content-fnref-2-4" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。加えて、禁止の理由を書き添えると、その理由文が禁じたい命題そのものを運びます。こちらは効き目以前の話で、その命題が文面に書かれているという事実自体は、禁止が効くかどうかとは別に決まります。</p>
+<h3 id="q-判定役に参照解答や資料を渡すのは常に間違いですか">Q. 判定役に参照解答や資料を渡すのは常に間違いですか？</h3>
+<p><strong>A.</strong> 違います。LLM-as-a-Judge の評価研究では、参照解答を判定役に与える手法が判定方式の1つとして提案されています<sup><a href="#user-content-fn-5" id="user-content-fnref-5-3" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。線を引くべきは資料の量ではなく身分です ── 判断基準にしてよい確定事項と、実験で検証中の命題は別に扱います。</p>
+<h3 id="q-読ませるのをやめると何が犠牲になりますか">Q. 読ませるのをやめると、何が犠牲になりますか？</h3>
+<p><strong>A.</strong> 司令塔側の手間です。資料を読ませておけば自動で追随した部分を、明示的な1行の引数に畳んで渡し直す必要があります。調査タスクの委任についての報告ですが、詳細なタスク記述を欠くとエージェントが作業を重複させたり抜けを作ったりすることが知られており<sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>、渡す1行の質がそのまま結果を左右する点は査読の委任でも変わりません。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li><strong>判定役の独立性は、渡した引数ではなく、届く経路の総数で決まります。</strong> 「読め」と指示したファイルの中身は、引数で渡したのと同じです。</li>
+<li><strong>禁止に理由を添えると、理由文が禁じたい命題を運びます。</strong> 「その命題が文面に書かれている」という事実自体はモデルに依存しません。効き目の話をする前に、渡すか渡さないかが決まっています。</li>
+<li><strong>「渡すな」ではなく「渡す身分を分ける」。</strong> 判断基準にしてよい確定事項と、実験で検証中の命題を混ぜないことです。参照解答を渡す評価設計が成立している以上、資料の量で線を引くと間違えます。</li>
+<li><strong>点検は引数リストだけでなく、読ませ口の一覧で行います。</strong> 明示的な必読指示に加えて、初期コンテキストへ自動で入るもの（指定したスキルの全文など）も、仕様上は同じ経路になります。</li>
+<li><strong>この事例で漏洩を検出したのは、3巡とも外部でした</strong>（母数は3巡）。自己チェックが同型の欠陥を拾えなかった以上、独立した目を通す工程は外せません。</li>
+</ul>
+<p>開発プロセスの標準化、AI Operations の導入設計、アーキテクチャや意思決定プロセスの見直しについて、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://code.claude.com/docs/en/sub-agents">Create custom subagents</a> Anthropic、Claude Code 公式ドキュメント（2026年9月21日閲覧）。「独立したコンテキストウィンドウ・独自のシステムプロンプト・個別のツールアクセスで動く」は冒頭の導入段落。「新しい隔離されたコンテキストウィンドウで開始し、会話履歴も、すでに呼び出したスキルも、すでに読んだファイルも見えない」「fork は親の会話を引き継ぐ例外」、および初期コンテキストの一覧（システムプロンプト / タスクメッセージ / CLAUDE.md / Git status / Preloaded skills＝<code>skills</code> フィールドで指定したスキルの全文 / Sibling roster）は、いずれも「Manage subagent context」節の「What loads at startup」小節。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://arxiv.org/abs/2608.25869">Anchoring Bias in LLM-as-a-Judge Systems: Prior Scores Compromise Evaluation Independence</a> Ante Kapetanovic, Kemal Altwlkany, Andro Mercep, Tomislav Duricic, Emanuel Lacic、arXiv:2608.25869 [cs.CL]、2026年8月26日。Comments 欄に「to appear in proceedings of the 35th ACM International Conference on Information and Knowledge Management (CIKM ‘26), 2026」とあり、CIKM ‘26 に採録予定（2026年9月21日閲覧）。事前スコアが文脈メタデータとしてだけ入っていても評点を系統的に動かすこと、192,000 回の試行（成功 185,271 回）・8モデル中7モデル・Cohen’s <em>d</em> の絶対値が最大 0.71 に達すること、および「Chain-of-Thought でも metadata-disregard warning でも総効果は減らない。ただし industry 実験では警告がベースライン比で paired accuracy 効果を改善した」という1文は、いずれもアブストラクト。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-2-4" data-footnote-backref="" aria-label="Back to reference 2-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://proceedings.mlr.press/v202/shi23a.html">Large Language Models Can Be Easily Distracted by Irrelevant Context</a> Freda Shi, Xinyun Chen, Kanishka Misra, Nathan Scales, David Dohan, Ed H. Chi, Nathanael Schärli, Denny Zhou、<em>Proceedings of the 40th International Conference on Machine Learning</em>, PMLR 202:31210-31227, 2023（査読済み）。モデルが無関係な情報に容易に気を散らされること（“easily distracted”）と、緩和策として self-consistency デコーディングおよび「無関係な情報を無視せよという指示をプロンプトに足すこと」を挙げている記述は、いずれもアブストラクト（緩和策は末尾の1文）。測定対象は GSM-IC の算数問題を解く側のモデルであり、判定役ではない。arXiv 版（arXiv:2302.00093）はアブストラクトの文言が異なる。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://arxiv.org/abs/2601.08070">Semantic Gravity Wells: Why Negative Constraints Backfire</a> Shailesh Rana（単著）、arXiv:2601.08070 [cs.AI] v1、2026年1月12日。Comments 欄に掲載先の記載がないプレプリント（2026年9月21日閲覧）。違反の 87.5% が priming failure であること（禁止語を明示すること自体が対象表現を活性化させる）はアブストラクト。実験に使ったモデルが Qwen2.5-7B-Instruct 1本だけであることは §7.3 Limitations 冒頭の「Single model.」、全モデルへの一般化を主張しない旨（“we do not claim universality across all models”）は本文冒頭。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://arxiv.org/abs/2306.05685">Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena</a> Lianmin Zheng ほか12名、arXiv:2306.05685 v4（2023年12月24日）、NeurIPS 2023 Datasets and Benchmarks Track。position・verbosity・self-enhancement の3バイアスはアブストラクト。判定の3方式の1つとしての reference-guided grading の定義は §3.1「Types of LLM-as-a-Judge」、判定役が評価対象として提示された解答に引きずられる限界（“it was misled by the provided answers”）は §3.3「Limitations of LLM-as-a-Judge」、reference-guided judge の提案と失敗率 70% → 15% は §3.4「Addressing limitations」（数値の所在は Table 4。母数は数学 10 問で、failure は誤った回答を正しいと判定することを指す）。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-5-3" data-footnote-backref="" aria-label="Back to reference 5-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://www.anthropic.com/engineering/multi-agent-research-system">How we built our multi-agent research system</a> Jeremy Hadfield, Barry Zhang, Kenneth Lien, Florian Scholz, Jeremy Fox, Daniel Ford（Anthropic Engineering）、2025年6月13日。「詳細なタスク記述がないと、エージェントは作業を重複させ、抜けを作り、必要な情報を見つけられない」は「Prompt engineering and evaluations for research agents」節の第2項「Teach the orchestrator how to delegate.」。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

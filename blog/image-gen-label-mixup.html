@@ -1,0 +1,147 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>同型要素を5個横並びで生成させると、ラベルが完結文でもAIは混同する | Meetsource</title><meta name="description" content="プロンプトの完結文ノウハウだけでは防げないAI画像生成のラベル混同事例。局所修正が「ナスu_nの」へ悪化した失敗から全14ラベル再固定で修復した検証プロセスを共有します。"><link rel="canonical" href="https://www.meetsource.work/blog/image-gen-label-mixup"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="同型要素を5個横並びで生成させると、ラベルが完結文でもAIは混同する | Meetsource"><meta property="og:description" content="プロンプトの完結文ノウハウだけでは防げないAI画像生成のラベル混同事例。局所修正が「ナスu_nの」へ悪化した失敗から全14ラベル再固定で修復した検証プロセスを共有します。"><meta property="og:url" content="https://www.meetsource.work/blog/image-gen-label-mixup"><meta property="og:image" content="https://www.meetsource.work/blog/image-gen-label-mixup-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-09T09:42:27.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="同型要素を5個横並びで生成させると、ラベルが完結文でもAIは混同する | Meetsource"><meta name="twitter:description" content="プロンプトの完結文ノウハウだけでは防げないAI画像生成のラベル混同事例。局所修正が「ナスu_nの」へ悪化した失敗から全14ラベル再固定で修復した検証プロセスを共有します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/image-gen-label-mixup-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"同型要素を5個横並びで生成させると、ラベルが完結文でもAIは混同する","description":"プロンプトの完結文ノウハウだけでは防げないAI画像生成のラベル混同事例。局所修正が「ナスu_nの」へ悪化した失敗から全14ラベル再固定で修復した検証プロセスを共有します。","datePublished":"2026-08-09T09:42:27.000Z","image":"https://www.meetsource.work/blog/image-gen-label-mixup-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/image-gen-label-mixup"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-09T09:42:27.000Z" data-astro-cid-7jjqptxk> 2026.08.09 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#image-generation</span><span class="tag" data-astro-cid-7jjqptxk>#prompt-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>同型要素を5個横並びで生成させると、ラベルが完結文でもAIは混同する</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/image-gen-label-mixup-hero.webp" alt="同型要素を5個横並びで生成させると、ラベルが完結文でもAIは混同する" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>画像生成 AI で図解や挿絵を作成する際、「プロンプト内のテキストラベルは、単語の断片（例: <code>Tomato</code>）ではなく、明確な意味を持つ完結した文・表現にすると誤生成を防ぎやすい」というノウハウが知られています。単語単体だと AI が一般的な概念と混同しやすいのに対し、文脈を持たせることで意図通りの文字を出力させやすくするテクニックです。</p>
+<p>しかし、どれほど丁寧にプロンプトのラベルを「完結文」として設計していても、 <strong>同型要素を5個横並びで一括生成させる配置</strong> を行うと、AI は隣接するラベル同士を混同して誤生成を起こすことが手元での実験・検証ログで判明しました。</p>
+<p>この記事では、実際の図解制作で発生したラベル混同の具体例と、2箇所の誤りのみピンポイント修正しようとしてかえって悪化した失敗談、そして全ラベルを再提示して解決したプロセスと実務上の教訓を共有します。</p>
+<hr>
+<h2 id="はじめに-ラベルを完結文に整えればai画像生成の誤字は防げるか">はじめに: ラベルを「完結文」に整えればAI画像生成の誤字は防げるか？</h2>
+<p>画像生成 AI（Imagen 3 や各種 Diffusion モデルなど）の進化により、画像内に日本語や英語のテキストを描画する精度は飛躍的に向上しました。プロンプトエンジニアリングの現場では、テキスト描画を成功させるコツとして「ラベルを完結した名詞句・文にする」手法が推奨されています。</p>
+<p>しかし、このノウハウを適用しても、一枚の画像の中に同型のカードやノードを多数並べるレイアウトでは、AI が文字と位置関係を内部で混同してしまう現象（属性漏れ: Attribute Leakage）が発生します。</p>
+<p>そもそも、Google Gemini API Imagen 3 Prompt Guide の公式仕様においても、テキスト描画成功の推奨条件は <strong>「1画像あたり描画するフレーズ数は2〜3個以下」「各フレーズは25文字以内」</strong> と明示されています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>今回の検証事例では、一枚の図解の中に一括で <strong>14個ものテキストフレーズ</strong> の描画を依頼していました。これは公式が推奨する上限（2〜3個）を 4〜5倍 大幅に超過していたことになります。一般的な Diffusion モデルは潜在空間全体で一枚の画像を同時に描画するため、高密度のテキスト要求に対しては構造的に文字崩れや混同のエラーが起こりやすくなります<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<hr>
+<h2 id="実証実験のプロンプト設計-productcreatorペア5組の高密度図解">実証実験のプロンプト設計: Product/Creatorペア5組の高密度図解</h2>
+<p>今回検証の対象となったのは、ソフトウェアデザインパターン（Factory Method パターン）を解説する技術記事の挿絵作成プロセスです。</p>
+<p>プロンプトの段階では、すべてのラベルを単語の断片ではなく完結文・完結名詞で丁寧に定義していました。</p>
+<h3 id="図解のラベル構成全14個の完結文ラベル">図解のラベル構成（全14個の完結文ラベル）</h3>
+<ul>
+<li><strong>上部2頂点</strong>:
+<ul>
+<li><code>trait Seedling（Product役）</code></li>
+<li><code>trait SeedlingFactory（Creator役）</code></li>
+</ul>
+</li>
+<li><strong>横並び5品種の独立ペア（Product / Creator）</strong>:
+<ul>
+<li>トマト組: <code>TomatoSeedling</code> / <code>TomatoFactory</code></li>
+<li>キュウリ組: <code>キュウリの苗（専用Product）</code> / <code>キュウリのFactory</code></li>
+<li>ナス組: <code>ナスの苗（専用Product）</code> / <code>ナスのFactory</code></li>
+<li>ピーマン組: <code>ピーマンの苗（専用Product）</code> / <code>ピーマンのFactory</code></li>
+<li>バジル組: <code>バジルの苗（専用Product）</code> / <code>バジルのFactory</code></li>
+</ul>
+</li>
+<li><strong>属性フィールド例</strong>: <code>needs_support: bool</code></li>
+</ul>
+<p>5組のペア間には水平方向の接続線はなく、それぞれが独立したカードとして横一列に並び、上部の2頂点と垂直に接続する整然とした高密度レイアウトです。「短い単語ではなく完結文にする」という既知の対策は、この設計の時点で完全に満たされていました。</p>
+<hr>
+<h2 id="失敗実録1-完結文でも防げなかった同型5組横並びのラベル混同">失敗実録1: 完結文でも防げなかった「同型5組横並び」のラベル混同</h2>
+<p>プロンプトで全14個のラベルを完結文で指定して初回生成を実行したところ、生成結果の検証で <strong>2件のテキスト不一致</strong> が検出されました。</p>
+<div class="callout" data-callout="warning" data-collapsible="false"><div class="callout-title"><div class="callout-title-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div><div class="callout-title-text">1回目の生成で発生した2件の誤生成</div></div><div class="callout-content"><ol>
+<li><code>TomatoFactory</code> → <strong><code>Tomato Factory</code></strong> （キャメルケースの間に不要なスペースが混入し、2行に分割表記された）</li>
+<li><code>ナスのFactory</code> → <strong><code>ナスウリのFactory</code></strong> （隣接する「キュウリのFactory」の「ウリ」の文字が混入した造語が発生した）</li>
+</ol></div></div>
+<p>プロンプトの設計自体に落ち度はなかったにもかかわらず、なぜこのような誤生成が発生したのでしょうか。ここには2つの異なる技術的メカニズムが関係しています。</p>
+<h3 id="1-cross-attention-の空間干渉attribute-leakage--属性漏れ">1. Cross-Attention の空間干渉（Attribute Leakage / 属性漏れ）</h3>
+<p><code>ナスのFactory</code> が <code>ナスウリのFactory</code> に化けた現象は、まさに典型的な <strong>Attribute Leakage（属性漏れ）</strong> です<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。
+Diffusion モデルがテキスト指示を画像に反映させる「Cross-Attention」という仕組みにおいて、隣接する同型カード（キュウリのカードとナスのカード）のアテンション領域がオーバーラップした結果、「キュウリ」の文字列トークンが隣の「ナス」の描画領域へ漏れ出し、両者が合体した「ナスウリ」という造語が生み出されてしまいました<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<h3 id="2-bpe-トークナイザーと視覚的スペースの補間">2. BPE トークナイザーと視覚的スペースの補間</h3>
+<p><code>TomatoFactory</code> が <code>Tomato Factory</code> に分割された現象は、言語モデルの単語分割（BPE トークナイザー）に起因します。キャメルケースの識別子は <code>Tomato</code> と <code>Factory</code> という2つのサブワードに分割して処理されます。明確な単語境界の幾何制約がない場合、画像生成デコーダーはトークン境界に視覚的な空白（スペース）を補間してしまう性質があります。</p>
+<hr>
+<h2 id="失敗実録2-誤り2箇所だけを直すピンポイント修正の失敗とナスu_nのへの悪化">失敗実録2: 誤り2箇所だけを直すピンポイント修正の失敗と「ナスu_nの」への悪化</h2>
+<p>2件の誤生成を検出したため、参照画像編集（Inpainting / 局所修正）機能を使って修正を試みました。この際、「誤っている2箇所だけをピンポイントで直す」という短い指示を出しました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>【1回目の修正指示（失敗）】</span></span>
+<span class="line"><span>上段左の Tomato Factory のスペースを削除して 1 単語の TomatoFactory にし、</span></span>
+<span class="line"><span>ナスウリのFactory の「ウリ」を削除して ナスのFactory に修正してください。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>「ピンポイントで指定したのだから一発で直るだろう」という期待に反し、この1回目の修正指示は <strong>失敗</strong> しました。</p>
+<div class="callout" data-callout="caution" data-collapsible="false"><div class="callout-title"><div class="callout-title-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div><div class="callout-title-text">1回目修正後の確認結果</div></div><div class="callout-content"><ul>
+<li><code>Tomato Factory</code>: <strong>不変</strong> （スペースは消えずそのまま）</li>
+<li><code>ナスウリのFactory</code>: <strong><code>ナスu_nのFactory</code> に悪化</strong> （「ウリ」が消えるどころか、アルファベットと記号が混ざった崩れた文字列に変化した）</li>
+</ul></div></div>
+<h3 id="なぜピンポイント修正で悪化したのか">なぜピンポイント修正で悪化したのか？</h3>
+<ul>
+<li><strong>Context Window（文脈領域）の喪失</strong>: 編集指示のマスク領域（Inpainting Mask）を誤り2箇所だけに絞りすぎた結果、AI モデルが認識できる周囲の文脈領域が極小化しました<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</li>
+<li><strong>Glyph Degeneration（文字構造の壊滅的崩壊）</strong>: 逆拡散過程で日本語漢字・仮名のアテンション活性化が保てなくなり、ラテン文字や記号のノイズ（<code>u_n</code>）へと文字構造が退化してしまいました<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</li>
+</ul>
+<p>「ピンポイントで誤りだけを直す」という直感的なアプローチは、AI 画像生成においては周囲の文脈を失わせ、かえって文字崩れを悪化させるリスクがあることがわかりました。</p>
+<hr>
+<h2 id="解決策-全14ラベルの逐語列挙と変更禁止指定prompt-anchoring">解決策: 全14ラベルの逐語列挙と変更禁止指定（Prompt Anchoring）</h2>
+<p>1回目の修正失敗を踏まえ、2回目の修正ではアプローチを大幅に変更しました。修正したい2箇所だけでなく、 <strong>変更不要な残り12個のラベルも含めて全14個のラベルすべてをプロンプト内で再提示</strong> しました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>【2回目の修正指示（成功）】</span></span>
+<span class="line"><span>参照画像の図解を修正してください。</span></span>
+<span class="line"><span>1. 左から2番目のカード: 「Tomato Factory」（スペースなし・改行なし・1単語）</span></span>
+<span class="line"><span>2. 左から4番目のカード: 「ナスのFactory」（「ナス」＋「の」＋「Factory」の3要素、余計な文字なし）</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>【変更禁止の全体固定リスト】</span></span>
+<span class="line"><span>以下の残り 12 個のテキスト要素は一字一句変更せず、そのまま維持してください：</span></span>
+<span class="line"><span>- trait Seedling（Product役）</span></span>
+<span class="line"><span>- trait SeedlingFactory（Creator役）</span></span>
+<span class="line"><span>- TomatoSeedling</span></span>
+<span class="line"><span>- キュウリの苗（専用Product）</span></span>
+<span class="line"><span>- キュウリのFactory</span></span>
+<span class="line"><span>- ナスの苗（専用Product）</span></span>
+<span class="line"><span>- ピーマンの苗（専用Product）</span></span>
+<span class="line"><span>- ピーマンのFactory</span></span>
+<span class="line"><span>- バジルの苗（専用Product）</span></span>
+<span class="line"><span>- バジルのFactory</span></span>
+<span class="line"><span>- needs_support: bool (各カード内)</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この修正指示を実行した結果、 <strong>全14個のラベルが完璧に一致（テキスト忠実度 100%）</strong> し、誤生成を修復することに成功しました。</p>
+<h3 id="修復成功の要因-prompt-anchoringプロンプト再固定">修復成功の要因: Prompt Anchoring（プロンプト再固定）</h3>
+<p>画像全体のすべてのテキスト要素をプロンプト内で明示的に再提示することにより、テキスト位置と描画文字列を再固定することになり、未編集領域の再計算による崩れを防止できました<sup><a href="#user-content-fn-8" id="user-content-fnref-8-2" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<h3 id="テキスト修正と構図アスペクト比のトレードオフ">テキスト修正と構図（アスペクト比）のトレードオフ</h3>
+<p>なお、この修正プロセスの副産物として、画像のアスペクト比が当初指定していた「正方形（比率 1:1）」から <strong><code>1376x768</code>（16:9 相当）</strong> へと変化しました（実際の生成画像 <code>infographic_2.webp</code> で確認）。</p>
+<p>テキストの忠実度を最優先して潜在空間を最適化した結果、AI が画像全体の縦横比率を再計算したためです。実務においては、「テキストの正確性を取るか、完璧な構図比率を取るか」というトレードオフが発生することを考慮しておく必要があります。</p>
+<hr>
+<h2 id="まとめ-画像生成ai運用における検証習慣と人間による修正プロセス">まとめ: 画像生成AI運用における「検証習慣」と「人間による修正プロセス」</h2>
+<p>プロンプトのラベルを「完結文」にするテクニックは非常に有効ですが、同型要素を5個横並びで配置するような高密度レイアウトにおいては、それ単体で誤生成を完全に防ぐことはできません。</p>
+<p>今回の検証から得られた実務上のガイドラインは以下の3点です。</p>
+<ol>
+<li><strong>文字単位での目視チェック（HITL）を必須化する</strong>: AI に「一発で完璧な図解を出力させる」ことや「完全自動化する」ことの限界を認識し、人間が目視で確認する工程を運用に組み込む。</li>
+<li><strong>局所修正時は「全要素の再提示＋変更禁止指定」を行う</strong>: 誤り箇所だけのピンポイント指示は文字崩れを悪化させるため、全体のテキスト要素を列挙して Prompt Anchoring を効かせる。</li>
+<li><strong>構図のトレードオフを許容する</strong>: テキストの完全修正を行う際、アスペクト比や周辺デザインの微細な変化が起きることを前提とした柔軟な制作フローを持つ。</li>
+</ol>
+<p>AI 画像生成をビジネスやコンテンツ制作に組み込む際は、「一発生成の幻想」を捨て、適切な検証と多段階の修正プロトコルを運用することが、最も確実で高品質な成果物への近道となります。</p>
+<hr>
+<p>AI 活用や業務プロセスの自動化、生成AI導入における品質管理のご相談は <a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p>Google Gemini API Imagen 3 Prompt Guide, <code>https://ai.google.dev/gemini-api/docs/imagen</code> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p>TextDiffuser: Diffusion Models as Text Painters, <code>https://arxiv.org/abs/2305.10855</code> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p>SynGen: Linguistic Binding in Diffusion Models, <code>https://arxiv.org/abs/2306.08877</code> <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p>T2I-CompBench: A Comprehensive Benchmark for Open-World Text-to-Image Generation, <code>https://arxiv.org/abs/2303.16198</code> <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p>Attend-and-Excite: Attention-Based Semantic Guidance for Text-to-Image Diffusion Models, <code>https://arxiv.org/abs/2301.13826</code> <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p>InstructPix2Pix: Learning to Follow Image Editing Instructions, <code>https://arxiv.org/abs/2211.09800</code> <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p>SDEdit: Guided Image Synthesis and Editing with Stochastic Differential Equations, <code>https://arxiv.org/abs/2108.01073</code> <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p>AnyText: Multilingual Visual Text Generation And Editing, <code>https://arxiv.org/abs/2311.03054</code> <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-8-2" data-footnote-backref="" aria-label="Back to reference 8-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 
