@@ -1,0 +1,161 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Loopを回す前に『ハーネス』を整えよ：AGENTS.mdの階層分割とmiseで実現する堅牢なAI開発基盤 | Meetsource</title><meta name="description" content="単発のVibe Codingや自律Loopの前に必要な『ハーネスエンジニアリング』を解説。巨大なAGENTS.mdによるLost in the Middle現象を防ぐ階層分割モデルと、miseによる決定論的な検証環境（Self-Verification）の構築手法を提示します。"><link rel="canonical" href="https://www.meetsource.work/blog/harness-engineering-agents-md"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="Loopを回す前に『ハーネス』を整えよ：AGENTS.mdの階層分割とmiseで実現する堅牢なAI開発基盤 | Meetsource"><meta property="og:description" content="単発のVibe Codingや自律Loopの前に必要な『ハーネスエンジニアリング』を解説。巨大なAGENTS.mdによるLost in the Middle現象を防ぐ階層分割モデルと、miseによる決定論的な検証環境（Self-Verification）の構築手法を提示します。"><meta property="og:url" content="https://www.meetsource.work/blog/harness-engineering-agents-md"><meta property="og:image" content="https://www.meetsource.work/blog/harness-engineering-agents-md-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-07-23T13:32:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Loopを回す前に『ハーネス』を整えよ：AGENTS.mdの階層分割とmiseで実現する堅牢なAI開発基盤 | Meetsource"><meta name="twitter:description" content="単発のVibe Codingや自律Loopの前に必要な『ハーネスエンジニアリング』を解説。巨大なAGENTS.mdによるLost in the Middle現象を防ぐ階層分割モデルと、miseによる決定論的な検証環境（Self-Verification）の構築手法を提示します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/harness-engineering-agents-md-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Loopを回す前に『ハーネス』を整えよ：AGENTS.mdの階層分割とmiseで実現する堅牢なAI開発基盤","description":"単発のVibe Codingや自律Loopの前に必要な『ハーネスエンジニアリング』を解説。巨大なAGENTS.mdによるLost in the Middle現象を防ぐ階層分割モデルと、miseによる決定論的な検証環境（Self-Verification）の構築手法を提示します。","datePublished":"2026-07-23T13:32:00.000Z","image":"https://www.meetsource.work/blog/harness-engineering-agents-md-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/harness-engineering-agents-md"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-07-23T13:32:00.000Z" data-astro-cid-7jjqptxk> 2026.07.23 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#context-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#harness-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#agents-md</span><span class="tag" data-astro-cid-7jjqptxk>#システム設計</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>Loopを回す前に『ハーネス』を整えよ：AGENTS.mdの階層分割とmiseで実現する堅牢なAI開発基盤</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/harness-engineering-agents-md-hero.webp" alt="Loopを回す前に『ハーネス』を整えよ：AGENTS.mdの階層分割とmiseで実現する堅牢なAI開発基盤" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <h2 id="はじめにvibe-codingから自律loopへしかしその前にハーネスはあるか">はじめに：Vibe Codingから自律Loopへ──しかし、その前に「ハーネス」はあるか？</h2>
+<p>Claude Code や Cursor といった AI コーディングエージェントの発展により、開発スタイルは劇的な変化を遂げています。単発のプロンプトでコードを生成させる <strong>「Vibe Coding（雰囲気による自然言語指示）」</strong> から、エージェントに長時間のタスクを自律実行させる <strong>「Loop（ループ）」</strong> の活用へとシフトしつつあります。</p>
+<p>エージェントに個別の指示を出すのではなく、指示を出すループそのものを設計する——AI コーディングの重心はそちらへ移りつつあります。</p>
+<p>しかし、意気込んで自律ループを回し始めたものの、以下のような壁に突き当たった経験はないでしょうか。</p>
+<ul>
+<li>エージェントが何度繰り返しても同じテストで失敗し、無限ループに陥る</li>
+<li>プロジェクト固有の命名規約や構造を無視し、非推奨のライブラリを使ってコードを書き換えてしまう</li>
+<li>ローカル環境と AI の実行環境でコマンドやバージョンが異なり、セルフチェックが正常に機能しない</li>
+</ul>
+<p>こうした失敗の根本原因は、AI モデル自体の知能不足ではありません。 <strong>「エージェントを安全かつ正確に走らせるためのハーネス（Harness：制約・文脈・検証基盤）」</strong> が欠如していることにあります。</p>
+<p>いくら高性能なレーシングカー（AI モデル）と自動運転システム（Loop）を用意しても、ガードレール（文脈・制約）がなく、整備されたサーキット（検証環境）がなければ、車はすぐにコースアウトしてしまいます。本記事では、自律ループを回す前段階として不可欠な <strong>「ハーネスエンジニアリング（Harness Engineering）」</strong> の全体像と具体的な構築手法を解説します。</p>
+<hr>
+<h2 id="課題分析巨大単一-agentsmd-が招く-context-rot-と検証の破綻">課題分析：巨大単一 <code>AGENTS.md</code> が招く Context Rot と検証の破綻</h2>
+<p>エージェントの行動を制御するために、リポジトリルートに <code>AGENTS.md</code> や <code>.cursorrules</code> を配置する設計は一般的になりました。しかし、すべての規約・ガイドライン・コマンドを 1 つのファイルに詰め込もうとすると、すぐに強烈な副作用に見舞われます。</p>
+<p>それが、学術的にも実証されている <strong>「Lost in the Middle（中央埋没）現象」</strong> と、コンテキストの形骸化である <strong>「Context Rot（文脈の劣化）」</strong> です。</p>
+<h3 id="1-科学的に証明された-lost-in-the-middle-現象">1. 科学的に証明された Lost in the Middle 現象</h3>
+<p>Liu らの研究論文『Lost in the Middle: How Language Models Use Long Contexts』では、LLM は長大な入力コンテキストの冒頭（Primacy）と末尾（Recency）の情報を最も正確に認識する一方で、 <strong>中央部に配置されたキー情報の参照精度が 20〜30 パーセントポイント低下する（U字型精度曲線）</strong> ことが実証されています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>最悪の場合、コンテキストの中に解や指示が含まれていても、情報量が多すぎることで事前学習のみ（Closed-book）の精度を下回る現象すら確認されています。</p>
+<p><img src="/blog/lost-in-the-middle-chart.webp" alt="入力コンテキスト位置と情報参照精度（Lost in the Middle現象）"></p>
+<p>プロジェクトルートの <code>AGENTS.md</code> に数百行以上のルールを書き連ねると、中央付近に埋もれた重要ルールが「Lost in the Middle」によって完全にスルーされてしまいます。AI が指示を無視するのは反抗期だからではなく、 <strong>コンテキスト長増加に伴う科学的な現象</strong> なのです。</p>
+<h3 id="2-context-rot-と-1-ファイル-300-行の限界">2. Context Rot と 1 ファイル 300 行の限界</h3>
+<p>Varun Mathur 氏が指摘するように、コンテキスト空間へ無秩序に情報を流し込むと、過去のメッセージや過剰な設定の中に本当に必要な制約が没没し、回答品質が著しく劣化する <strong>Context Rot</strong> が発生します<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>Agentic AI Foundation が策定する <code>AGENTS.md</code> オープン標準仕様においても、1 つのコンテキストファイルに含める指示は <strong>150〜200 指示以内（約 300 行以内）</strong> に抑えることが推奨されています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>さらに、ローカル開発環境と AI エージェントの実行コマンドが統一されていない場合、エージェントは自身が生成したコードの合否判定（Self-Verification）に失敗し、誤った確信を持ったまま作業を完了としてしまいます。</p>
+<hr>
+<h2 id="context設計オブジェクト指向クラス設計に学ぶ-agentsmd-の階層分割">Context設計：オブジェクト指向クラス設計に学ぶ <code>AGENTS.md</code> の階層分割</h2>
+<p>巨大単一ファイルの限界を打破する鍵が、 <strong>「階層的コンテキスト管理（Hierarchical Context Architecture）」</strong> です。</p>
+<p>プログラミングにおける <strong>オブジェクト指向のクラス設計（カプセル化・継承）</strong> を思い出してください。システム全体の共通ルールを抽象親クラスに定義し、モジュール固有の具体的な振る舞いは具象派生クラスに閉じ込めるのが鉄則です。コンテキスト設計もまったく同じ考え方が適用できます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>/ (Repository Root)</span></span>
+<span class="line"><span>├── AGENTS.md                  ← [基底クラス] プロジェクト全域の共通原則・絶対禁止事項</span></span>
+<span class="line"><span>└── src/</span></span>
+<span class="line"><span>    └── features/</span></span>
+<span class="line"><span>        └── auth/</span></span>
+<span class="line"><span>            └── AGENTS.md      ← [派生クラス] 認証モジュール専用の命名規約・局所ルール</span></span>
+<span class="line"><span></span></span></code></pre>
+<h3 id="階層分割における各ツールの動作仕様とマージ挙動">階層分割における各ツールの動作仕様とマージ挙動</h3>
+<p>エージェントがサブディレクトリ配下のファイルを操作する際、上位ディレクトリからルールを自動的に継承・マージする仕組みが整っています。</p>
+<ol>
+<li><strong>AGENTS.md オープン標準（Agentic AI Foundation）</strong>:
+作業対象のサブディレクトリからルート方向へ上位探索（Hierarchical Traversal）を行い、カレントディレクトリに最も近い <code>AGENTS.md</code> の記述が最優先（Precedence）されます<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。広域ルールを局所ルールが上書き・拡張する設計です。</li>
+<li><strong>Claude Code</strong>:
+ネイティブの設定ファイル（<code>CLAUDE.md</code>）は Ancestor Traversal によって祖先ディレクトリのファイルを自動探索・統合します。標準の <code>AGENTS.md</code> を利用する場合は、ルートの <code>CLAUDE.md</code> 内で <code>@AGENTS.md</code> や <code>@src/features/auth/AGENTS.md</code> と記述して明示的にインポート・参照させる手法が推奨されます<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+<li><strong>Cursor</strong>:
+<code>.cursor/rules/*.mdc</code> 内の YAML Frontmatter にて <code>globs: "src/features/auth/**/*.ts"</code> のように対象パスを指定することで、該当モジュールの編集時にのみ該当ルールを動的注入できます<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+</ol>
+<h3 id="ディレクトリ階層別-agentsmd-の具体的な記述例">ディレクトリ階層別 <code>AGENTS.md</code> の具体的な記述例</h3>
+<h4 id="ルート-agentsmd全域適用ルール">ルート <code>/AGENTS.md</code>（全域適用ルール）</h4>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#D20F39"># Project Core Principles</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FE640B">## Global Rules</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#4C4F69"> Always use Clean Architecture patterns.</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#4C4F69"> Do not add new npm dependencies without explicit permission.</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#4C4F69"> All code changes MUST be verified using the standard check command.</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FE640B">## Universal Verification</span></span>
+<span class="line"><span style="color:#4C4F69">Before completing any task, execute:</span></span>
+<span class="line"><span style="color:#7C7F93">```</span><span style="color:#04A5E5">bash</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">mise</span><span style="color:#40A02B"> run</span><span style="color:#40A02B"> check</span></span>
+<span class="line"><span style="color:#7C7F93">```</span></span>
+<span class="line"></span></code></pre>
+<h4 id="サブディレクトリ-srcfeaturesauthagentsmd認証モジュール専用ルール">サブディレクトリ <code>/src/features/auth/AGENTS.md</code>（認証モジュール専用ルール）</h4>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#D20F39"># Auth Module Local Guidelines</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FE640B">## Component &#x26; Logic Rules</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#4C4F69"> Use Zod schemas for all request validation.</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#4C4F69"> Authentication tokens MUST be handled via HTTP-only cookies.</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#4C4F69"> Do not modify legacy session handlers in </span><span style="color:#40A02B">`utils/legacy-session.ts`</span><span style="color:#4C4F69">.</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FE640B">## Local Testing</span></span>
+<span class="line"><span style="color:#4C4F69">To run tests specifically for this module:</span></span>
+<span class="line"><span style="color:#7C7F93">```</span><span style="color:#04A5E5">bash</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">mise</span><span style="color:#40A02B"> run</span><span style="color:#40A02B"> test</span><span style="color:#40A02B"> --</span><span style="color:#40A02B"> src/features/auth</span></span>
+<span class="line"><span style="color:#7C7F93">```</span></span>
+<span class="line"></span></code></pre>
+<p>必要な領域のコンテキストのみを絞り込んで AI に手渡すことで、「Lost in the Middle」によるルール無視を物理的に防ぎ、1 ファイルあたりの行数も健全に保つことが可能になります。</p>
+<hr>
+<h2 id="環境ハーネスの標準化mise-による決定論的検証環境の構築">環境ハーネスの標準化：<code>mise</code> による決定論的検証環境の構築</h2>
+<p>文脈（Context）を整えたら、次はエージェントが安全に走れる <strong>「実行環境ハーネス」</strong> の標準化です。</p>
+<p>エージェントに自律検証（Self-Verification）を行わせる際、最大の障害となるのが <strong>環境依存とコマンドの分散</strong> です。言語ごとに <code>npm test</code> / <code>pnpm test</code> / <code>pytest</code> / <code>go test</code> / <code>cargo test</code> とコマンドが乱立していたり、ローカル環境と CI 環境で Node.js やツールチェーンのバージョンがズレていると、AI の実行ループは簡単に崩壊します。</p>
+<p>ここで強力な武器となるのが、開発環境ミドルウェア・タスクランナーである <strong><code>mise</code>（mise-en-place）</strong> です<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<h3 id="1-mise-による環境タスクの一括抽象化">1. <code>mise</code> による環境・タスクの一括抽象化</h3>
+<p><code>mise</code> を導入することで、ツールバージョンの固定（Node.js, pnpm, Python 等）と、タスク実行パイプラインの標準化を <code>mise.toml</code> 単一ファイルで決定論的に管理できます。</p>
+<h4 id="リポジトリルートの-misetoml-設定例">リポジトリルートの <code>mise.toml</code> 設定例</h4>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="toml"><code><span class="line"><span style="color:#7C7F93">[</span><span style="color:#4C4F69">tools</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#4C4F69">node </span><span style="color:#179299">=</span><span style="color:#40A02B"> "22.12.0"</span></span>
+<span class="line"><span style="color:#4C4F69">pnpm </span><span style="color:#179299">=</span><span style="color:#40A02B"> "9.15.0"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#7C7F93">[</span><span style="color:#4C4F69">env</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#4C4F69">NODE_ENV </span><span style="color:#179299">=</span><span style="color:#40A02B"> "test"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#7C7F93">[</span><span style="color:#4C4F69">tasks.lint</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#4C4F69">description </span><span style="color:#179299">=</span><span style="color:#40A02B"> "Run ESLint and Prettier"</span></span>
+<span class="line"><span style="color:#4C4F69">run </span><span style="color:#179299">=</span><span style="color:#40A02B"> "pnpm lint"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#7C7F93">[</span><span style="color:#4C4F69">tasks.typecheck</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#4C4F69">description </span><span style="color:#179299">=</span><span style="color:#40A02B"> "Run TypeScript type checks"</span></span>
+<span class="line"><span style="color:#4C4F69">run </span><span style="color:#179299">=</span><span style="color:#40A02B"> "pnpm tsc --noEmit"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#7C7F93">[</span><span style="color:#4C4F69">tasks.test</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#4C4F69">description </span><span style="color:#179299">=</span><span style="color:#40A02B"> "Run Vitest suite"</span></span>
+<span class="line"><span style="color:#4C4F69">run </span><span style="color:#179299">=</span><span style="color:#40A02B"> "pnpm test"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#7C7F93">[</span><span style="color:#4C4F69">tasks.check</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#4C4F69">description </span><span style="color:#179299">=</span><span style="color:#40A02B"> "AI Agent Self-Verification: Complete validation pipeline"</span></span>
+<span class="line"><span style="color:#4C4F69">depends </span><span style="color:#179299">=</span><span style="color:#7C7F93"> [</span><span style="color:#40A02B">"lint"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "typecheck"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "test"</span><span style="color:#7C7F93">]</span></span>
+<span class="line"></span></code></pre>
+<h3 id="2-agentsmd-と-mise-の決定論的統合">2. <code>AGENTS.md</code> と <code>mise</code> の決定論的統合</h3>
+<p><code>mise.toml</code> で全自動検証タスク <code>[tasks.check]</code> を用意したら、<code>AGENTS.md</code> の検証コマンドセクションには以下のように指定するだけです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#FE640B">## Verification Commands</span></span>
+<span class="line"><span style="color:#4C4F69">Before marking a task as done, you MUST execute the following command and confirm all checks pass:</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#7C7F93">```</span><span style="color:#04A5E5">bash</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">mise</span><span style="color:#40A02B"> run</span><span style="color:#40A02B"> check</span></span>
+<span class="line"><span style="color:#7C7F93">```</span></span>
+<span class="line"></span></code></pre>
+<p>言語やプロジェクトの技術スタックが変わっても、AI エージェントに対する指示は <strong>「作業終了前に必ず <code>mise run check</code> を実行せよ」</strong> という 1 行で完結します。</p>
+<p><code>mise run check</code> はリント、型チェック、単体テストを依存関係順に一括実行するため、AI エージェントはツールバージョンや環境差異に悩まされることなく、完全に一貫したセルフチェックを回すことができます。</p>
+<hr>
+<h2 id="まとめハーネスエンジニアリングがひらく安心できるai協働開発">まとめ：ハーネスエンジニアリングがひらく「安心できるAI協働開発」</h2>
+<p>AI エージェントを活用した開発において、モデルの選択や単発プロンプトの調整（Prompt Engineering）に費やす時間はすでに過去のものです。また、単に自動ループ（Loop）を回すだけでも不十分です。</p>
+<p>真に求められているのは、エージェントの走行路を整える <strong>「ハーネスエンジニアリング（Harness Engineering）」</strong> です。</p>
+<ul>
+<li><strong>文脈のハーネス</strong>: クラス設計に学んだ <code>AGENTS.md</code> の階層分割により、Lost in the Middle や Context Rot を科学的に回避する。</li>
+<li><strong>環境のハーネス</strong>: <code>mise</code> などのタスクランナーで統一インターフェースを構築し、AI による決定論的な自律検証（Self-Verification）を可能にする。</li>
+</ul>
+<p>制約と検証基盤というガードレールが強固に整って初めて、AI エージェントは開発者の信頼に応える本当の自律性を発揮できます。まずは手元のプロジェクトで、肥大化した <code>AGENTS.md</code> の分割と <code>mise.toml</code> による検証コマンドの統一から始めてみてください。</p>
+<p>AI エージェントのコンテキスト設計や開発プロセスの標準化・導入支援についてご相談がある方は、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p>Liu, Nelson, et al. “Lost in the Middle: How Language Models Use Long Contexts.” <em>Transactions of the Association for Computational Linguistics (TACL)</em>, 2024. <a href="https://arxiv.org/abs/2307.03172">https://arxiv.org/abs/2307.03172</a> (2026-07-23参照). <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p>Mathur, Varun. “Your AI is a genius locked in a room — here’s how context engineering sets it free.” Medium, 2026. <a href="https://medium.com/@mathurvarun84/your-ai-is-a-genius-locked-in-a-room-heres-how-context-engineering-sets-it-free-d9cee74b5cef">https://medium.com/@mathurvarun84/your-ai-is-a-genius-locked-in-a-room-heres-how-context-engineering-sets-it-free-d9cee74b5cef</a> (2026-07-23参照). <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p>Agentic AI Foundation. “AGENTS.md Specification.” <a href="https://github.com/agents-md/spec">https://github.com/agents-md/spec</a> (2026-07-23参照). <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p>Harsh. “Context Engineering: Why Your AGENTS.md File Is Quietly Running Your AI Coding Sessions.” Medium, 2026. <a href="https://simplifiedbyharsh.medium.com/context-engineering-why-your-agents-md-file-is-quietly-running-your-ai-coding-sessions-4caedc0aa93d">https://simplifiedbyharsh.medium.com/context-engineering-why-your-agents-md-file-is-quietly-running-your-ai-coding-sessions-4caedc0aa93d</a> (2026-07-23参照). <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p>jdx. “mise-en-place Documentation.” <a href="https://mise.jdx.dev/">https://mise.jdx.dev/</a> (2026-07-23参照). <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

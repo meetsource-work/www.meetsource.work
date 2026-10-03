@@ -1,0 +1,157 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>「タイトルにキー名を書かない」と記録した後も、同じ YAML エラーは16日後と25日後に起きた──記録は失敗の前にセッションへ現れなかった | Meetsource</title><meta name="description" content="YAML のタイトルにコロンと空白を入れると壊れます。避け方を学び記録に残した後も同じエラーが16日後と25日後に再発し、2回とも失敗の前に記録はセッションに現れませんでした。3回の逐語と、テンプレートの title をクォートする1行の修理を示します。"><link rel="canonical" href="https://www.meetsource.work/blog/yaml-colon-title-recurrence"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="「タイトルにキー名を書かない」と記録した後も、同じ YAML エラーは16日後と25日後に起きた──記録は失敗の前にセッションへ現れなかった | Meetsource"><meta property="og:description" content="YAML のタイトルにコロンと空白を入れると壊れます。避け方を学び記録に残した後も同じエラーが16日後と25日後に再発し、2回とも失敗の前に記録はセッションに現れませんでした。3回の逐語と、テンプレートの title をクォートする1行の修理を示します。"><meta property="og:url" content="https://www.meetsource.work/blog/yaml-colon-title-recurrence"><meta property="og:image" content="https://www.meetsource.work/blog/yaml-colon-title-recurrence-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-09-29T04:20:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="「タイトルにキー名を書かない」と記録した後も、同じ YAML エラーは16日後と25日後に起きた──記録は失敗の前にセッションへ現れなかった | Meetsource"><meta name="twitter:description" content="YAML のタイトルにコロンと空白を入れると壊れます。避け方を学び記録に残した後も同じエラーが16日後と25日後に再発し、2回とも失敗の前に記録はセッションに現れませんでした。3回の逐語と、テンプレートの title をクォートする1行の修理を示します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/yaml-colon-title-recurrence-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"「タイトルにキー名を書かない」と記録した後も、同じ YAML エラーは16日後と25日後に起きた──記録は失敗の前にセッションへ現れなかった","description":"YAML のタイトルにコロンと空白を入れると壊れます。避け方を学び記録に残した後も同じエラーが16日後と25日後に再発し、2回とも失敗の前に記録はセッションに現れませんでした。3回の逐語と、テンプレートの title をクォートする1行の修理を示します。","datePublished":"2026-09-29T04:20:00.000Z","image":"https://www.meetsource.work/blog/yaml-colon-title-recurrence-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/yaml-colon-title-recurrence"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"YAML のタイトルにコロンを入れると「mapping values are not allowed in this context」になるのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"クォートなしの文字列に : （コロンと空白）を含めることを、YAML 1.2.2 が禁じているためです。マッピングのキーと値と区別がつかなくなります。エラー文言はパーサー側のものです。社内の試験では、試した3種のうち A:B と全角の A：B は通り、A: B だけが失敗しました。仕様は # も禁じています。"}},{"@type":"Question","name":"テンプレートで生成する YAML の title を安全にクォートするには？","acceptedAnswer":{"@type":"Answer","text":"テンプレートの title を JSON の文字列として出力します。minijinja では title: {{ title | tojson }} とし、json feature の有効化が要ります。adrs の Issue では、この方法が有効な YAML として往復できるとされています。社内の3台帳では、この1行の変更で試験が全て通りました。"}},{"@type":"Question","name":"事故の学びを記録しても同じ失敗が再発するのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"今回は、記録がすでにあった2回目と3回目の両方で、失敗の前にその記録がセッションに現れませんでした。「読まれていれば防げた」とまでは言えません。避け方を書くときは、同じ記録に「環境側で直せるか」を1行添えるとよい、というのが私の考えです。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-09-29T04:20:00.000Z" data-astro-cid-7jjqptxk> 2026.09.29 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span><span class="tag" data-astro-cid-7jjqptxk>#automation</span><span class="tag" data-astro-cid-7jjqptxk>#yaml</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>「タイトルにキー名を書かない」と記録した後も、同じ YAML エラーは16日後と25日後に起きた──記録は失敗の前にセッションへ現れなかった</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/yaml-colon-title-recurrence-hero.webp" alt="「タイトルにキー名を書かない」と記録した後も、同じ YAML エラーは16日後と25日後に起きた──記録は失敗の前にセッションへ現れなかった" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>YAML のクォートなしの文字列（プレーンスカラー）には、コロンの直後に空白が続く <code>: </code> を含められません。YAML 1.2.2 の仕様がそう定めていて、フロントマターの <code>title:</code> に <code>キー名: 値</code> の形をそのまま入れると、YAML として読めなくなります<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>社内の記録スクリプト（決定・学び・メモを1件ずつ Markdown ファイルとして作るもの）にこの形のタイトルを渡すと、YAML が壊れて作成に失敗し、生成直後のファイルが自動で削除されました。最初の失敗（2026年8月30日）のあと、学び記録に「タイトルにキー名や設定値をそのまま書かない」と残しました。ところが同じエラーは、調べた範囲でその後さらに2回、16日後（9月15日）と25日後（9月24日）に起きています。3回とも実行したのは Claude Code です。</p>
+<p>再発した2回のセッションでは、失敗の前にその学び記録がセッションに現れた行は0件でした。同じ入力が試験で通るようになったのは、記録を読ませたからではなく、台帳のテンプレートの <code>title</code> をクォートした時です。修理後の運用は調べた記録の範囲外なので、再発が止んだかどうかは分かりません。</p>
+<h2 id="1回目の事故で記録に残したのは避け方だった">1回目の事故で、記録に残したのは「避け方」だった</h2>
+<p>2026年8月30日、Claude Code が記録スクリプトを呼びました。タイトルは、たとえば <code>決定の題名（tags: [x]・recall: y）</code> のように、<code>キー名: 値</code> の形を含むものでした。</p>
+<p>エラー文は <code>YAML error: mapping values are not allowed in this context at line 2 column 24</code> で、続けてスクリプトが「<code>adrs new</code> が失敗したため、生成直後の残置ファイルを削除した」と表示しました。<code>adrs</code> は ADR（アーキテクチャ決定記録）を管理する CLI で、記録スクリプトはこの <code>adrs new</code> でファイルを作ります。</p>
+<p>回復は、コロンを除いたタイトルでの再実行でした。学び記録には、含意として「タイトルにキー名や設定値をそのまま書かない」と書きました。この時点で、スクリプトもテンプレートも変えていません。</p>
+<p>当時は、エラー文がその場で見えていて、生成直後のファイルが削除されたことも表示され、原因もタイトルの書き方にあるように見えました。それなら「書き方の規約」として学び記録に残すのが自然に思えたのです。</p>
+<h2 id="16日後と25日後にも同じエラーが出たyaml-のタイトルでコロンが壊すのはどの形か">16日後と25日後にも同じエラーが出た：YAML のタイトルでコロンが壊すのはどの形か</h2>
+<p>2回目は9月15日、初回の16日後です。タイトルに <code>verified:</code> を含む形で、エラー文は同じ <code>mapping values are not allowed in this context</code>（column 30）でした。Claude Code は直後に「タイトルの <code>:</code> で YAML が壊れたので直します。」と述べ、コロンを外したタイトルで再実行して成功しました。</p>
+<p>3回目は9月24日、25日後です。タイトルに <code>題名の一部: 続き</code> のようにコロンと空白を含む日本語の題名で、エラー文は同じ（column 20）でした。再実行は、タイトルからコロンを外して成功しています。</p>
+<p>3回とも実行者は Claude Code の呼び出し（tool_use）で、人が <code>!</code> で手打ちした実行の記録は3セッションとも0件でした。エラー文は同じで、桁の数字だけがタイトルごとに違います（24・30・20）。学び記録には、2回目（9月15日）の記載がありません。</p>
+<p>試した3種の入力のうち、壊れたのはコロンの直後に空白が続く形だけでした。次の表は、修理前のテンプレートで <code>adrs new</code> にタイトルだけを変えて通した結果です。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>入力（タイトル）</th><th>結果</th><th>理由</th></tr></thead><tbody><tr><td><code>A:B</code></td><td>通る</td><td>コロンの直後が空白ではない</td></tr><tr><td><code>A：B</code>（全角コロン）</td><td>通る</td><td>全角コロンは YAML の記号ではない</td></tr><tr><td><code>A: B</code></td><td>失敗</td><td>コロンの直後に空白が続く</td></tr></tbody></table>
+<p>実測は入力ごとの通る・失敗だけで、理由の欄は YAML 仕様に基づく解説です。仕様（7.3.3 Plain Style）は次のように定めています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<blockquote><p>Plain scalars must never contain the “: ” and “ #” character combinations. Such combinations would cause ambiguity with mapping key/value pairs and comments.</p></blockquote>
+<p><code>: </code>（コロンと空白）と <code> #</code>（空白とハッシュ）は、マッピングのキーと値、およびコメントと区別がつかなくなるため、プレーンスカラーに含められない、という意味です。エラー文言 <code>mapping values are not allowed in this context</code> は仕様には書かれていません。仕様が禁じ、パーサーがこのエラーで拒否する、という分担です。今回試したのは上の3種だけなので、<code> #</code> を含むタイトルの挙動は実測していません。</p>
+<h2 id="学び記録は失敗の前にセッションに現れなかった">学び記録は、失敗の前にセッションに現れなかった</h2>
+<p>調べたのは、同じエラー文を含むセッション3本（1回目・2回目・3回目の各セッション）です。あるプロジェクトのセッションに限ります。</p>
+<p>1回目のセッションは、学び記録が失敗の後に作られたので、失敗の前に現れないのは当然で、証拠になりません。「失敗の前に記録が現れたか」を問えるのは、記録がすでにあった2回目と3回目の2セッションです。この2本とも、学び記録への言及（記録の識別子・ファイル名の断片のいずれか）が失敗の前に現れた行は0件でした。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>セッション</th><th>失敗より前に記録が現れた行</th><th>記録が最初に現れた位置</th></tr></thead><tbody><tr><td>1回目（8月30日）</td><td>対象外（記録は失敗の後に作られた）</td><td>失敗の後、記録を作る呼び出し</td></tr><tr><td>2回目（9月15日）</td><td>0件</td><td>セッション全体で0件</td></tr><tr><td>3回目（9月24日）</td><td>0件</td><td>失敗の後、原因を調べる過程</td></tr></tbody></table>
+<p>3回目のセッションでは、Claude Code が失敗の後に git の履歴を調べる過程で記録を見つけ、「前にも同じ問題を記録していました」と述べています。</p>
+<p>この集計の母数は2セッションです。「現れた」は、セッションの記録（jsonl）を、学び記録の識別子とファイル名の断片で検索した結果なので、検索の語に限った不在の主張になります。「記録が読まれていれば防げた」とは言えません。2回目のセッションで Claude Code の文脈に何が入っていたかは、記録からは特定できないためです。</p>
+<p>Claude Code の公式ドキュメントは、起動時に読まれるものと、必要に応じて読まれるものを区別しています。起動時に読まれるのは CLAUDE.md と、<code>MEMORY.md</code> の先頭200行（または25KB のどちらか先に達したほう）です。トピックファイルは起動時には読まれず、必要になったときに Claude が読みます。サブディレクトリのファイルも、そのディレクトリのファイルを読んだときに読まれます<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。公式ドキュメントは台帳という置き場には触れていないので、自分の記録がどちらに当たるかは、読者が自分の環境で点検することになります。</p>
+<p>私は、避け方を学び記録に書いただけでは、使う場面（エージェントが次にスクリプトを呼ぶ時）でその記録が読まれる保証はないと考えています。避け方を書くときは、同じ記録に「環境側で直せるか」を1行添えることを勧めます。</p>
+<h2 id="壊れた場所と守っていた場所がずれていた">壊れた場所と、守っていた場所がずれていた</h2>
+<p>記録スクリプトには、タイトルを JSON 形式の文字列に直してクォートする処理が実在していました。ただしその処理は、YAML ファイルを作る <code>adrs new</code> の呼び出しより後に走ります。<code>adrs new</code> が失敗すると、スクリプトは残ったファイルを削除して終了し、クォートの処理には到達しません。この順序は、手元にある過去の全ての版のスクリプトで同じでした。</p>
+<p>一方、<code>adrs</code> に渡すテンプレートは、決定・学び・メモの3台帳とも <code>title: {{ title }}</code>（クォートなし）でした。エラー文には <code>Error: Failed to update ADR status</code> も含まれていて、<code>adrs new</code> が status を更新する段階で YAML を解析できなかったと読めます。</p>
+<p><code>adrs</code> 本体の組み込みテンプレートも同じ形です。2026年9月29日時点の main では、4か所が <code>title: {{ title }}</code> のクォートなしで、ソースのテストのコメントには「A bare <code>title: {{ title }}</code> breaks as soon as the title carries a colon, a leading quote, or a <code>#</code>」と書かれています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>予防の処理が実在していても、守っている場所が、実際に壊れる場所とずれることがあります。守る処理と壊れる処理の実行順序は、点検する価値があります。</p>
+<h2 id="テンプレートの-title-をクォートする同じ入力が通るようになった1行の修理">テンプレートの title をクォートする：同じ入力が通るようになった1行の修理</h2>
+<p>修理は、決定・学び・メモの3台帳それぞれのテンプレートの1行でした。目的は、テンプレートがタイトルを JSON の文字列として出力し、コロン・引用符・<code>#</code> を含んでも YAML として壊れない形にすることです。</p>
+<p>ファイル: 各台帳の <code>template.md</code>（3ファイルとも同じ1行の変更）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="diff"><code><span class="line"><span style="color:#7C7F93"><span style="user-select: none;">-</span></span><span style="color:#D20F39">title: {{ title }}</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">title: {{ title | tojson }}</span></span>
+<span class="line"></span></code></pre>
+<p>修理後、3台帳を、通常のタイトル・コロンと引用符を含むタイトル・<code>--supersedes</code>（既存レコードを置き換える指定）付きの3系で試験し、全て通りました。</p>
+<p><code>tojson</code> は minijinja（<code>adrs</code> が使うテンプレートエンジン）のフィルタで、値を JSON にします。<code>json</code> feature が有効なときだけ使えます<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。minijinja のドキュメントに YAML への言及はありません。</p>
+<p><code>adrs</code> の Issue では、同じ <code>{{ title | tojson }}</code> が、カスタムテンプレートでタイトルをクォートする方法として提案され、「JSON の文字列は有効な YAML で、そのまま往復できる」とされています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。この提案を受けて、<code>adrs</code> 側で minijinja の <code>json</code> feature を有効にする変更が2026年9月3日に取り込まれました<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。この feature が無効なまま <code>tojson</code> を使うと、<code>Template error: unknown filter: filter tojson is unknown</code> になります<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>試験には落とし穴が2つありました。</p>
+<ul>
+<li>試験に使う入力は、壊れる形そのものにする必要があります。<code>A:B</code> のようなコロンの後ろに空白がない形は壊れないので、壊れを検出できません。壊れる形は <code>A: B</code> でした。</li>
+<li>試験の環境変数（記録の置き場所を指す変数）が設定されたまま、試験用のディレクトリに移動していました。そのため <code>--supersedes</code> の試験が、本物の台帳のレコード1件の status を書き換えました。未コミットのうちに戻し、環境変数を外して3台帳を試験し直しています。</li>
+</ul>
+<h2 id="この修理で直らないことと避け方の記録が効く場面">この修理で直らないことと、避け方の記録が効く場面</h2>
+<p>直るのは、タイトルのクォートだけです。本文やタグなど、ほかのフィールドに同種の入力が渡る場合は、別の対処が要ります。</p>
+<p>「避け方の記録は無駄だったのか」という反論があるでしょう。3回とも失敗の前に現れなかった、という範囲でしか言えません。人が読む運用メモとしては、有効な場面があります。環境側で直せないとき、たとえば外部ツールの仕様に起因するときや他人のリポジトリのときは、避け方の記録が唯一の手段になります。注意書きを足し続ける設計そのものの限界は、<a href="/blog/ai-agent-pipeline-retrospective">AIパイプライン運用における「振り返り」の設計論</a>で書きました。</p>
+<p>「Claude Code が読んでいれば防げたのでは」という反論には、未検証と答えるしかありません。記録から言えるのは、失敗の前に現れなかったところまでです。</p>
+<p>「クォートの実装がスクリプトにあったのだから十分では」という反論は、その実装が壊れる地点に届く場所にあったか、という問いになります。今回は届いていませんでした。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>学び記録が、起動時に読まれる場所（CLAUDE.md や、<code>MEMORY.md</code> の先頭200行または25KB）にあれば、失敗の前に現れた可能性はあります<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。ただしその領域は有限で、全ての学びは置けません。実際にそうなったかは、今回の記録からは確かめていません。</p>
+<p>記録スクリプトの側でタイトルを先にクォートする、または呼び出し側で入力を検証するなら、記録が読まれるかどうかに依存しません。これは一般的な設計の説明で、今回の実測ではありません。</p>
+<p><code>adrs</code> ではなく別のツールで記録を作るなら、そのツールの組み込みテンプレートがタイトルをクォートするかを確認します。<code>adrs</code> の組み込みテンプレートは、2026年9月29日時点でクォートなしのままです<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-yaml-のタイトルにコロンを入れるとmapping-values-are-not-allowed-in-this-contextになるのはなぜですか">Q. YAML のタイトルにコロンを入れると「mapping values are not allowed in this context」になるのはなぜですか？</h3>
+<p><strong>A.</strong> クォートなしの文字列に <code>: </code>（コロンと空白）を含めることを、YAML 1.2.2 が禁じているためです。マッピングのキーと値と区別がつかなくなります。エラー文言はパーサー側のものです<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。社内の試験では、試した3種のうち <code>A:B</code> と全角の <code>A：B</code> は通り、<code>A: B</code> だけが失敗しました。仕様は <code> #</code> も禁じています。</p>
+<h3 id="q-テンプレートで生成する-yaml-の-title-を安全にクォートするには">Q. テンプレートで生成する YAML の title を安全にクォートするには？</h3>
+<p><strong>A.</strong> テンプレートの title を JSON の文字列として出力します。minijinja では <code>title: {{ title | tojson }}</code> とし、<code>json</code> feature の有効化が要ります<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。<code>adrs</code> の Issue では、この方法が有効な YAML として往復できるとされています<sup><a href="#user-content-fn-5" id="user-content-fnref-5-3" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。社内の3台帳では、この1行の変更で試験が全て通りました。</p>
+<h3 id="q-事故の学びを記録しても同じ失敗が再発するのはなぜですか">Q. 事故の学びを記録しても同じ失敗が再発するのはなぜですか？</h3>
+<p><strong>A.</strong> 今回は、記録がすでにあった2回目と3回目の両方で、失敗の前にその記録がセッションに現れませんでした。「読まれていれば防げた」とまでは言えません。避け方を書くときは、同じ記録に「環境側で直せるか」を1行添えるとよい、というのが私の考えです。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li>学び記録に避け方を残しても、同じエラーは調べた範囲で16日後と25日後に2回起きました（母数は、同じエラー文を含む3セッション）。</li>
+<li>記録がすでにあった2回目と3回目の2セッションでは、失敗の前に記録がセッションに現れた行は0件でした。検索の語に限った不在の主張で、1回目は記録が失敗の後に作られたので対象外です。</li>
+<li>試した入力のうち壊れたのは <code>: </code>（コロンと空白）の形だけで、<code>A:B</code> と全角の <code>A：B</code> は通りました。仕様は <code> #</code> も禁じているので、試験にはこの形も含めるとよいでしょう。</li>
+<li>クォートの実装があっても、壊れる地点の後で走れば守れません。守る処理と壊れる処理の順序を点検します。</li>
+<li>同じ入力が試験で通るようになったのは、テンプレートの title を JSON 文字列として出力する1行の修理でした。修理は3回目と同じ9月24日で、調べた記録はその時点までです。修理後の再発は観測していません。</li>
+<li>避け方を学び記録に残すときは、同じ記録に「環境側で直せるか」を1行添えます。</li>
+</ul>
+<p>AI エージェントを実務の仕組みに組み込む際の、記録・自動化パイプラインの点検や仕組み化について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://yaml.org/spec/1.2.2/">YAML Ain’t Markup Language (YAML™) revision 1.2.2</a> YAML Language Development Team、Revision 1.2.2（2021年10月1日）。プレーンスカラーが <code>: </code> と <code> #</code> を含められない規則は 7.3.3 Plain Style。エラー文言 <code>mapping values are not allowed in this context</code> は仕様には無く、パーサー側のもの。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://code.claude.com/docs/en/memory">How Claude remembers your project</a> Anthropic、Claude Code Docs、2026年9月29日取得。起動時に読まれるもの（CLAUDE.md、<code>MEMORY.md</code> の先頭200行または25KB）と、必要に応じて読まれるもの（トピックファイル、サブディレクトリのファイル）の区別が書かれている。台帳という置き場への言及は無い。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://raw.githubusercontent.com/joshrotenberg/adrs/main/crates/adrs-core/src/template.rs">adrs の template.rs（main ブランチ）</a> joshrotenberg/adrs リポジトリ、2026年9月29日時点の main。組み込みテンプレートの4か所（327・364・445・549 行目）が、クォートなしの <code>title: {{ title }}</code>。テストのコメント（1456 行付近）に、コロン・先頭の引用符・<code>#</code> を含むタイトルで壊れるとの記述がある。行番号は main の更新で動く。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://docs.rs/minijinja/latest/minijinja/filters/fn.tojson.html">tojson in minijinja::filters</a> docs.rs 掲載、2026年9月29日取得（バージョン 2.24.0）。<code>tojson</code> が値を JSON にするフィルタで、<code>json</code> feature が有効なときだけ使えることは、このページの記述による。feature の説明は同クレートのトップページ <a href="https://docs.rs/minijinja/latest/minijinja/">minijinja - Rust</a> の Features 節。どちらにも YAML への言及は無い。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://github.com/joshrotenberg/adrs/issues/384">feat(template): enable minijinja’s json feature so custom templates can use tojson · Issue #384</a> joshrotenberg/adrs リポジトリ、2026年9月3日に起票・同日クローズ（completed）。<code>title: {{ title }}</code> のカスタムテンプレートが、コロン・先頭の引用符・<code>#</code> を含むタイトルで無効または別の意味の YAML になること、<code>tojson</code> の提案、JSON の文字列が有効な YAML でそのまま往復できるという記述、<code>json</code> feature が無効なときの <code>unknown filter</code> エラーは、Issue の本文に書かれている。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-5-3" data-footnote-backref="" aria-label="Back to reference 5-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://github.com/joshrotenberg/adrs/pull/386">feat(template): enable minijinja’s json feature for the tojson filter · Pull Request #386</a> joshrotenberg/adrs リポジトリ、2026年9月3日にマージ（Issue #384 を Closes）。minijinja の <code>json</code> feature を有効にする変更で、YAML の往復（ラウンドトリップ）で検証している。どのリリースに入ったかは確認していない。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

@@ -1,0 +1,168 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>git worktree はコーディングエージェントの分離境界ではない | Meetsource</title><meta name="description" content="エージェントの並列実行で多用される git worktree ですが、実は .git の設定やフックを共有しています。事故シナリオ、自社実録、そして適切な隔離モデルを解剖します。"><link rel="canonical" href="https://www.meetsource.work/blog/git-worktree-agent-isolation"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="git worktree はコーディングエージェントの分離境界ではない | Meetsource"><meta property="og:description" content="エージェントの並列実行で多用される git worktree ですが、実は .git の設定やフックを共有しています。事故シナリオ、自社実録、そして適切な隔離モデルを解剖します。"><meta property="og:url" content="https://www.meetsource.work/blog/git-worktree-agent-isolation"><meta property="og:image" content="https://www.meetsource.work/blog/git-worktree-agent-isolation-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-08T00:20:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="git worktree はコーディングエージェントの分離境界ではない | Meetsource"><meta name="twitter:description" content="エージェントの並列実行で多用される git worktree ですが、実は .git の設定やフックを共有しています。事故シナリオ、自社実録、そして適切な隔離モデルを解剖します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/git-worktree-agent-isolation-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"git worktree はコーディングエージェントの分離境界ではない","description":"エージェントの並列実行で多用される git worktree ですが、実は .git の設定やフックを共有しています。事故シナリオ、自社実録、そして適切な隔離モデルを解剖します。","datePublished":"2026-08-08T00:20:00.000Z","image":"https://www.meetsource.work/blog/git-worktree-agent-isolation-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/git-worktree-agent-isolation"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-08T00:20:00.000Z" data-astro-cid-7jjqptxk> 2026.08.08 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#git-worktree</span><span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#security</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>git worktree はコーディングエージェントの分離境界ではない</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/git-worktree-agent-isolation-hero.webp" alt="git worktree はコーディングエージェントの分離境界ではない" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>Claude Code をはじめとするコーディングエージェントを日常の開発作業に組み込み、複数のタスクを並列で実行させる開発者が増えています。その際、エージェント同士のファイル競合を防ぐ標準的なアプローチとして広く使われているのが <strong><code>git worktree</code></strong> です。</p>
+<p>コマンド一つで別の作業ディレクトリを生成でき、ブランチの切り替えに伴う <code>git stash</code> やコンテキストの混乱を回避できるため、「Worktree を分けたから、これで各エージェントは安全に独立して作業できる」と考えがちです。</p>
+<p>しかし、結論から言うと <strong><code>git worktree</code> は作業ツリー（作業ディレクトリ）を分離する仕組みであり、実行環境やセキュリティの分離境界（サンドボックス）ではありません</strong>。</p>
+<p>本記事では、Linked Worktree が内部で共有しているメタデータの仕組みを解剖し、Worktree を安全な「隔離壁」だと過信したときに起こり得る具体的な事故シナリオ、自社開発での実体験、そして本当に必要な 4 つの隔離境界線について解説します。</p>
+<hr>
+<h2 id="1-導入-worktree-で分けたから安心という前提の危うさ">1. 導入: 「worktree で分けたから安心」という前提の危うさ</h2>
+<p>CLI ツールやエージェントフレームワーク（Claude Code の <code>-w</code> / <code>--worktree</code> オプションや、各種ツールの <code>isolation: "worktree"</code> 設定など）の普及により、複数エージェントを動かす際の基盤として <code>git worktree</code> を利用するケースが急増しています。</p>
+<p>開発者の視点からは、エージェント A とエージェント B にそれぞれ別のディレクトリ（例: <code>/path/to/project-worktree-1</code> と <code>/path/to/project-worktree-2</code>）が割り当てられ、ファイルシステム上も独立した空間に見えます。そのため、「作業ディレクトリが完全に別々だから、お互いの変更が干渉せず、ホスト環境も汚さない」という心理的安心感が生まれます。</p>
+<p>しかし、エージェントにシェルコマンドの実行権限やファイルの書き込み権限を与えている場合、この「別ディレクトリだから安全」という直感は脆くも崩れ去ります。</p>
+<hr>
+<h2 id="2-linked-worktree-の正体-git-が共有される内部構造">2. Linked Worktree の正体: <code>.git</code> が共有される内部構造</h2>
+<p>なぜ <code>git worktree</code> は分離境界にならないのでしょうか。その理由は Git の内部アーキテクチャにあります。</p>
+<p>Linked Worktree を作成した際、作成された作業ディレクトリ内の <code>.git</code> は普通のディレクトリではありません。中身を開くと、親リポジトリのメタデータを参照する単なるテキストファイルであることが分かります <sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">$</span><span style="color:#40A02B"> cat</span><span style="color:#40A02B"> ../my-worktree/.git</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">gitdir:</span><span style="color:#40A02B"> /path/to/repo/.git/worktrees/my-worktree</span></span>
+<span class="line"></span></code></pre>
+<p>Git はリポジトリの状態を「Worktree 固有の状態」と「全体で共有される共通状態（Common Directory）」に明確に分離して管理しています <sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。実際にコマンドを実行してパスを確認してみましょう。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">$</span><span style="color:#40A02B"> cd</span><span style="color:#40A02B"> ../my-worktree</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">$</span><span style="color:#40A02B"> git</span><span style="color:#40A02B"> rev-parse</span><span style="color:#40A02B"> --git-dir</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">/path/to/repo/.git/worktrees/my-worktree</span><span style="color:#9CA0B0;font-style:italic">    # Worktree 固有の領域</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">$</span><span style="color:#40A02B"> git</span><span style="color:#40A02B"> rev-parse</span><span style="color:#40A02B"> --git-common-dir</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">/path/to/repo/.git</span><span style="color:#9CA0B0;font-style:italic">                          # 親および全 sibling で共有される共通領域</span></span>
+<span class="line"></span></code></pre>
+<p>ここで重要なのは、<strong>Worktree 固有として分離される領域は極めて限定的である</strong> という点です。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="left">分離されるもの (Per-Worktree)</th><th align="left">共有されるもの (Common Directory <code>.git/</code>)</th></tr></thead><tbody><tr><td align="left"><code>HEAD</code> (チェックアウト中の参照)</td><td align="left"><code>objects/</code> (Git オブジェクト全般)</td></tr><tr><td align="left"><code>index</code> (ステージング領域)</td><td align="left"><code>refs/</code> (<code>refs/heads/*</code>, <code>refs/tags/*</code>, <code>refs/stash</code>)</td></tr><tr><td align="left"><code>ORIG_HEAD</code></td><td align="left"><code>config</code> (リポジトリ設定)</td></tr><tr><td align="left">その他ごく一部の状態ファイル</td><td align="left"><code>hooks/</code> (すべての Git フックスクリプト)</td></tr></tbody></table>
+<p>つまり、ワーキングツリーとインデックス以外のほぼすべてのメタデータ（設定・フック・Stash・全オブジェクト・全参照）は、親リポジトリとすべての Worktree の間で <strong>完全に共有</strong> されています <sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<hr>
+<h2 id="3-worktree-を境界と信じたときに起きる-4-つの事故シナリオ">3. worktree を「境界」と信じたときに起きる 4 つの事故シナリオ</h2>
+<p>この共有構造を理解しないままエージェントに自律的なコマンド実行権限を与えると、次のような問題が発生する可能性があります <sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<h3 id="シナリオ-1-ホスト上でのコード実行githooks-共有">シナリオ 1: ホスト上でのコード実行（<code>.git/hooks</code> 共有）</h3>
+<p>最も危険なのが <code>.git/hooks</code> ディレクトリの共有です。</p>
+<p>ある Worktree 内で動くエージェントが、自身のタスクを自動化しようとして Git フックを書き換えたとします <sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># Worktree A 内でエージェントが共通フックを書き換える</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">cd</span><span style="color:#40A02B"> ../hook-agent</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#179299"> ></span><span style="color:#40A02B"> "</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">git</span><span style="color:#40A02B"> rev-parse --git-common-dir</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">/hooks/pre-commit"</span><span style="color:#179299"> &#x3C;&#x3C;</span><span style="color:#40A02B">'EOF'</span></span>
+<span class="line"><span style="color:#40A02B">#!/bin/sh</span></span>
+<span class="line"><span style="color:#40A02B">echo "*** hook running as $(whoami) in $(pwd) ***"</span></span>
+<span class="line"><span style="color:#40A02B">EOF</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">chmod</span><span style="color:#40A02B"> +x</span><span style="color:#40A02B"> "</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">git</span><span style="color:#40A02B"> rev-parse --git-common-dir</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">/hooks/pre-commit"</span></span>
+<span class="line"></span></code></pre>
+<p>フックは親の <code>.git/hooks/pre-commit</code> に直接保存されます。その結果、<strong>親リポジトリで人間開発者が日常のコミットを行った瞬間、ホストOS上のユーザー権限でそのフックスクリプトが自動実行</strong> されます。Worktree という「壁」は、ホスト権限の実行を一切防げません。</p>
+<h3 id="シナリオ-2-コミット著者のすり替えgitconfig-共有">シナリオ 2: コミット著者のすり替え（<code>.git/config</code> 共有）</h3>
+<p>リポジトリ設定である <code>.git/config</code> も全 Worktree で共通です <sup><a href="#user-content-fn-3" id="user-content-fnref-3-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>Worktree A 内でエージェントが <code>git config user.email "agent@example.com"</code> を実行すると、親リポジトリおよび他 Worktree の設定も即座に書き換わります。その後、人間開発者が自分のリポジトリでコミットを作成しても、著者がエージェントのアドレスにすり替わってしまうといった混乱が生じます。</p>
+<h3 id="シナリオ-3-他エージェントの作業の誤奪取破壊refsstash-単一スタック問題">シナリオ 3: 他エージェントの作業の誤奪取・破壊（<code>refs/stash</code> 単一スタック問題）</h3>
+<p>Git の Stash 機構は、リポジトリ全体で単一の参照 <code>refs/stash</code> を共有しています <sup><a href="#user-content-fn-3" id="user-content-fnref-3-4" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>エージェント A が一時的に変更を退避させようと <code>git stash</code> を実行した直後、別 Worktree で作業中のエージェント B が <code>git stash pop</code> を実行すると、エージェント A の変更がエージェント B の作業ツリーに突然適用されます。これにより、コードの混入や修正の破壊が発生します。</p>
+<h3 id="シナリオ-4-参照とオブジェクトの混乱refsheads-や-git-gc">シナリオ 4: 参照とオブジェクトの混乱（<code>refs/heads</code> や <code>git gc</code>）</h3>
+<p>ブランチ参照（<code>refs/heads/*</code>）やオブジェクトデータベースも共有されています。</p>
+<p>Git は同一ブランチの複数 Worktree での同時チェックアウトを阻止する保護機構を備えていますが、エージェントが <code>git update-ref</code> 等を用いてブランチ参照を強制的に変更することは防げません。また、エージェントが強硬なクリーンアップ操作や <code>git gc</code> を実行した場合、別 Worktree で作業中の未コミットオブジェクトが孤立・消滅するリスクがあります <sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<hr>
+<h2 id="4-実録-自社開発で実際に起きた-worktree-並列運用の限界">4. 実録: 自社開発で実際に起きた worktree 並列運用の限界</h2>
+<p>当開発チームの日常的な開発運用（実測検証ログ <sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>）においても、<code>git worktree</code> による並列エージェント実行を取り入れています。その運用の中で実際に体験したインシデントと限界をご紹介します。</p>
+<h3 id="背景インシデントworktree-導入の動機">背景インシデント（worktree 導入の動機）</h3>
+<p>かつて Worktree を使わず、単一の作業ディレクトリで複数のエージェントセッションを並行実行していた時期がありました。</p>
+<p>あるセッションが作業を中断している間に、同一ディレクトリで動く別セッションが <code>git reset</code> を実行したことで、未コミットでステージ済みだった重要なスキルの修正差分が無言で消滅する事故が発生しました <sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。このファイル直接衝突事故を物理的に回避するために導入されたのが <code>git worktree</code> でした。</p>
+<h3 id="運用の限界インシデントworktree-導入後の事故">運用の限界インシデント（worktree 導入後の事故）</h3>
+<p>しかし、Worktree を導入した後も新たな限界に直面しました。</p>
+<p>エージェントツール側で <code>isolation: "worktree"</code> オプションを明示し、専用 Worktree 内でサブエージェントを実行していたにもかかわらず、ツールのカレントディレクトリ（cwd）保持の制御がすり抜け、サブエージェントがメインブランチ側の作業ディレクトリに対して誤ってコミットを連発する事故が同一作業中に複数回発生しました <sup><a href="#user-content-fn-4" id="user-content-fnref-4-3" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>復旧のために <code>git cherry-pick</code> と <code>reset --hard</code> を繰り返した結果、同一のコミットメッセージ・Author Date を持った重複コミット履歴が残り、プルリクエストとして統合されるという事態になりました <sup><a href="#user-content-fn-4" id="user-content-fnref-4-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>この実例が示しているのは、<strong><code>git worktree</code> はあくまでファイルパスを整理する手段であり、ツールやエージェントの誤操作・親領域へのアクセスを物理的に遮断するセキュリティ境界にはなり得ない</strong> という運用の現実です。</p>
+<hr>
+<h2 id="5-作業ツリーの分離と実行環境の分離の境界を引き直す">5. 「作業ツリーの分離」と「実行環境の分離」の境界を引き直す</h2>
+<p>エージェント並列運用を安全に行うためには、「作業ツリーの分離（Working Directory Isolation）」と「実行環境の分離（Runtime &#x26; Sandbox Isolation）」を明確に区別する必要があります。</p>
+<p>本当に保護すべき境界線は、以下の 4 レイヤーに整理できます。</p>
+<p><img src="/blog/git-worktree-agent-isolation-diagram-isolation-layers.webp" alt="AIコーディングエージェントのための 4 つのセキュリティ分離レイヤー"></p>
+<h3 id="コンテナマウントの罠-the-container-mount-trap">コンテナマウントの罠 (The Container Mount Trap)</h3>
+<p>「Docker コンテナ内でエージェントを動かしているから安全だ」と考える開発者は少なくありません。しかし、ここにも大きな罠が存在します <sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>コンテナに対してホスト上の Worktree ディレクトリ（<code>.git</code> を含む）を生のままバインドマウント（<code>-v /path/to/worktree:/app</code>）して実行した場合、コンテナ内のエージェントが <code>.git/hooks</code> や <code>.git/config</code> を書き換えると、<strong>その変更はホスト側の共有 <code>.git</code> へ即座に透過</strong> します <sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>結果として、コンテナ外のホストで開発者がコミットした際にフックが発火し、コンテナによる隔離が容易に突破されてしまいます。</p>
+<h3 id="ツール固有の暗黙共有仕様">ツール固有の暗黙共有仕様</h3>
+<p>また、Git 自体だけでなく周辺ツールチェーンの共有仕様にも注意が必要です。</p>
+<p>例えば Claude Code の自動記憶機構（Auto memory）は、同一 Git リポジトリ配下であれば、どの Worktree やサブディレクトリから実行されても単一の記憶ディレクトリを暗黙的に共有する仕様になっています <sup><a href="#user-content-fn-4" id="user-content-fnref-4-5" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。作業ディレクトリを分けたとしても、ツール側のコンテキストや記憶は裏でつながっていることを認識しておく必要があります。</p>
+<hr>
+<h2 id="6-安全な並列実行を実現する-3-つのアプローチ">6. 安全な並列実行を実現する 3 つのアプローチ</h2>
+<p>では、エージェントを安全に並列実行するにはどのような構成をとるべきでしょうか。代表的な 3 つのアプローチをご紹介します。</p>
+<h3 id="アプローチ-1-独立クローン-git-clone---reference-の採用">アプローチ 1: 独立クローン (<code>git clone --reference</code>) の採用</h3>
+<p>最もシンプルかつ確実に Git メタデータを隔離する方法は、Worktree ではなく独立した <code>git clone</code> を使用することです <sup><a href="#user-content-fn-3" id="user-content-fnref-3-5" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>メタデータが完全に独立するため、フックや設定、Stash の競合は原理的に発生しません。ディスク容量やクローン時間を節約したい場合は、ローカルのオブジェクトデータベースを参照する <code>--reference</code> オプションを併用します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">git</span><span style="color:#40A02B"> clone</span><span style="color:#40A02B"> --reference</span><span style="color:#40A02B"> /path/to/main-repo</span><span style="color:#40A02B"> https://github.com/user/repo.git</span><span style="color:#40A02B"> agent-work-1</span></span>
+<span class="line"></span></code></pre>
+<h3 id="アプローチ-2-osレベルの権限制御-nono">アプローチ 2: OSレベルの権限制御 (<code>nono</code>)</h3>
+<p>ホスト上で軽量に権限を絞る場合、カーネル層のアクセス制御を利用するアプローチが有効です。</p>
+<p><code>nono</code> (nolabs-ai/nono) は、Linux の Landlock や macOS の Seatbelt を利用して、エージェントプロセスの権限を制限するツールです <sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>エージェントに対して Worktree 外部へのアクセス禁止はもちろん、<code>.git/hooks</code> への書き込み遮断、Docker ソケットへのアクセス遮断、特定の GitHub API 操作制限などをカーネルレベルで強制的におこなうことができます。</p>
+<h3 id="アプローチ-3-完全な仮想環境サンドボックス-agentbox--microvm">アプローチ 3: 完全な仮想環境・サンドボックス (<code>agentbox</code> / MicroVM)</h3>
+<p>最も堅牢なアプローチは、エージェントを完全に分離された MicroVM やコンテナサンドボックス内で実行することです。</p>
+<p><code>agentbox</code> (madarco/agentbox) などのツールでは、エージェントを独立したサンドボックス環境で起動し、ホストの Git 資格情報をサンドボックス内に直接持たせず、ホスト側のプロキシ経由で中継・調停する構成（Credential Relay）をとります <sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<hr>
+<h2 id="7-まとめ-自分の並列実行環境の点検チェックリスト">7. まとめ: 自分の並列実行環境の点検チェックリスト</h2>
+<p><code>git worktree</code> は、複数の作業文脈を効率的に並行管理するための優れた「生産性向上ツール」です。しかし、それ自体をエージェントの悪意や誤操作からシステムを守る「セキュリティ境界」として期待することはできません。</p>
+<p>最後に、ご自身の並列エージェント実行環境を点検するためのチェックリストを掲載します。</p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> <strong>1. フックの保護</strong>: エージェント実行環境から <code>.git/hooks</code> への書き込みが遮断されているか？</li>
+<li class="task-list-item"><input type="checkbox" disabled> <strong>2. 設定の孤立</strong>: <code>.git/config</code> の書き換えや参照が保護されているか？</li>
+<li class="task-list-item"><input type="checkbox" disabled> <strong>3. マウントの透過性</strong>: ホストの <code>.git</code> ディレクトリを生のまま Docker/VM にバインドマウントしていないか？</li>
+<li class="task-list-item"><input type="checkbox" disabled> <strong>4. Stash / Ref の共有</strong>: 複数の並列エージェントが単一の <code>refs/stash</code> や共通ブランチ参照にアクセスできる状態になっていないか？</li>
+<li class="task-list-item"><input type="checkbox" disabled> <strong>5. 資格情報の保護</strong>: SSH キーや API トークン、Git 認証情報がエージェントの環境変数に直接露出していないか？</li>
+</ul>
+<p>エージェントとの安全で快適な協働開発環境を構築するために、本記事をきっかけに足元の実行境界を見直してみてはいかがでしょうか。</p>
+<hr>
+<p>AI エージェントの安全な並列実行構成や、開発ツールのセキュリティ境界設計についてのご相談・お問い合わせは <a href="/#contact">コンタクトフォーム</a> よりお気軽にご連絡ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p>Git Official Documentation: <code>git-worktree(1)</code> (<a href="https://git-scm.com/docs/git-worktree">https://git-scm.com/docs/git-worktree</a>) <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p>Git Official Documentation: <code>gitrepository-layout(5)</code> (<a href="https://git-scm.com/docs/gitrepository-layout">https://git-scm.com/docs/gitrepository-layout</a>) <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p>Alex Chaplinsky, “Git worktrees are not an isolation boundary for coding agents” (<a href="https://fletch.sh/blog/git-worktrees-vs-clones-for-ai-agents/">https://fletch.sh/blog/git-worktrees-vs-clones-for-ai-agents/</a>) <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-3-3" data-footnote-backref="" aria-label="Back to reference 3-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-3-4" data-footnote-backref="" aria-label="Back to reference 3-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-3-5" data-footnote-backref="" aria-label="Back to reference 3-5" class="data-footnote-backref">↩<sup>5</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p>当開発チームによる実測検証ログ <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-4-3" data-footnote-backref="" aria-label="Back to reference 4-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-4-4" data-footnote-backref="" aria-label="Back to reference 4-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-4-5" data-footnote-backref="" aria-label="Back to reference 4-5" class="data-footnote-backref">↩<sup>5</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p>Hacker News Discussion #49110389 (<a href="https://news.ycombinator.com/item?id=49110389">https://news.ycombinator.com/item?id=49110389</a>) <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p>nolabs-ai/nono (<a href="https://github.com/nolabs-ai/nono">https://github.com/nolabs-ai/nono</a>) <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p>madarco/agentbox (<a href="https://github.com/madarco/agentbox">https://github.com/madarco/agentbox</a>) <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

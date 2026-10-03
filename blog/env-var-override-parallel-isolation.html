@@ -1,0 +1,193 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>環境変数で渡したはずの設定が、受け側の無条件代入で上書きされていた ── 4並列の分離が効いていなかった話 | Meetsource</title><meta name="description" content="並列ジョブを環境変数で分離したつもりが、受け側の無条件代入で上書きされ、4並列がすべて同じ台帳へ書いていた。実行は成功し続けた。再現実走の数値と、代入行の点検手順をまとめます。"><link rel="canonical" href="https://www.meetsource.work/blog/env-var-override-parallel-isolation"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="4並列で安全に回しているつもりだった。全ジョブが同じ台帳に書いていて、実行は全部成功していた"><meta property="og:description" content="並列ジョブを環境変数で分離したつもりが、受け側の無条件代入で上書きされ、4並列がすべて同じ台帳へ書いていました。実行は成功し続けたまま。自分のスクリプトを点検する手順もまとめます。"><meta property="og:url" content="https://www.meetsource.work/blog/env-var-override-parallel-isolation"><meta property="og:image" content="https://www.meetsource.work/blog/env-var-override-parallel-isolation-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-02T01:21:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="4並列で安全に回しているつもりだった。全ジョブが同じ台帳に書いていて、実行は全部成功していた"><meta name="twitter:description" content="並列ジョブを環境変数で分離したつもりが、受け側の無条件代入で上書きされ、4並列がすべて同じ台帳へ書いていました。実行は成功し続けたまま。自分のスクリプトを点検する手順もまとめます。"><meta name="twitter:image" content="https://www.meetsource.work/blog/env-var-override-parallel-isolation-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"環境変数で渡したはずの設定が、受け側の無条件代入で上書きされていた ── 4並列の分離が効いていなかった話","description":"並列ジョブを環境変数で分離したつもりが、受け側の無条件代入で上書きされ、4並列がすべて同じ台帳へ書いていた。実行は成功し続けた。再現実走の数値と、代入行の点検手順をまとめます。","datePublished":"2026-10-02T01:21:00.000Z","image":"https://www.meetsource.work/blog/env-var-override-parallel-isolation-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/env-var-override-parallel-isolation"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"環境変数で渡した値が、スクリプトの中で上書きされるのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"受け側のスクリプトが、同じ名前の変数へ無条件に代入しているからです。本件の再現では、その代入が渡された値を置き換えていました。環境から渡された値は起動時にシェルのパラメータになるので、他の代入と同じく置き換わる、というのがマニュアルの記述からの読みです。直し方は、受け側の代入を ${VAR:-default} に変えることです。"}},{"@type":"Question","name":"並列ジョブの分離が効いているかを確認するには、どうすればよいですか？","acceptedAnswer":{"@type":"Answer","text":"渡す側と受け側の代入行を grep -n 'VAR=' *.sh で両方見て（無条件の代入かどうかは、一致した行を読んで判別します）、結合の直前に一時ファイルが何本できているかを数えます。終了コードでは分かりません。"}},{"@type":"Question","name":"${VAR:-default} と ${VAR-default} の違いは何ですか？","acceptedAnswer":{"@type":"Answer","text":":- は変数が未設定または空文字のときに既定値を使い、コロンの無い - は未設定のときだけ使います。空文字を渡したとき、前者は default、後者は空のままです（上の実測のとおりです）。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-02T01:21:00.000Z" data-astro-cid-7jjqptxk> 2026.10.02 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#shell-script</span><span class="tag" data-astro-cid-7jjqptxk>#parallel-execution</span><span class="tag" data-astro-cid-7jjqptxk>#environment-variables</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>環境変数で渡したはずの設定が、受け側の無条件代入で上書きされていた ── 4並列の分離が効いていなかった話</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/env-var-override-parallel-isolation-hero.webp" alt="環境変数で渡したはずの設定が、受け側の無条件代入で上書きされていた ── 4並列の分離が効いていなかった話" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>環境変数による分離とは、並列ジョブごとに別の出力先（一時ファイルなど）を環境変数で渡し、同じファイルへの同時書き込みを避ける設計です。ただし受け側のスクリプトが同名の変数へ無条件に代入していると、渡した値は上書きされ、分離は効きません。</p>
+<p>私の並列検収スクリプト（4並列）で、この上書きが起きていました。実行は成功し続けていて、見つけたのはスクリプトの置き場を整理する設計の途中でコードを読んでいた Claude Code です。当時の振り返りでは、このバグは「コード読みだけが拾った。実行は成功し続けていた」と述べられています。</p>
+<p>「環境変数で渡した値は、子プロセスでそのまま使われる」という前提は、受け側の1行で崩れます。再現実走の数値と、自分の並列スクリプトで代入行を点検する手順まで示します。</p>
+<h2 id="一時台帳を環境変数で渡す設計にした理由">一時台帳を環境変数で渡す設計にした理由</h2>
+<p>検収対象は、AI エージェントが調べた URL を実際に取得して確かめるスクリプトです。これを4並列で走らせると、全ジョブが同じ台帳 <code>sources.tsv</code> へ追記するため、競合しうる状況になります。それを避けるため、渡す側の <code>batch-verify.sh</code> が URL リストを4分割し、ジョブごとに <code>LEDGER=&#x3C;一時台帳></code> を環境変数で渡し、最後に一時台帳を正本へ結合する設計にしました（設計意図は Claude Code が当時説明したものです）。同じ検収スクリプトの設計は <a href="/blog/ai-agent-url-verification-traps">AIエージェントのWeb調査検収で起きた2つの罠</a> でも扱っています。</p>
+<p>次が修正前のスクリプトの抜粋です。実行用のコードではなく、<code>batch-verify.sh</code> と <code>verify-urls.sh</code> から該当行だけを取り出しています。</p>
+<p>ファイル: <code>batch-verify.sh</code>（渡す側。ジョブ起動の行と、結合の行）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#4C4F69">LEDGER</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">$tmpdir</span><span style="color:#40A02B">/ledger.</span><span style="color:#4C4F69">$chunk_name</span><span style="color:#40A02B">"</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$VERIFY</span><span style="color:#40A02B">"</span><span style="color:#1E66F5;font-style:italic"> --origin</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$ORIGIN</span><span style="color:#40A02B">"</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$chunk</span><span style="color:#40A02B">"</span><span style="color:#179299"> ></span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$tmpdir</span><span style="color:#40A02B">/results.</span><span style="color:#4C4F69">$chunk_name</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> &#x26;</span></span>
+<span class="line"></span></code></pre>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">tail</span><span style="color:#40A02B"> -n</span><span style="color:#40A02B"> +2</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$ledger_part</span><span style="color:#40A02B">"</span><span style="color:#179299"> >></span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$REAL_LEDGER</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span></code></pre>
+<p>ファイル: <code>verify-urls.sh</code>（受け側。先頭付近の代入行）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#4C4F69">LEDGER</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">$RESEARCH_DIR</span><span style="color:#40A02B">/sources.tsv"</span></span>
+<span class="line"></span></code></pre>
+<p>渡す側は、ジョブごとに別の <code>LEDGER</code> を渡しています。受け側は <code>LEDGER</code> に値を代入しています。この2つを並べて読んだとき、何が起きるでしょうか。</p>
+<h2 id="実行は成功したまま分離は効いていなかった">実行は成功したまま、分離は効いていなかった</h2>
+<p>答えは、スクリプトの置き場を整理する設計を Claude Code に依頼していた途中で出ました。依頼は、検収スクリプトに依存するスキルの依存をうまく解決する方法を考えてほしい、というものです。その作業で <code>batch-verify.sh</code> と <code>verify-urls.sh</code> を読んでいた Claude Code が、次のように指摘しました（行番号を省略して引用します）。</p>
+<blockquote><p><code>verify-urls.sh</code> が <code>LEDGER="$RESEARCH_DIR/sources.tsv"</code> で無条件に上書きしている。4並列が全部そのまま正本へ追記していて、一時台帳は空のまま結合されている。</p></blockquote>
+<p>これはコード読みの結論で、実行して確かめたものではありません。実際に動かして確かめると、「一時台帳は空のまま」の部分は正確ではありませんでした。一時台帳は空だったのではなく、一時台帳のファイル自体が作られていませんでした。結合ループ（<code>ledger.chunk-*</code> のグロブ）は何も拾わず、4並列の書き込みはすべて正本に直接入っていました。</p>
+<p>当時の記録には、修正前のスクリプトの実行出力が残っていません。そこで 2026-10-02 に、隔離したディレクトリで修正前後のスクリプトを同じ入力（4 URL）で実走し直しました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th></th><th>結合直前の一時台帳</th><th>正本 <code>sources.tsv</code> の行数</th></tr></thead><tbody><tr><td>修正前</td><td>0 本</td><td>5 行（ヘッダ1＋4件）</td></tr><tr><td>修正後</td><td>4 本</td><td>4 行（ヘッダなし）</td></tr></tbody></table>
+<p>表の値は、結合の直前に一時ディレクトリの中身を記録する1行を挿入した計測用コピーで実走したものです（ロジックは変えていません）。修正後の値は、計測日（2026-10-02）時点の現行版でのものです。修正後の正本にヘッダ行が無いのは、正本が存在しない状態から始めたためで、本題とは別の話です。</p>
+<p>修正前は、4並列のジョブがすべて正本に直接追記していました。5行はヘッダ1行と4件で、この再現では欠落も破損も見られませんでした。つまり、実行の結果だけを見ても異常は出ません。異常に気づく手がかりは、受け側のコードの1行にありました。</p>
+<h2 id="最小の再現受け側の1行で分離が消える">最小の再現：受け側の1行で分離が消える</h2>
+<p>同じ現象を、手元で再現できる最小のスクリプトで確かめます。受け側 <code>worker.sh</code> が <code>LEDGER</code> に1行追記し、渡す側 <code>runner.sh</code> が4並列でジョブごとの一時台帳を渡します。必要なのは bash だけです。2つのファイルを同じディレクトリに置きます。</p>
+<p>ファイル: <code>worker.sh</code>（受け側。修正前: 無条件代入）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#EA76CB;font-style:italic">#!/usr/bin/env bash</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 受け側: 渡された LEDGER に1行追記する（修正前: 無条件代入）</span></span>
+<span class="line"><span style="color:#4C4F69">LEDGER</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">dirname</span><span style="color:#40A02B"> "</span><span style="color:#E64553;font-style:italic">$0</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">/main.tsv"</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> "</span><span style="color:#E64553;font-style:italic">$1</span><span style="color:#40A02B">"</span><span style="color:#179299"> >></span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$LEDGER</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span></code></pre>
+<p>ファイル: <code>runner.sh</code>（渡す側。4並列でジョブごとの一時台帳を渡す）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#EA76CB;font-style:italic">#!/usr/bin/env bash</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 渡す側: 4並列で、ジョブごとの一時台帳を LEDGER で渡す</span></span>
+<span class="line"><span style="color:#4C4F69">dir</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#D20F39;font-style:italic">cd</span><span style="color:#40A02B"> "</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">dirname</span><span style="color:#40A02B"> "</span><span style="color:#E64553;font-style:italic">$0</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#D20F39;font-style:italic"> pwd</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">tmp</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">mktemp</span><span style="color:#40A02B"> -d</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#4C4F69"> i </span><span style="color:#8839EF">in</span><span style="color:#40A02B"> 1</span><span style="color:#40A02B"> 2</span><span style="color:#40A02B"> 3</span><span style="color:#40A02B"> 4</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span></span>
+<span class="line"><span style="color:#4C4F69">  LEDGER</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">$tmp</span><span style="color:#40A02B">/ledger.</span><span style="color:#4C4F69">$i</span><span style="color:#40A02B">"</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$dir</span><span style="color:#40A02B">/worker.sh"</span><span style="color:#40A02B"> "job-</span><span style="color:#4C4F69">$i</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> &#x26;</span></span>
+<span class="line"><span style="color:#8839EF">done</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">wait</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> "wait の終了コード: </span><span style="color:#4C4F69">$?</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> "一時台帳: </span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">ls</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$tmp</span><span style="color:#40A02B">" </span><span style="color:#179299">|</span><span style="color:#1E66F5;font-style:italic"> wc</span><span style="color:#40A02B"> -l </span><span style="color:#179299">|</span><span style="color:#1E66F5;font-style:italic"> tr</span><span style="color:#40A02B"> -d ' '</span><span style="color:#7C7F93">)</span><span style="color:#40A02B"> 本"</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> "main.tsv: </span><span style="color:#7C7F93">$(</span><span style="color:#7C7F93"> [</span><span style="color:#179299"> -f</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$dir</span><span style="color:#40A02B">/main.tsv" </span><span style="color:#7C7F93">]</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#1E66F5;font-style:italic"> wc</span><span style="color:#40A02B"> -l </span><span style="color:#179299">&#x3C;</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$dir</span><span style="color:#40A02B">/main.tsv" </span><span style="color:#179299">|</span><span style="color:#1E66F5;font-style:italic"> tr</span><span style="color:#40A02B"> -d ' ' </span><span style="color:#179299">||</span><span style="color:#D20F39;font-style:italic"> echo</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93"> )</span><span style="color:#40A02B"> 行"</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">rm</span><span style="color:#40A02B"> -rf</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$tmp</span><span style="color:#40A02B">"</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$dir</span><span style="color:#40A02B">/main.tsv"</span></span>
+<span class="line"></span></code></pre>
+<p>実行します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">chmod</span><span style="color:#40A02B"> +x</span><span style="color:#40A02B"> worker.sh</span><span style="color:#40A02B"> runner.sh</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#1E66F5;font-style:italic"> ./runner.sh</span></span>
+<span class="line"></span></code></pre>
+<p>出力は次のとおりでした。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>wait の終了コード: 0</span></span>
+<span class="line"><span>一時台帳: 0 本</span></span>
+<span class="line"><span>main.tsv: 4 行</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>一時台帳は0本、<code>main.tsv</code> に4行です。終了コードは0で、エラーも出ません。ここで表示している <code>wait</code> の終了コードは、引数なしの <code>wait</code> の戻り値であり、各ジョブの終了コードではありません。なお、<code>worker.sh</code> は <code>echo</code> の戻り値で正常終了するため、実行は成功して見えます。実在のスクリプトでの再現は、前節の表のとおりです。</p>
+<h2 id="直し方受け側を-var-default-にする">直し方：受け側を <code>${VAR:-default}</code> にする</h2>
+<p>受け側の代入を、変数が未設定または空のときだけ既定値を入れる形にします。変更するのは <code>worker.sh</code> の3行目だけです。</p>
+<p>ファイル: <code>worker.sh</code>（受け側。修正後: 未設定・空のときだけ既定値）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#EA76CB;font-style:italic">#!/usr/bin/env bash</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 受け側: 渡された LEDGER に1行追記する（修正後: 未設定・空のときだけ既定値）</span></span>
+<span class="line"><span style="color:#4C4F69">LEDGER</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">${LEDGER</span><span style="color:#179299">:-</span><span style="color:#40A02B">$(</span><span style="color:#4C4F69">dirname</span><span style="color:#40A02B"> "</span><span style="color:#E64553;font-style:italic">$0</span><span style="color:#40A02B">")</span><span style="color:#179299">/</span><span style="color:#4C4F69">main</span><span style="color:#40A02B">.</span><span style="color:#4C4F69">tsv}</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> "</span><span style="color:#E64553;font-style:italic">$1</span><span style="color:#40A02B">"</span><span style="color:#179299"> >></span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$LEDGER</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span></code></pre>
+<p>同じ <code>./runner.sh</code> を実行すると、出力は次のようになりました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>wait の終了コード: 0</span></span>
+<span class="line"><span>一時台帳: 4 本</span></span>
+<span class="line"><span>main.tsv: 0 行</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>一時台帳が4本でき、<code>main.tsv</code> は作られません。実在のスクリプトでも、受け側の代入を <code>LEDGER="${LEDGER:-&#x3C;正本の既定パス>}"</code> の形に変えて直しました。</p>
+<p><code>${VAR:-default}</code> は、変数が未設定または空のときだけ既定値を使い、渡された値があればそれを残します<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。この形は bash 固有ではなく、POSIX のシェルコマンド言語にも同じ定義があります<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。コロンを省いた <code>${VAR-default}</code> は、未設定のときだけ既定値を使います<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。3つの書き方の違いは次のとおりです。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>書き方</th><th>変数が未設定のとき</th><th>変数が空文字のとき</th><th>変数に値があるとき</th></tr></thead><tbody><tr><td><code>VAR="x"</code></td><td><code>x</code> を代入</td><td><code>x</code> を代入</td><td><code>x</code> を代入（渡された値を上書き）</td></tr><tr><td><code>VAR="${VAR:-x}"</code></td><td><code>x</code></td><td><code>x</code></td><td>渡された値を使う</td></tr><tr><td><code>VAR="${VAR-x}"</code></td><td><code>x</code></td><td>空文字のまま</td><td>渡された値を使う</td></tr></tbody></table>
+<p>空文字の列は、<code>LEDGER=</code> を渡して試した実測です。<code>${LEDGER:-default}</code> は <code>default</code> に、<code>${LEDGER-default}</code> は空文字になりました。つまり <code>:-</code> は、空文字を渡されると既定値、本件では正本のほうへ戻ります。</p>
+<h3 id="なぜ無条件代入が上書きするのか">なぜ無条件代入が上書きするのか</h3>
+<p>Bash は起動時に、環境にある各名前に対応するパラメータを作ります。環境内のパラメータの値を変更すると、新しい値が環境に入り、古い値を置き換えます<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。環境から来た変数への代入も、他のシェル変数への代入と同じく値を置き換える、とマニュアルの記述から読めます。</p>
+<p>渡す側の <code>VAR=value command</code> の形は、そのコマンドの環境にだけ入ります<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。ジョブごとに別の値を渡せるのはこのためで、渡し方そのものは正しく動いていました。値が失われたのは、受け側の代入です。</p>
+<h2 id="自分の並列スクリプトを点検する">自分の並列スクリプトを点検する</h2>
+<p>点検は3手です。実行結果ではなく、コードと、できたファイルの数を見ます。</p>
+<ol>
+<li>
+<p><strong>代入行を洗い出す。</strong> 渡している変数名で、渡す側と受け側の両方を探します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">grep</span><span style="color:#40A02B"> -n</span><span style="color:#40A02B"> 'LEDGER='</span><span style="color:#4C4F69"> *</span><span style="color:#40A02B">.sh</span></span>
+<span class="line"></span></code></pre>
+<p>最小の再現では、次のように渡す側と受け側の行が1本の <code>grep</code> に並びます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>runner.sh:6:  LEDGER="$tmp/ledger.$i" "$dir/worker.sh" "job-$i" &#x26;</span></span>
+<span class="line"><span>worker.sh:3:LEDGER="$(dirname "$0")/main.tsv"</span></span>
+<span class="line"><span></span></span></code></pre>
+</li>
+<li>
+<p><strong>受け側の代入が <code>${VAR:-...}</code> か、無条件の <code>VAR="..."</code> かを見る。</strong> 無条件の代入なら、渡した値はその行で置き換わります。<code>[ -z "$VAR" ] &#x26;&#x26; VAR=...</code> のような条件付き代入は <code>grep</code> に一致しても別物なので、一致した行は目で読んで判別します。<code>export</code> や <code>declare</code> を付けた形は上の <code>grep</code> では拾えません。必要なら別に探してください（手元で確かめたのは <code>LEDGER=</code> の1形だけです）。</p>
+</li>
+<li>
+<p><strong>結合の直前で、一時ファイルが何本できているかを数える。</strong> 最小の再現の <code>runner.sh</code> にある <code>ls "$tmp" | wc -l</code> と同じ形です。修正前は0本、修正後は4本でした。</p>
+</li>
+</ol>
+<h2 id="この点検でわかることわからないこと">この点検でわかること・わからないこと</h2>
+<p>この点検でわかるのは、渡した値が受け側で使われているか（代入行と、できた一時ファイルの本数）です。</p>
+<p>書き込みの混在や台帳の破損が起きるかは、点検ではわかりません。本件の再現では欠落も破損もなく、5行はヘッダ1行と4件でした。</p>
+<p>「テストを書けば気づけたのではないか」という反論はありえます。一時ファイルの本数を数える確認を最初から書いていれば、気づけたとは言えます。ただ本件では、実行結果に異常が出ませんでした。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>受け側が外部のコマンドで、代入を書き換えられない場合は、受け側を直す修正は選べません。</p>
+<p>再現は、4 URL・4チャンクの1条件で、各1回の実走です。毎回同じ結果になることまでは確かめていません。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="環境変数で渡した値がスクリプトの中で上書きされるのはなぜですか">環境変数で渡した値が、スクリプトの中で上書きされるのはなぜですか？</h3>
+<p>受け側のスクリプトが、同じ名前の変数へ無条件に代入しているからです。本件の再現では、その代入が渡された値を置き換えていました。環境から渡された値は起動時にシェルのパラメータになる<sup><a href="#user-content-fn-3" id="user-content-fnref-3-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>ので、他の代入と同じく置き換わる、というのがマニュアルの記述からの読みです。直し方は、受け側の代入を <code>${VAR:-default}</code> に変えることです。</p>
+<h3 id="並列ジョブの分離が効いているかを確認するにはどうすればよいですか">並列ジョブの分離が効いているかを確認するには、どうすればよいですか？</h3>
+<p>渡す側と受け側の代入行を <code>grep -n 'VAR=' *.sh</code> で両方見て（無条件の代入かどうかは、一致した行を読んで判別します）、結合の直前に一時ファイルが何本できているかを数えます。終了コードでは分かりません。</p>
+<h3 id="var-default-と-var-default-の違いは何ですか"><code>${VAR:-default}</code> と <code>${VAR-default}</code> の違いは何ですか？</h3>
+<p><code>:-</code> は変数が未設定または空文字のときに既定値を使い、コロンの無い <code>-</code> は未設定のときだけ使います<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。空文字を渡したとき、前者は <code>default</code>、後者は空のままです（上の実測のとおりです）。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li>受け側の無条件代入は、渡された環境変数の値を上書きしました。4 URL を4並列で渡した検収スクリプトと、4ジョブの最小の再現で確認した事実で、仕組みの説明はマニュアルの記述からの読みです。</li>
+<li>実在のスクリプトでは、当時の振り返りが「実行は成功し続けていた」と述べています。最小の再現でも、<code>wait</code> の終了コードは0で、エラーは出ませんでした。</li>
+<li>「渡したつもり」の確認は、渡す側と受け側の代入行を両方読み、結合の前に一時ファイルの本数を数えます。</li>
+<li>直し方は、受け側の代入を <code>${VAR:-default}</code> にすることです。</li>
+<li>この再現が示すのは、一時台帳が作られず正本に直接書かれたことです。修正前に台帳が壊れたか、他の環境・シェルで同じ結果になるかは、示していません。</li>
+</ul>
+<p>AI エージェントを使った並列実行・検収の仕組みづくりについて、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html">Shell Parameter Expansion（Bash Reference Manual 3.5.3）</a> GNU Project。<code>${parameter:-word}</code> の定義（未設定または空のときに word を使う）と、コロンを省いた形が未設定のときだけを判定することは、同節。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html">Shell Command Language（POSIX.1-2024、2.6.2 Parameter Expansion）</a> The Open Group、IEEE Std 1003.1-2024。<code>${parameter:-[word]}</code>（Use Default Values）の定義は、2.6.2 節。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://www.gnu.org/software/bash/manual/html_node/Environment.html">Environment（Bash Reference Manual 3.7.4）</a> GNU Project。起動時に環境の各名前に対してパラメータを作ることと、環境内の値を変更すると新しい値が古い値を置き換えること、<code>VAR=value command</code> の代入がそのコマンドの環境にだけ入ることは、同節。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-3-3" data-footnote-backref="" aria-label="Back to reference 3-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

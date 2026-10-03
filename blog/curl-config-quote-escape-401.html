@@ -1,0 +1,157 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>APIの401 Unauthorizedは権限エラーとは限らない — curl設定ファイル生成時の引用符エスケープの落とし穴 | Meetsource</title><meta name="description" content="APIキーやトークン、署名ロジックが正常でもHTTP 401が返る？curl設定ファイルのheader構文における引用符パースの落とし穴と、ローカルnetcatを活用した即効切り分けテクニックを実例付きで詳解。"><link rel="canonical" href="https://www.meetsource.work/blog/curl-config-quote-escape-401"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="APIの401 Unauthorizedは権限エラーとは限らない — curl設定ファイル生成時の引用符エスケープの落とし穴 | Meetsource"><meta property="og:description" content="APIキーやトークン、署名ロジックが正常でもHTTP 401が返る？curl設定ファイルのheader構文における引用符パースの落とし穴と、ローカルnetcatを活用した即効切り分けテクニックを実例付きで詳解。"><meta property="og:url" content="https://www.meetsource.work/blog/curl-config-quote-escape-401"><meta property="og:image" content="https://www.meetsource.work/blog/curl-config-quote-escape-401-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-08T15:03:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="APIの401 Unauthorizedは権限エラーとは限らない — curl設定ファイル生成時の引用符エスケープの落とし穴 | Meetsource"><meta name="twitter:description" content="APIキーやトークン、署名ロジックが正常でもHTTP 401が返る？curl設定ファイルのheader構文における引用符パースの落とし穴と、ローカルnetcatを活用した即効切り分けテクニックを実例付きで詳解。"><meta name="twitter:image" content="https://www.meetsource.work/blog/curl-config-quote-escape-401-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"APIの401 Unauthorizedは権限エラーとは限らない — curl設定ファイル生成時の引用符エスケープの落とし穴","description":"APIキーやトークン、署名ロジックが正常でもHTTP 401が返る？curl設定ファイルのheader構文における引用符パースの落とし穴と、ローカルnetcatを活用した即効切り分けテクニックを実例付きで詳解。","datePublished":"2026-08-08T15:03:00.000Z","image":"https://www.meetsource.work/blog/curl-config-quote-escape-401-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/curl-config-quote-escape-401"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-08T15:03:00.000Z" data-astro-cid-7jjqptxk> 2026.08.09 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#curl</span><span class="tag" data-astro-cid-7jjqptxk>#api</span><span class="tag" data-astro-cid-7jjqptxk>#oauth</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span><span class="tag" data-astro-cid-7jjqptxk>#shell-script</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>APIの401 Unauthorizedは権限エラーとは限らない — curl設定ファイル生成時の引用符エスケープの落とし穴</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/curl-config-quote-escape-401-hero.webp" alt="APIの401 Unauthorizedは権限エラーとは限らない — curl設定ファイル生成時の引用符エスケープの落とし穴" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>外部 REST API や Webhook と連動する CLI ツール・バックエンドの自動化スクリプトを作成していると、突如遭遇するのが <strong>「HTTP 401 Unauthorized」</strong> という認証エラーです。</p>
+<p>このステータスコードを受け取った時、開発者の多くは「API キーの記述ミス」「OAuth トークンの有効期限切れ」「アクセス権限（App Permissions）の不足」「アクセストークンの再発行忘れ」などを真っ先に疑います。しかし、API 管理画面で何度も設定を見直し、署名計算ロジックの単体テストを通しているにもかかわらず、リクエストが一切通らない事態に陥ることがあります。</p>
+<p>本記事では、クライアント側の HTTP 送信処理において発生する盲点 — <strong>「<code>curl</code> 設定ファイル（<code>--config</code> / <code>-K</code>）生成時における二重引用符 <code>"</code> のエスケープ漏れによる送信ヘッダの切断バグ」</strong> について詳しく解説します。また、外部 API のレート制限を消費せずに、ローカルの <code>nc</code> (netcat) で実際の送信バイト列を捉える即効性のある切り分けテクニックも併せて紹介します。</p>
+<hr>
+<h2 id="1-署名もキーも正しいのになぜ-401エラーという罠">1. 署名もキーも正しいのになぜ？ 401エラーという「罠」</h2>
+<p>HTTP 仕様上、<code>401 Unauthorized</code> はクライアントから提示された認証資格情報（<code>Authorization</code> ヘッダ等）が無効であるか、サーバーに正しく提示されていないことを示すエラーです<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>そのため、開発現場で 401 が発生すると、トラブルシューティングの方向性は自然と「認証データの中身」に集中します。</p>
+<ul>
+<li>API キーやアクセストークンの文字列が正しいか</li>
+<li>OAuth 1.0a や HMAC 等の署名（Signature）計算ロジックにバグがないか</li>
+<li>認証サーバー側のパーミッション設定（Read/Write 権限）が正しく適用されているか</li>
+</ul>
+<p>しかし、<strong>「認証データの中身は 100% 正しいが、HTTP リクエストの送信ヘッダがクライアント側で物理的に途切れて届いていない」</strong> というケースが存在します。</p>
+<p>当リポジトリの一次検証ログにおいても、API 投稿スクリプトのテスト実行時に <code>HTTP 401 {"title": "Unauthorized", "status": 401, "detail": "Unauthorized"}</code> が返却され、当初は認証キーや権限の不全が疑われました。</p>
+<p>しかし、直前に実行していた OAuth 1.0a 署名生成機能の単体テストスクリプト（<code>oauth-signature.pl</code>）は、公式ドキュメントのテストベクタとの照合で <code>hCtSmYh+iHYCEqBWrE7C7hYmtUk=</code> に完全一致しており、署名計算ロジック自体には一切の不具合がありませんでした。</p>
+<p>署名計算ロジックが正常であるにもかかわらず 401 が発生する場合、疑うべきは「認証情報の中身」ではなく「送信経路での文字列のパース」です。</p>
+<hr>
+<h2 id="2-真因-curl---config-構文の引用符打ち切りルール">2. 真因: curl <code>--config</code> 構文の引用符打ち切りルール</h2>
+<p>CLI スクリプト（Perl, Python, Bash など）から <code>curl</code> を起動して外部 API を叩く際、認証キーやアクセストークンをコマンドライン引数（<code>-H "Authorization: ..."</code>）に直接渡すと、<code>ps</code> コマンドやシステムログ経由でプロセス引数が他のユーザーに閲覧されるリスクがあります。</p>
+<p>このセキュリティ上の課題を回避するため、一時的な設定ファイル（<code>--config</code> または <code>-K</code> オプション）をファイルシステム上に生成し、<code>curl -K /path/to/config</code> のように実行する設計がよく用いられます<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p><code>curl</code> の設定ファイルでは、以下のようにオプションと値を 1 行ごとに記述します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>header = "Authorization: Bearer my_secret_token"</span></span>
+<span class="line"><span>header = "Content-Type: application/json"</span></span>
+<span class="line"><span></span></span></code></pre>
+<div class="callout" data-callout="warning" data-collapsible="false"><div class="callout-title"><div class="callout-title-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div><div class="callout-title-text"><strong><code>curl</code> 設定ファイルの引用符パースルール</strong></div></div><div class="callout-content"><p><code>curl</code> の設定ファイル構文において、<code>header = "..."</code> のようにダブルクォート（<code>"</code>）で囲まれた値の内部にエスケープされていない <code>"</code> が現れると、<code>curl</code> はそこを <strong>「値の終端記号」</strong> とみなします<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p></div></div>
+<p>例えば、Perl スクリプト等で以下のように無加工のまま設定ファイル文字列を生成していたとします。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="perl"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 修正前の設定ファイル生成（バグが含まれる例）</span></span>
+<span class="line"><span style="color:#8839EF">my</span><span style="color:#4C4F69"> $conf_text = </span><span style="color:#40A02B">qq{header = "Authorization: </span><span style="color:#4C4F69">$auth</span><span style="color:#40A02B">"</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">}</span><span style="color:#4C4F69">;</span></span>
+<span class="line"></span></code></pre>
+<p>ここで、OAuth 1.0a の <code>Authorization</code> ヘッダ文字列（<code>$auth</code>）を組み立てると、通常は以下のような形式になります。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>OAuth oauth_consumer_key="my_key", oauth_token="my_token", oauth_signature="hCtSm..."</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>これを上のテンプレートに当てはめると、設定ファイルには次のような行が出力されます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>header = "Authorization: OAuth oauth_consumer_key="my_key", oauth_token="my_token"..."</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>一見すると 1 つのヘッダ行に見えますが、<code>curl</code> の設定ファイルパーサーは <code>Authorization: OAuth oauth_consumer_key=</code> 直後の <code>"</code> を出会った瞬間に「文字列の閉じクォート」と判定します。</p>
+<p>その結果、<code>curl</code> が実際に読み込んで送信に使用するヘッダ値は以下の通り短縮されてしまいます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="http"><code><span class="line"><span style="color:#1E66F5">Authorization</span><span style="color:#8839EF">:</span><span style="color:#40A02B"> OAuth oauth_consumer_key=</span></span>
+<span class="line"></span></code></pre>
+<p><code>oauth_consumer_key=</code> より後ろのトークン、署名、タイムスタンプなどの認証文字列はすべて削ぎ落とされた状態で HTTP リクエストが組み立てられます。</p>
+<p>認証サーバー側から見れば、届いたリクエストには不完全な <code>Authorization</code> ヘッダしか含まれていないため、当然ながら <code>HTTP 401 Unauthorized</code> を返却します。どれだけ正しい API キーを設定しても、あるいは署名ロジックをどれだけ修正しても、サーバーにはそもそも届いていないため 401 エラーが解消することはありません。</p>
+<hr>
+<h2 id="3-外部apiを叩かずに即特定するローカル-listener-nc切り分け術">3. 外部APIを叩かずに即特定する「ローカル listener (nc)」切り分け術</h2>
+<p>この手の「送信データの途中切れ」バグで厄介なのは、外部 API を何度叩いても同じ 401 レスポンスが返ってくるため、原因がクライアント側かサーバー側か判別しづらい点です。また、外部 API を無駄に試行錯誤すると、レート制限（Rate Limit）の枯渇や意図しないテストデータの作成・送信といった副作用のリスクが生じます。</p>
+<p>この問題を即座に切り分ける非常に有効なテクニックが、<strong>「ローカルの <code>nc</code> (netcat) にリクエストを送信して生のパケットを自前で捉える」</strong> 手法です<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<h3 id="切り分け手順">切り分け手順</h3>
+<ol>
+<li>
+<p><strong>ローカルポートで <code>nc</code> を Listen 状態にする</strong>
+ターミナルを立ち上げ、以下のコマンドを実行してポート（例: <code>8099</code>）で待機します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">nc</span><span style="color:#40A02B"> -l</span><span style="color:#FE640B"> 127.0.0.1</span><span style="color:#FE640B"> 8099</span></span>
+<span class="line"></span></code></pre>
+</li>
+<li>
+<p><strong>スクリプトの送信先 URL を一時的にローカルに向ける</strong>
+スクリプト内で <code>curl</code> が呼び出す対象 URL を一時的に <code>http://127.0.0.1:8099</code> へ変更し、スクリプトを実行します。</p>
+</li>
+<li>
+<p><strong><code>nc</code> 側のターミナルに出力された生の HTTP リクエストを確認する</strong></p>
+</li>
+</ol>
+<p><code>nc</code> を使用して実際に送信されたヘッダを観測した際の実測出力例は以下の通りです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="http"><code><span class="line"><span style="color:#8839EF">POST</span><span style="color:#4C4F69"> / </span><span style="color:#8839EF">HTTP</span><span style="color:#4C4F69">/</span><span style="color:#FE640B">1.1</span></span>
+<span class="line"><span style="color:#1E66F5">Host</span><span style="color:#8839EF">:</span><span style="color:#40A02B"> 127.0.0.1:8099</span></span>
+<span class="line"><span style="color:#1E66F5">User-Agent</span><span style="color:#8839EF">:</span><span style="color:#40A02B"> curl/8.7.1</span></span>
+<span class="line"><span style="color:#1E66F5">Accept</span><span style="color:#8839EF">:</span><span style="color:#40A02B"> */*</span></span>
+<span class="line"><span style="color:#1E66F5">Authorization</span><span style="color:#8839EF">:</span><span style="color:#40A02B"> OAuth oauth_consumer_key=</span></span>
+<span class="line"></span></code></pre>
+<p><code>Authorization:</code> ヘッダが <code>oauth_consumer_key=</code> の直後でスパッと切れている様子が一目で確認できます。</p>
+<p><code>-v</code> (<code>--verbose</code>) オプションを <code>curl</code> に付与して標準エラー出力を読む方法もありますが、スクリプト内部で <code>curl</code> の出力をキャプチャ・抑制している場合や、設定ファイルのパース処理自体の挙動を視覚的に確かめたい場合、<code>nc</code> によるローカル受信用リスナーの構築は最も確実かつ副作用のないトラブルシューティング手段となります。</p>
+<div class="callout" data-callout="tip" data-collapsible="false"><div class="callout-title"><div class="callout-title-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg></div><div class="callout-title-text"><strong>トラブルシューティングの教訓</strong></div></div><div class="callout-content"><p>リクエストの内容を変えたり（署名を故意に破壊するなど）、キーを更新したりしてもサーバーの応答ステータスが一切変化しない場合、「サーバー側が認証拒否している」と決めつける前に <strong>「クライアント側でリクエストが途中で切れて送信されている（届いていない）」</strong> ことを疑ってください。</p></div></div>
+<hr>
+<h2 id="4-対策コード-conf_quote-関数によるエスケープと無投稿実測">4. 対策コード: <code>conf_quote</code> 関数によるエスケープと無投稿実測</h2>
+<p><code>curl</code> の設定ファイルで二重引用符やバックスラッシュを含むヘッダを安全に記述するには、文字列中の <code>\</code> を <code>\\</code> に、<code>"</code> を <code>\"</code> に置換してエスケープした上で、全体を <code>"</code> で括る必要があります<sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h3 id="引用符エスケープ関数の実装例">引用符エスケープ関数の実装例</h3>
+<p>Perl におけるヘルパー関数 <code>conf_quote()</code> の実装例と、設定ファイル生成コードへの適用方法は以下の通りです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="perl"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># curl 設定ファイル用にバックスラッシュと二重引用符をエスケープする関数</span></span>
+<span class="line"><span style="color:#8839EF">sub</span><span style="color:#1E66F5;font-style:italic"> conf_quote</span><span style="color:#4C4F69"> {</span></span>
+<span class="line"><span style="color:#8839EF">    my</span><span style="color:#4C4F69"> ($s) = @_;</span></span>
+<span class="line"><span style="color:#4C4F69">    $s =~ </span><span style="color:#1E66F5;font-style:italic">s</span><span style="color:#40A02B">/</span><span style="color:#EA76CB">\\</span><span style="color:#40A02B">/</span><span style="color:#EA76CB">\\\\</span><span style="color:#40A02B">/</span><span style="color:#8839EF">g</span><span style="color:#4C4F69">;  </span><span style="color:#9CA0B0;font-style:italic"># \ を \\ に変換</span></span>
+<span class="line"><span style="color:#4C4F69">    $s =~ </span><span style="color:#1E66F5;font-style:italic">s</span><span style="color:#40A02B">/"/</span><span style="color:#EA76CB">\\</span><span style="color:#40A02B">"/</span><span style="color:#8839EF">g</span><span style="color:#4C4F69">;    </span><span style="color:#9CA0B0;font-style:italic"># " を \" に変換</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#40A02B"> qq{"</span><span style="color:#4C4F69">$s</span><span style="color:#40A02B">"}</span><span style="color:#4C4F69">;     </span><span style="color:#9CA0B0;font-style:italic"># エスケープ後の文字列を double quote で囲む</span></span>
+<span class="line"><span style="color:#4C4F69">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 呼び出し側の修正コード例</span></span>
+<span class="line"><span style="color:#8839EF">my</span><span style="color:#4C4F69"> $conf_text = </span><span style="color:#40A02B">'header = '</span><span style="color:#4C4F69"> . conf_quote(</span><span style="color:#40A02B">"Authorization: </span><span style="color:#4C4F69">$auth</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">) . </span><span style="color:#40A02B">"</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">;</span></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#4C4F69"> (</span><span style="color:#1E66F5;font-style:italic">defined</span><span style="color:#4C4F69"> $body) {</span></span>
+<span class="line"><span style="color:#4C4F69">    $conf_text .= </span><span style="color:#40A02B">'header = '</span><span style="color:#4C4F69"> . conf_quote(</span><span style="color:#40A02B">'Content-Type: application/json'</span><span style="color:#4C4F69">) . </span><span style="color:#40A02B">"</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">;</span></span>
+<span class="line"><span style="color:#4C4F69">    $conf_text .= </span><span style="color:#40A02B">'data-binary = '</span><span style="color:#4C4F69"> . conf_quote(</span><span style="color:#40A02B">"</span><span style="color:#EA76CB">\@</span><span style="color:#4C4F69">$body_file</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">) . </span><span style="color:#40A02B">"</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">;</span></span>
+<span class="line"><span style="color:#4C4F69">}</span></span>
+<span class="line"></span></code></pre>
+<p>この修正を適用すると、<code>curl</code> の設定ファイルには次のように正しくエスケープされた文字列が出力されます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>header = "Authorization: OAuth oauth_consumer_key=\"my_key\", oauth_token=\"my_token\"..."</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>これにより、<code>curl</code> は内部の <code>\"</code> をヘッダ値の一部として正しく解釈し、終端の <code>"</code> までを 1 つの <code>Authorization</code> ヘッダとして認識するようになります。</p>
+<h3 id="実際に投稿を行わない無被害検証">実際に投稿を行わない無被害検証</h3>
+<p>修正を適用した後の確認ステップにおいて、本番の投稿エンドポイント（例: <code>POST /2/tweets</code>）をいきなり叩く必要はありません。</p>
+<p>多くの Web API には、トークンの有効性とパーミッションを確認するための読み取り系エンドポイント（例: <code>GET /1.1/account/verify_credentials.json</code> や <code>GET /2/users/me</code>）が用意されています。</p>
+<p>修正後のスクリプトで認証確認チェックモード（<code>--auth-check</code>）を実行したところ、以下の通り即座に <code>HTTP 200</code> および書き込み権限を示せるステータスが取得できました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>=== 認証確認（投稿は行いません） ===</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>--- v1.1 verify_credentials</span></span>
+<span class="line"><span>    GET https://api.twitter.com/1.1/account/verify_credentials.json</span></span>
+<span class="line"><span>    HTTP 200</span></span>
+<span class="line"><span>    x-access-level                   read-write</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>--- v2 users/me</span></span>
+<span class="line"><span>    GET https://api.x.com/2/users/me</span></span>
+<span class="line"><span>    HTTP 200</span></span>
+<span class="line"><span>    x-access-level                   read-write</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>=== 判定 ===</span></span>
+<span class="line"><span>x-access-level: read-write</span></span>
+<span class="line"><span>→ 書き込み権限あり。実投稿を行わずに検証完了。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>テスト投稿を行うことなく、確認用 API エンドポイント経由で <code>HTTP 200</code> と <code>read-write</code> レベルの実測結果を得ることで、安全かつ確実にバグの解消を証明できます。</p>
+<hr>
+<h2 id="5-まとめ-応答が変わらない時は届いていないを疑え">5. まとめ: 応答が変わらない時は「届いていない」を疑え</h2>
+<p><code>HTTP 401 Unauthorized</code> が発生した際のチェックリストをまとめます。</p>
+<ol>
+<li><strong>署名単体テストの確認</strong>: 署名計算ロジック自体が正しいかを単体テストで照合する。</li>
+<li><strong>送信ヘッダの到達確認</strong>: リクエストパラメータを変えても 401 応答が変わらない場合は、ローカルの <code>nc</code> (netcat) 等で実際の送信バイト列を観測する。</li>
+<li><strong><code>curl</code> 設定ファイルの引用符チェック</strong>: <code>--config</code> を使用している場合、<code>header = "..."</code> 内の <code>"</code> や <code>\</code> がエスケープされているか確認する。</li>
+<li><strong>安全な無投稿検証</strong>: 修正後は読み取り系の確認エンドポイント（<code>users/me</code> 等）を叩き、<code>HTTP 200</code> を実測確認する。</li>
+</ol>
+<p>API トラブルシューティングにおいて「入力を変えても相手の応答が一切変化しない」ときは、サーバー側の認証判定を疑う前に <strong>「そもそもこちらのデータが届いていない」</strong> という可能性を疑ってください。送信バイト列を自分の目で見る簡単な仕組みを用意しておくことで、迷走するデバッグ時間を大幅に短縮できます。</p>
+<hr>
+<p>記事内容に関する質問や自動化ツールの構築相談はこちらから。
+<a href="/#contact">コンタクトフォーム</a></p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p>MDN Web Docs. “401 Unauthorized”. <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401">https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401</a> (参照 2026-08-08) <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p>everything.curl.dev. “Everything curl - Config file”. <a href="https://everything.curl.dev/cmdline/configfile.html">https://everything.curl.dev/cmdline/configfile.html</a> (参照 2026-08-08) <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p>curl.se. “curl FAQ - How options are specified”. <a href="https://curl.se/docs/faq.html">https://curl.se/docs/faq.html</a> (参照 2026-08-08) <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

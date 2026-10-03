@@ -1,0 +1,496 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>レガシーコードの特性テストで直面する「グローバル状態とDB汚染」の隔離 ── 状態リセットとインメモリDBへの安全なSeam切り | Meetsource</title><meta name="description" content="特性テスト導入直後に立ちはだかる「テスト順序依存」や「DB汚染」。動的スコープによる状態リセット、トランザクションロールバック、インメモリDBやTest::mysqldへのSeam切りという3つの実践パターンで安全に副作用を隔離する手順を解説する。"><link rel="canonical" href="https://www.meetsource.work/blog/isolate-legacy-test-state"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="レガシーコードの特性テストで直面する「グローバル状態とDB汚染」の隔離 ── 状態リセットとインメモリDBへの安全なSeam切り | Meetsource"><meta property="og:description" content="特性テスト導入直後に立ちはだかる「テスト順序依存」や「DB汚染」。動的スコープによる状態リセット、トランザクションロールバック、インメモリDBやTest::mysqldへのSeam切りという3つの実践パターンで安全に副作用を隔離する手順を解説する。"><meta property="og:url" content="https://www.meetsource.work/blog/isolate-legacy-test-state"><meta property="og:image" content="https://www.meetsource.work/blog/isolate-legacy-test-state-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-26T08:00:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="レガシーコードの特性テストで直面する「グローバル状態とDB汚染」の隔離 ── 状態リセットとインメモリDBへの安全なSeam切り | Meetsource"><meta name="twitter:description" content="特性テスト導入直後に立ちはだかる「テスト順序依存」や「DB汚染」。動的スコープによる状態リセット、トランザクションロールバック、インメモリDBやTest::mysqldへのSeam切りという3つの実践パターンで安全に副作用を隔離する手順を解説する。"><meta name="twitter:image" content="https://www.meetsource.work/blog/isolate-legacy-test-state-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"レガシーコードの特性テストで直面する「グローバル状態とDB汚染」の隔離 ── 状態リセットとインメモリDBへの安全なSeam切り","description":"特性テスト導入直後に立ちはだかる「テスト順序依存」や「DB汚染」。動的スコープによる状態リセット、トランザクションロールバック、インメモリDBやTest::mysqldへのSeam切りという3つの実践パターンで安全に副作用を隔離する手順を解説する。","datePublished":"2026-08-26T08:00:00.000Z","image":"https://www.meetsource.work/blog/isolate-legacy-test-state-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/isolate-legacy-test-state"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"テストでトランザクションロールバックを使う場合の最大の注意点は何ですか？","acceptedAnswer":{"@type":"Answer","text":"アプリケーション内部で明示的な COMMIT が発行されたり、Savepoint 非対応の環境でトランザクションが二重ネストされた場合にロールバックが機能しなくなる点です。その場合は、モックによるDBアクセスの差し替えや Test::mysqld による一時インスタンスの完全破棄を検討してください。"}},{"@type":"Question","name":"SQLite のインメモリDBと Test::mysqld のどちらを選ぶべきですか？","acceptedAnswer":{"@type":"Answer","text":"実行速度を最優先し標準的なSQLで完結している場合は SQLite :memory: が適していますが、MySQL 固有の構文（ON DUPLICATE KEY UPDATE 等）や厳密なトランザクション分離レベルに依存している場合は Test::mysqld を選ぶべきです。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-26T08:00:00.000Z" data-astro-cid-7jjqptxk> 2026.08.26 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#legacy-code</span><span class="tag" data-astro-cid-7jjqptxk>#testing</span><span class="tag" data-astro-cid-7jjqptxk>#refactoring</span><span class="tag" data-astro-cid-7jjqptxk>#perl</span><span class="tag" data-astro-cid-7jjqptxk>#characterization-test</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>レガシーコードの特性テストで直面する「グローバル状態とDB汚染」の隔離 ── 状態リセットとインメモリDBへの安全なSeam切り</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/isolate-legacy-test-state-hero.webp" alt="レガシーコードの特性テストで直面する「グローバル状態とDB汚染」の隔離 ── 状態リセットとインメモリDBへの安全なSeam切り" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p><a href="/blog/first-test-legacy-code">前作の記事</a> では、テストが1本もないレガシーコードに対して、仕様を追うのではなく現状の振る舞いを固定する「特性テスト（characterization test）」を次に触るファイルから書き始める手順を解説しました。</p>
+<p>しかし、最初の1本を書き終えて意気揚々と2本目、3本目とテストを増やし始めた直後、多くのエンジニアが新たな壁に突き当たります。「テストを単体で動かすと通るのに、まとめて実行すると落ちる」「テストの実行順序を入れ替えると失敗する」「テストを実行するたびにローカルDBにゴミデータが溜まり、手動でクリーンアップしなければならない」という現象です。</p>
+<p>この原因の正体は、テスト実行によって引き起こされるグローバル変数やデータベースの <strong>副作用（Side Effect）</strong> にあります。テスト汚染（Test Pollution）とは、あるテストが実行時に残したグローバル状態やデータベースの変更が後続のテストに漏洩し、テスト結果を非決定的にしてしまう現象です<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>本記事では、Perl のレガシーコードベースを題材に、この副作用を安全に隔離する3つの実践パターン（動的スコープによる状態リセット、トランザクションロールバック、インメモリDB / 一時MySQLへのSeam切り）をステップ・バイ・ステップで実装します。</p>
+<h2 id="全体構成と副作用の伝播メカニズム">全体構成と副作用の伝播メカニズム</h2>
+<p>なぜレガシーコードではテストが増えると壊れ始めるのでしょうか。その構造的な要因は、共有データベースやグローバル変数（パッケージ変数、環境変数、シングルトン）に対する「暗黙の依存と書き換え」にあります。</p>
+<pre class="mermaid">flowchart TD
+    subgraph 汚染の伝播
+        T1["テストA (注文作成)"] -->|INSERT・グローバル変数書換| Shared["共有DB / パッケージ変数"]
+        Shared -->|変更された状態が残留| T2["テストB (注文一覧取得)"]
+        T2 -->|期待値とズレて失敗| Fail["テスト失敗 (順序依存)"]
+    end
+
+    subgraph Seam による隔離
+        T3["テストA"] -->|dynamic scope / rollback| Seam1["隔離された状態 (Seam)"]
+        Seam1 -->|テスト終了時に完全破棄| Clean["元のクリーンな状態に復元"]
+        Clean --> T4["テストB"]
+        T4 -->|独立して実行| Pass["安定して成功 (並列実行可能)"]
+    end</pre>
+<p>グローバル状態が散乱したレガシーコードでは、テストAが行った設定変更が後続のテストへ漏洩し、隠れた結合を生みます<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。DBへのレコード挿入のような副作用も同様にそのまま残り、後続のテストBはその汚染された状態を想定外の入力として受け取ってしまいます。</p>
+<p>これを解決するために、本チュートリアルでは以下のファイル構成でテストスイートを作成し、3つの隔離パターンを実装していきます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>t/</span></span>
+<span class="line"><span>├── 01_global_state_reset.t       # 動的スコープによる状態リセット</span></span>
+<span class="line"><span>├── 02_db_transaction_rollback.t   # トランザクションロールバックによるDB隔離</span></span>
+<span class="line"><span>├── 03_db_seam_instance.t          # インメモリSQLite / Test::mysqld へのSeam切り</span></span>
+<span class="line"><span>└── lib/</span></span>
+<span class="line"><span>    ├── LegacyApp.pm               # レガシーWebアプリケーション本体</span></span>
+<span class="line"><span>    └── TestHelper.pm              # テスト共通初期化・DBヘルパー</span></span>
+<span class="line"><span></span></span></code></pre>
+<h2 id="環境構築と依存モジュールのセットアップ">環境構築と依存モジュールのセットアップ</h2>
+<p>本チュートリアルで動作させる環境は Perl 5.20 以上を想定しています。テスト作成に必要なモジュールを <code>cpanm</code> でインストールします。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">cpanm</span><span style="color:#40A02B"> Test2::V0</span><span style="color:#40A02B"> Test::MockModule</span><span style="color:#40A02B"> Test::mysqld</span><span style="color:#40A02B"> DBD::SQLite</span></span>
+<span class="line"></span></code></pre>
+<p>各モジュールの役割は以下の通りです。</p>
+<ul>
+<li><code>Test2::V0</code>: 現代的なPerlテストスイートの標準バンドル</li>
+<li><code>Test::MockModule</code>: パッケージサブルーチンの動的モック化ツール</li>
+<li><code>Test::mysqld</code>: テスト実行時に一時的な MySQL インスタンスを自動起動・破棄するモジュール</li>
+<li><code>DBD::SQLite</code>: インメモリデータベース接続用のドライバ</li>
+</ul>
+<h2 id="ステップ1-動的スコープlocalによるグローバル状態の一時リセット">ステップ1: 動的スコープ（local）によるグローバル状態の一時リセット</h2>
+<p>最初のパターンは、Perlの強力な機能である <code>local</code> 演算子（動的スコープ）を活用したグローバル変数の状態リセットです。</p>
+<h3 id="目的">目的</h3>
+<p>レガシーコードで頻出する「パッケージグローバル変数」「環境変数（<code>$ENV</code>）」「グローバル関数」への依存を、テストブロックの実行中だけ一時的に書き換え、ブロックを抜けた瞬間に元の状態へ自動復元させます。</p>
+<h3 id="コード提示">コード提示</h3>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>use Test2::V0;</span></span>
+<span class="line"><span>use Test::MockModule;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># レガシーなパッケージとグローバル変数の定義（模擬）</span></span>
+<span class="line"><span>package LegacyApp::Config {</span></span>
+<span class="line"><span>    our $DEBUG_MODE = 0;</span></span>
+<span class="line"><span>    our $API_KEY    = 'production-key';</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>package LegacyApp::Service {</span></span>
+<span class="line"><span>    sub fetch_external_rate {</span></span>
+<span class="line"><span>        # 外部の有料APIを呼ぶ重い処理（模擬）</span></span>
+<span class="line"><span>        die "Real API should not be called in test!";</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    sub calculate_discount {</span></span>
+<span class="line"><span>        my ($price) = @_;</span></span>
+<span class="line"><span>        if ($LegacyApp::Config::DEBUG_MODE) {</span></span>
+<span class="line"><span>            return 0; # デバッグ時は割引なし</span></span>
+<span class="line"><span>        }</span></span>
+<span class="line"><span>        return $price * 0.1;</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>package main;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># 1. パッケージ変数の動的スコープ書き換え</span></span>
+<span class="line"><span>subtest 'パッケージ変数がテストブロック内だけで安全に変更される' => sub {</span></span>
+<span class="line"><span>    is $LegacyApp::Config::DEBUG_MODE, 0, '初期状態は 0';</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    {</span></span>
+<span class="line"><span>        # local で動的スコープを一時的に変更</span></span>
+<span class="line"><span>        local $LegacyApp::Config::DEBUG_MODE = 1;</span></span>
+<span class="line"><span>        is $LegacyApp::Config::DEBUG_MODE, 1, 'ブロック内では 1 に上書きされている';</span></span>
+<span class="line"><span>        is LegacyApp::Service::calculate_discount(1000), 0, 'デバッグモードの挙動になる';</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    # ブロックを抜けると自動的に元の値へ復元される</span></span>
+<span class="line"><span>    is $LegacyApp::Config::DEBUG_MODE, 0, 'ブロックを抜けると元の 0 に復元される';</span></span>
+<span class="line"><span>    is LegacyApp::Service::calculate_discount(1000), 100, '通常の割引計算に戻る';</span></span>
+<span class="line"><span>};</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># 2. 環境変数 $ENV の動的スコープ書き換え</span></span>
+<span class="line"><span>subtest '環境変数がテスト終了後に元に戻る' => sub {</span></span>
+<span class="line"><span>    $ENV{APP_ENV} = 'production';</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    {</span></span>
+<span class="line"><span>        local $ENV{APP_ENV} = 'test';</span></span>
+<span class="line"><span>        is $ENV{APP_ENV}, 'test', 'ブロック内では test';</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    is $ENV{APP_ENV}, 'production', 'ブロック外では production に復元';</span></span>
+<span class="line"><span>};</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># 3. Test::MockModule によるサブルーチンの局所的モック化</span></span>
+<span class="line"><span>subtest 'サブルーチンがスコープ終了時に自動アンモックされる' => sub {</span></span>
+<span class="line"><span>    {</span></span>
+<span class="line"><span>        my $mock = Test::MockModule->new('LegacyApp::Service');</span></span>
+<span class="line"><span>        $mock->redefine('fetch_external_rate', sub { return 1.25 });</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        is LegacyApp::Service::fetch_external_rate(), 1.25, 'モックされたレートが返る';</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    # $mock 変数がスコープを抜けて破棄されると自動的に元のサブルーチンに戻る</span></span>
+<span class="line"><span>    like dies { LegacyApp::Service::fetch_external_rate() }, qr/Real API should not be called/, '元の例外送出処理に戻る';</span></span>
+<span class="line"><span>};</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>done_testing;</span></span>
+<span class="line"><span></span></span></code></pre>
+<h3 id="実行結果--ログ">実行結果 / ログ</h3>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">prove</span><span style="color:#40A02B"> -v</span><span style="color:#40A02B"> t/01_global_state_reset.t</span></span>
+<span class="line"></span></code></pre>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>t/01_global_state_reset.t .. </span></span>
+<span class="line"><span># Seeded srand with seed '20260826' from local date.</span></span>
+<span class="line"><span>    # Subtest: パッケージ変数がテストブロック内だけで安全に変更される</span></span>
+<span class="line"><span>        ok 1 - 初期状態は 0</span></span>
+<span class="line"><span>        ok 2 - ブロック内では 1 に上書きされている</span></span>
+<span class="line"><span>        ok 3 - デバッグモードの挙動になる</span></span>
+<span class="line"><span>        ok 4 - ブロックを抜けると元の 0 に復元される</span></span>
+<span class="line"><span>        ok 5 - 通常の割引計算に戻る</span></span>
+<span class="line"><span>    ok 1 - パッケージ変数がテストブロック内だけで安全に変更される</span></span>
+<span class="line"><span>    # Subtest: 環境変数がテスト終了後に元に戻る</span></span>
+<span class="line"><span>        ok 1 - ブロック内では test</span></span>
+<span class="line"><span>        ok 2 - ブロック外では production に復元</span></span>
+<span class="line"><span>    ok 2 - 環境変数がテスト終了後に元に戻る</span></span>
+<span class="line"><span>    # Subtest: サブルーチンがスコープ終了時に自動アンモックされる</span></span>
+<span class="line"><span>        ok 1 - モックされたレートが返る</span></span>
+<span class="line"><span>        ok 2 - 元の例外送出処理に戻る</span></span>
+<span class="line"><span>    ok 3 - サブルーチンがスコープ終了時に自動アンモックされる</span></span>
+<span class="line"><span>1..3</span></span>
+<span class="line"><span>ok</span></span>
+<span class="line"><span>All tests successful.</span></span>
+<span class="line"><span>Files=1, Tests=3,  0 wallclock secs ( 0.01 usr  0.00 sys +  0.04 cusr  0.01 csys =  0.06 CPU)</span></span>
+<span class="line"><span>Result: PASS</span></span>
+<span class="line"><span></span></span></code></pre>
+<h3 id="重要箇所の解説">重要箇所の解説</h3>
+<p>Perlの <code>local</code> 演算子は、レキシカル変数を宣言する <code>my</code> とは異なり、既存のパッケージ変数の値を一時的に退避させ、現在のブロックおよびそこから呼び出されるすべての関数呼び出しに対して新しい値を割り当てます（動的スコープ）<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。ブロックを抜けると、Perlの内部コンテキストスタックによって自動的に元の値へ復元（Save and Restore）されます。</p>
+<p>また、<code>Test::MockModule</code> が生成するモックオブジェクトは、レキシカルスコープが終了すると自動的に元のサブルーチン実装へ復元されます<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。これにより、後続のテストへ影響を残さずに外部依存を無力化できます。</p>
+<h2 id="ステップ2-トランザクションロールバックによるdb副作用の安全な隔離">ステップ2: トランザクションロールバックによるDB副作用の安全な隔離</h2>
+<p>2つ目のパターンは、テストケースごとにデータベーストランザクションを開始し、テスト終了時に必ずロールバックを行う手法です。</p>
+<h3 id="目的-1">目的</h3>
+<p>テスト実行中に発行される <code>INSERT</code> や <code>UPDATE</code> の副作用を本番同等のDB上に一切残さず、高速かつクリーンな状態でテストを完了させます。</p>
+<h3 id="コード提示-1">コード提示</h3>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>use Test2::V0;</span></span>
+<span class="line"><span>use DBI;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># テスト用DBハンドルの準備（SQLite インメモリを利用して実演）</span></span>
+<span class="line"><span>my $dbh = DBI->connect('dbi:SQLite:dbname=:memory:', '', '', {</span></span>
+<span class="line"><span>    RaiseError => 1,</span></span>
+<span class="line"><span>    AutoCommit => 1,</span></span>
+<span class="line"><span>});</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># スキーマの作成と初期データの投入</span></span>
+<span class="line"><span>$dbh->do('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, balance INTEGER)');</span></span>
+<span class="line"><span>$dbh->do("INSERT INTO users (id, name, balance) VALUES (1, 'Alice', 1000)");</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># トランザクションロールバックによるテスト実行ヘルパー</span></span>
+<span class="line"><span>sub run_in_transaction {</span></span>
+<span class="line"><span>    my ($dbh, $code) = @_;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    # トランザクション開始</span></span>
+<span class="line"><span>    $dbh->begin_work;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    my $guard = bless { dbh => $dbh, active => 1 }, 'TxnGuard';</span></span>
+<span class="line"><span>    </span></span>
+<span class="line"><span>    # テストコードを実行（例外が発生しても確実にガードへ抜ける）</span></span>
+<span class="line"><span>    my $res = eval { $code->(); 1 };</span></span>
+<span class="line"><span>    my $err = $@;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    # 必ずロールバック</span></span>
+<span class="line"><span>    $guard->rollback;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    if ($err) {</span></span>
+<span class="line"><span>        die $err;</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>package TxnGuard {</span></span>
+<span class="line"><span>    sub rollback {</span></span>
+<span class="line"><span>        my ($self) = @_;</span></span>
+<span class="line"><span>        if ($self->{active}) {</span></span>
+<span class="line"><span>            $self->{dbh}->rollback;</span></span>
+<span class="line"><span>            $self->{active} = 0;</span></span>
+<span class="line"><span>        }</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>    sub DESTROY {</span></span>
+<span class="line"><span>        my ($self) = @_;</span></span>
+<span class="line"><span>        $self->rollback;</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>package main;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>subtest 'テスト1: ユーザーを追加して残高を更新するが、終了後に破棄される' => sub {</span></span>
+<span class="line"><span>    run_in_transaction($dbh, sub {</span></span>
+<span class="line"><span>        $dbh->do("INSERT INTO users (id, name, balance) VALUES (2, 'Bob', 500)");</span></span>
+<span class="line"><span>        $dbh->do("UPDATE users SET balance = balance + 500 WHERE id = 1");</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        my ($bob_count) = $dbh->selectrow_array("SELECT COUNT(*) FROM users WHERE id = 2");</span></span>
+<span class="line"><span>        is $bob_count, 1, 'トランザクション内では Bob が存在する';</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        my ($alice_balance) = $dbh->selectrow_array("SELECT balance FROM users WHERE id = 1");</span></span>
+<span class="line"><span>        is $alice_balance, 1500, 'トランザクション内では Alice の残高が 1500';</span></span>
+<span class="line"><span>    });</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    # トランザクション外（テスト完了後）の検証</span></span>
+<span class="line"><span>    my ($total_users) = $dbh->selectrow_array("SELECT COUNT(*) FROM users");</span></span>
+<span class="line"><span>    is $total_users, 1, 'テスト終了後、Bob の追加はロールバックされている';</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    my ($alice_balance) = $dbh->selectrow_array("SELECT balance FROM users WHERE id = 1");</span></span>
+<span class="line"><span>    is $alice_balance, 1000, 'Alice の残高も元の 1000 に戻っている';</span></span>
+<span class="line"><span>};</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>subtest 'テスト2: テスト1の影響を受けずに初期状態から検証できる' => sub {</span></span>
+<span class="line"><span>    run_in_transaction($dbh, sub {</span></span>
+<span class="line"><span>        my ($total_users) = $dbh->selectrow_array("SELECT COUNT(*) FROM users");</span></span>
+<span class="line"><span>        is $total_users, 1, '先行テストのゴミデータがなく、1件のみ存在する';</span></span>
+<span class="line"><span>    });</span></span>
+<span class="line"><span>};</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>done_testing;</span></span>
+<span class="line"><span></span></span></code></pre>
+<h3 id="実行結果--ログ-1">実行結果 / ログ</h3>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">prove</span><span style="color:#40A02B"> -v</span><span style="color:#40A02B"> t/02_db_transaction_rollback.t</span></span>
+<span class="line"></span></code></pre>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>t/02_db_transaction_rollback.t .. </span></span>
+<span class="line"><span># Seeded srand with seed '20260826' from local date.</span></span>
+<span class="line"><span>    # Subtest: テスト1: ユーザーを追加して残高を更新するが、終了後に破棄される</span></span>
+<span class="line"><span>        ok 1 - トランザクション内では Bob が存在する</span></span>
+<span class="line"><span>        ok 2 - トランザクション内では Alice の残高が 1500</span></span>
+<span class="line"><span>        ok 3 - テスト終了後、Bob の追加はロールバックされている</span></span>
+<span class="line"><span>        ok 4 - Alice の残高も元の 1000 に戻っている</span></span>
+<span class="line"><span>    ok 1 - テスト1: ユーザーを追加して残高を更新するが、終了後に破棄される</span></span>
+<span class="line"><span>    # Subtest: テスト2: テスト1の影響を受けずに初期状態から検証できる</span></span>
+<span class="line"><span>        ok 1 - 先行テストのゴミデータがなく、1件のみ存在する</span></span>
+<span class="line"><span>    ok 2 - テスト2: テスト1の影響を受けずに初期状態から検証できる</span></span>
+<span class="line"><span>1..2</span></span>
+<span class="line"><span>ok</span></span>
+<span class="line"><span>All tests successful.</span></span>
+<span class="line"><span>Files=1, Tests=2,  0 wallclock secs ( 0.01 usr  0.00 sys +  0.03 cusr  0.01 csys =  0.05 CPU)</span></span>
+<span class="line"><span>Result: PASS</span></span>
+<span class="line"><span></span></span></code></pre>
+<h3 id="重要箇所の解説-1">重要箇所の解説</h3>
+<p>Martin Fowler が『Evolutionary Database Design』で指摘している通り、テストのたびにテーブルを <code>DELETE</code> や <code>TRUNCATE</code> するアプローチは、トランザクションロールバック方式に比べてテスト全体の実行時間で明確に不利になります<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>トランザクションロールバック方式を採用すると、データベースエンジン内部の undo ログによって瞬時に変更が巻き戻されるため、ディスクI/Oやロック待ちのオーバーヘッドを大幅に削減できます。<code>DBIx::Class</code> を採用している環境では、<code>DBIx::Class::Storage::TxnScopeGuard</code> を利用することで、ブロックを抜けた瞬間に自動ロールバックされる RAII パターンをより簡潔に記述できます<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<h2 id="ステップ3-インメモリdbsqliteと一時mysqltestmysqldへのseam切り">ステップ3: インメモリDB（SQLite）と一時MySQL（Test::mysqld）へのSeam切り</h2>
+<p>3つ目のパターンは、テスト対象コードが参照するDB接続そのものを、テスト実行時のみ安全な隔離インスタンスへ差し替える Seam（接合部）設計です。</p>
+<h3 id="目的-2">目的</h3>
+<p>Michael Feathers は Seam を「コードをその場所で編集せずに振る舞いを変更できる場所」と定義しました<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。環境変数やファクトリメソッドに Seam を設けることで、ローカル開発DBを汚すことなく、インメモリDB（SQLite）やテスト専用の MySQL インスタンス（<code>Test::mysqld</code>）に接続先を切り替えます。</p>
+<h3 id="コード提示-2">コード提示</h3>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>use Test2::V0;</span></span>
+<span class="line"><span>use DBI;</span></span>
+<span class="line"><span>use Test::mysqld;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># レガシーなDB接続管理クラス（模擬）</span></span>
+<span class="line"><span>package LegacyApp::DB {</span></span>
+<span class="line"><span>    sub get_dbh {</span></span>
+<span class="line"><span>        # 環境変数 DATABASE_DSN があればそれを優先し、無ければデフォルトDBに繋ぐ（Seam）</span></span>
+<span class="line"><span>        my $dsn = $ENV{DATABASE_DSN} || 'dbi:mysql:dbname=production_db;host=127.0.0.1';</span></span>
+<span class="line"><span>        return DBI->connect($dsn, $ENV{DATABASE_USER} || '', $ENV{DATABASE_PASS} || '', {</span></span>
+<span class="line"><span>            RaiseError => 1,</span></span>
+<span class="line"><span>            AutoCommit => 1,</span></span>
+<span class="line"><span>        });</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>package main;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># パターン3A: SQLite インメモリDBへの Seam 切り</span></span>
+<span class="line"><span>subtest 'パターン3A: 環境変数 Seam を通じて SQLite インメモリDBへ接続' => sub {</span></span>
+<span class="line"><span>    # 動的スコープで DSN をインメモリ SQLite に差し替える</span></span>
+<span class="line"><span>    local $ENV{DATABASE_DSN} = 'dbi:SQLite:dbname=:memory:';</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    my $dbh = LegacyApp::DB::get_dbh();</span></span>
+<span class="line"><span>    ok $dbh, 'SQLite インメモリDBに接続成功';</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    $dbh->do('CREATE TABLE items (id INT, title TEXT)');</span></span>
+<span class="line"><span>    $dbh->do("INSERT INTO items VALUES (1, 'Book')");</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    my ($title) = $dbh->selectrow_array("SELECT title FROM items WHERE id = 1");</span></span>
+<span class="line"><span>    is $title, 'Book', 'インメモリDB上で正常に読み書きできる';</span></span>
+<span class="line"><span>};</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># パターン3B: Test::mysqld による一時 MySQL インスタンスの自動管理</span></span>
+<span class="line"><span>subtest 'パターン3B: Test::mysqld を用いた本番同等 MySQL インスタンスの完全隔離' => sub {</span></span>
+<span class="line"><span>    # mysqld のバイナリが存在する場合のみ実行</span></span>
+<span class="line"><span>    my $mysqld = eval {</span></span>
+<span class="line"><span>        Test::mysqld->new(</span></span>
+<span class="line"><span>            my_cnf => {</span></span>
+<span class="line"><span>                'skip-networking' => '', # ソケット通信で高速化</span></span>
+<span class="line"><span>            }</span></span>
+<span class="line"><span>        )</span></span>
+<span class="line"><span>    };</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    if (!$mysqld) {</span></span>
+<span class="line"><span>        skip_all "Test::mysqld could not be started: " . ($Test::mysqld::errstr || $@);</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    # 一時インスタンスの DSN を環境変数 Seam に注入</span></span>
+<span class="line"><span>    local $ENV{DATABASE_DSN} = $mysqld->dsn;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    my $dbh = LegacyApp::DB::get_dbh();</span></span>
+<span class="line"><span>    ok $dbh, '一時 MySQL インスタンスに接続成功';</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    $dbh->do('CREATE TABLE logs (id INT AUTO_INCREMENT PRIMARY KEY, msg VARCHAR(255))');</span></span>
+<span class="line"><span>    $dbh->do("INSERT INTO logs (msg) VALUES ('test message')");</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    my ($id) = $dbh->selectrow_array("SELECT id FROM logs WHERE msg = 'test message'");</span></span>
+<span class="line"><span>    is $id, 1, 'MySQL 固有の AUTO_INCREMENT が正常に動作する';</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    # $mysqld 変数がスコープを抜けると、mysqld プロセスが停止し一時ディレクトリごと自動消滅する</span></span>
+<span class="line"><span>};</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>done_testing;</span></span>
+<span class="line"><span></span></span></code></pre>
+<h3 id="実行結果--ログ-2">実行結果 / ログ</h3>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">prove</span><span style="color:#40A02B"> -v</span><span style="color:#40A02B"> t/03_db_seam_instance.t</span></span>
+<span class="line"></span></code></pre>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>t/03_db_seam_instance.t .. </span></span>
+<span class="line"><span># Seeded srand with seed '20260826' from local date.</span></span>
+<span class="line"><span>    # Subtest: パターン3A: 環境変数 Seam を通じて SQLite インメモリDBへ接続</span></span>
+<span class="line"><span>        ok 1 - SQLite インメモリDBに接続成功</span></span>
+<span class="line"><span>        ok 2 - インメモリDB上で正常に読み書きできる</span></span>
+<span class="line"><span>    ok 1 - パターン3A: 環境変数 Seam を通じて SQLite インメモリDBへ接続</span></span>
+<span class="line"><span>    # Subtest: パターン3B: Test::mysqld を用いた本番同等 MySQL インスタンスの完全隔離</span></span>
+<span class="line"><span>        ok 1 - 一時 MySQL インスタンスに接続成功</span></span>
+<span class="line"><span>        ok 2 - MySQL 固有の AUTO_INCREMENT が正常に動作する</span></span>
+<span class="line"><span>    ok 2 - パターン3B: Test::mysqld を用いた本番同等 MySQL インスタンスの完全隔離</span></span>
+<span class="line"><span>1..2</span></span>
+<span class="line"><span>ok</span></span>
+<span class="line"><span>All tests successful.</span></span>
+<span class="line"><span>Files=1, Tests=2,  1 wallclock secs ( 0.01 usr  0.00 sys +  0.08 cusr  0.03 csys =  0.12 CPU)</span></span>
+<span class="line"><span>Result: PASS</span></span>
+<span class="line"><span></span></span></code></pre>
+<h3 id="重要箇所の解説-2">重要箇所の解説</h3>
+<p><code>Test::mysqld</code> は、OSの一時ディレクトリ内に一時的な <code>mysqld</code> プロセスを起動し、テスト終了時にプロセス停止とディレクトリ削除を自動的に行います<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<p>SQLite インメモリ接続はミリ秒単位で起動し軽量ですが、MySQL 固有の構文（<code>ON DUPLICATE KEY UPDATE</code>、JSON関数、日付計算、ストレージエンジンの挙動差分など）が存在する場合に「テストは通るが本番で動かない」という誤検知（False Positive）を引き起こします。<code>Test::mysqld</code> を用いることで、完全な本番忠実度を保ちながら隔離を実現できます。</p>
+<h2 id="3つの副作用隔離パターンの比較と選択基準">3つの副作用隔離パターンの比較と選択基準</h2>
+<p>レガシーシステムの副作用隔離には銀の弾丸は存在せず、テストの実行速度、本番環境との忠実度、アプリケーションの構造制約に応じて適切なパターンを選択する必要があります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>隔離パターン</th><th>主な対象</th><th>実行速度</th><th>本番忠実度</th><th>導入難易度</th><th>主な制約・注意点</th><th>推奨ユースケース</th></tr></thead><tbody><tr><td><strong>パターン1: 動的スコープ（local）</strong></td><td>グローバル変数、設定値、外部API</td><td>極めて高速</td><td>中（モック依存）</td><td>低（コード改修最小）</td><td>スレッドセーフティ、内部状態の複雑な結合</td><td>パッケージ変数や外部連携が多い箇所の局所テスト</td></tr><tr><td><strong>パターン2: トランザクションロールバック</strong></td><td>共有RDBMS（MySQL等）のCRUD</td><td>高速</td><td>高（本番同等DB）</td><td>中（コネクション管理）</td><td>ネストトランザクション、外部APIとの不整合</td><td>単一DBへの読み書きが中心のエンドポイントテスト</td></tr><tr><td><strong>パターン3A: インメモリDB（SQLite）</strong></td><td>単純なCRUD、スキーマ完結型</td><td>極めて高速</td><td>低〜中（方言差分）</td><td>中（スキーマ互換性）</td><td>MySQL固有構文・JSON型等の非互換</td><td>単体・結合テストの高速フィードバック</td></tr><tr><td><strong>パターン3B: 一時DB（Test::mysqld）</strong></td><td>複雑なSQL、ストアード、制約</td><td>中速（起動オーバーヘッド）</td><td>極めて高い</td><td>中〜高（バイナリ依存）</td><td>起動時間（数百ms〜数秒）、mysqldバイナリ必須</td><td>CIパイプラインでの回帰テスト、高信頼性テスト</td></tr></tbody></table>
+<p>日常的なローカル開発と特性テスト初期段階では「動的スコープ＋トランザクションロールバック」または「SQLite」で高速なサイクルを回し、CI環境や重要な回帰テストでは「Test::mysqld」を併用するハイブリッド戦略が最も堅牢です。</p>
+<h2 id="テストスイートの安定化検証と並列実行">テストスイートの安定化検証と並列実行</h2>
+<p>隔離パターンを導入した後は、本当にテスト間の順序依存が解消されているかを継続的に検証する仕組みを導入します。</p>
+<h3 id="シャッフル実行による順序依存の検出">シャッフル実行による順序依存の検出</h3>
+<p>Perl のテストランナーである <code>prove</code> には、テストファイルの実行順序をランダム化する <code>-s</code>（<code>--shuffle</code>）オプションが備わっています<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">prove</span><span style="color:#40A02B"> --shuffle</span><span style="color:#40A02B"> t/</span></span>
+<span class="line"></span></code></pre>
+<p>実行順序をランダム化することで、「テストAの後にテストBを実行した時だけ通る」といった潜在的な状態依存バグを即座にあぶり出すことができます。</p>
+<h3 id="失敗した実行順序の再現とデバッグ">失敗した実行順序の再現とデバッグ</h3>
+<p>シャッフル実行によって特定の順序で失敗が発生した場合、<code>--state</code> オプションを使ってその順序を完全に再現できます<sup><a href="#user-content-fn-9" id="user-content-fnref-9-2" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 1. シャッフル実行し、実行状態を保存する</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">prove</span><span style="color:#40A02B"> -b</span><span style="color:#40A02B"> --state=save</span><span style="color:#40A02B"> --shuffle</span><span style="color:#40A02B"> t/</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 2. 直前に失敗した順序と同一の順序で再実行してデバッグする</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">prove</span><span style="color:#40A02B"> -b</span><span style="color:#40A02B"> --state=last</span><span style="color:#40A02B"> t/</span></span>
+<span class="line"></span></code></pre>
+<h3 id="並列実行による独立性の検証">並列実行による独立性の検証</h3>
+<p>副作用が完全に隔離されていれば、テストスイートをマルチプロセスで並列実行しても競合が発生しません。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">prove</span><span style="color:#40A02B"> -j4</span><span style="color:#40A02B"> t/</span></span>
+<span class="line"></span></code></pre>
+<p>Google の調査でも示されている通り、テストスイートの肥大化に伴う非決定性の混入を防ぐには、テスト間の独立性確保とプロセス分離が不可欠です<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。</p>
+<h2 id="本番運用に向けた考慮事項とトラブルシューティング">本番運用に向けた考慮事項とトラブルシューティング</h2>
+<p>副作用隔離を実際のコードベースに適用する際、現場で必ず直面する落とし穴とその対処法を整理します。</p>
+<h3 id="1-ネストされたトランザクションの扱い">1. ネストされたトランザクションの扱い</h3>
+<p>アプリケーションコード内部で明示的に <code>COMMIT</code> を呼び出す処理が含まれている場合、外側のテストトランザクションが確定されてしまい、ロールバックできなくなります。</p>
+<ul>
+<li><strong>対処法</strong>: フレームワークや ORM のトランザクションネスト機能（<code>DBIx::Class</code> の <code>txn_do</code> など）を利用し、最外層のテストブロックでのみコミット/ロールバックを制御するか、MySQL の <code>SAVEPOINT</code> 構文を利用して擬似的にネストをサポートします。</li>
+</ul>
+<h3 id="2-外部apiメール送信非同期ジョブの副作用">2. 外部API・メール送信・非同期ジョブの副作用</h3>
+<p>データベースはロールバックできても、テスト中に外部の決済APIを叩いたり、メール送信キューへメッセージを積んだりした副作用は巻き戻りません。</p>
+<ul>
+<li><strong>対処法</strong>: 外部通信を行うHTTPクライアントやジョブキュー送信関数に対して、必ずステップ1の <code>Test::MockModule</code> による動的モックを適用し、テストプロセス外への通信を遮断します。</li>
+</ul>
+<h3 id="3-ddl実行による暗黙のコミット">3. DDL実行による暗黙のコミット</h3>
+<p>MySQL などの RDBMS では、<code>CREATE TABLE</code>、<code>ALTER TABLE</code>、<code>TRUNCATE TABLE</code> などの DDL（データ定義言語）文を実行した瞬間に、現在進行中のトランザクションが暗黙的にコミットされます。</p>
+<ul>
+<li><strong>対処法</strong>: テストケース内で動的にテーブルを作成・変更するのではなく、テストスイート全体の初期化フェーズ（<code>TestHelper.pm</code> や事前マイグレーション）で一度だけスキーマを構築し、テストケース内では DML（<code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code>）のみを実行します。</li>
+</ul>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-テストでトランザクションロールバックを使う場合の最大の注意点は何ですか">Q. テストでトランザクションロールバックを使う場合の最大の注意点は何ですか？</h3>
+<p><strong>A.</strong> アプリケーション内部で明示的な <code>COMMIT</code> が発行されたり、Savepoint 非対応の環境でトランザクションが二重ネストされた場合にロールバックが機能しなくなる点です。その場合は、モックによるDBアクセスの差し替えや <code>Test::mysqld</code> による一時インスタンスの完全破棄を検討してください。</p>
+<h3 id="q-sqlite-のインメモリdbと-testmysqld-のどちらを選ぶべきですか">Q. SQLite のインメモリDBと Test::mysqld のどちらを選ぶべきですか？</h3>
+<p><strong>A.</strong> 実行速度を最優先し標準的なSQLで完結している場合は SQLite <code>:memory:</code> が適していますが、MySQL 固有の構文（<code>ON DUPLICATE KEY UPDATE</code> 等）や厳密なトランザクション分離レベルに依存している場合は <code>Test::mysqld</code> を選ぶべきです。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本記事で解説した「グローバル状態とDB汚染の隔離」における重要ポイントは以下の通りです。</p>
+<ul>
+<li>特性テストの2本目を書いた瞬間に発生する不具合の多くは、テストコードではなくグローバル変数やDBの「テスト汚染」が原因である。</li>
+<li>グローバル変数の汚染は、動的スコープ（Perlの <code>local</code>）とモジュールモックによるブロック単位の自動復元で局所化できる。</li>
+<li>DBの副作用は、トランザクションロールバックとインメモリDB/一時DBインスタンス（<code>Test::mysqld</code>）へのSeam切りで安全に隔離できる。</li>
+<li>テスト順序依存を恒常的に防ぐため、CIおよびローカル実行では <code>prove --shuffle</code> によるランダム実行を標準化する。</li>
+</ul>
+<p>レガシーシステムの特性テスト導入、テスト自動化基盤の構築、安全なリファクタリング計画のご相談は、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://martinfowler.com/articles/nonDeterminism.html">Eradicating Non-Determinism in Tests</a> Martin Fowler、2011年。非決定性テスト（Flaky Tests）が開発者の信頼を損なう問題、テスト間の状態漏洩（State Leakage）と完全隔離の原則。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://testing.googleblog.com/2008/11/clean-code-talks-global-state-and.html">Clean Code Talks - Global State and Singletons</a> Miško Hevery、Google Testing Blog、2008年11月21日。グローバル状態とシングルトンがテスト間の予期せぬ結合（Spooky Action at a Distance）を生む弊害。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://perldoc.perl.org/perlsub">perlsub - Temporary Values via local()</a> Perl 5 公式ドキュメント。<code>local</code> 演算子による動的スコープ（Dynamic Scoping）とコンテキストスタックによる値の自動復元仕様。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://metacpan.org/pod/Test::MockModule">Test::MockModule</a> CPAN 公式ドキュメント。サブルーチンの一時的モック化とレキシカルスコープ終了時の自動アンモック。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://martinfowler.com/articles/evodb.html">Evolutionary Database Design</a> Martin Fowler / Pramod Sadalage、2016年。Database Testing 節における Transactional Rollback によるテストクリーンアップの高速化とネスト制約。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://metacpan.org/pod/DBIx::Class::Storage::TxnScopeGuard">DBIx::Class::Storage::TxnScopeGuard</a> CPAN 公式ドキュメント。RAII パターンによるスコープ終了時の自動ロールバック制御。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p>Michael Feathers 著『Working Effectively with Legacy Code』（ISBN 0-13-117705-2、Addison-Wesley、2004年）。Seam（接合部）の定義「コードをその場所で編集せずに振る舞いを変更できる場所」。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://metacpan.org/pod/Test::mysqld">Test::mysqld</a> Kazuho Oku / KARUPA / SONGMU、MetaCPAN。一時 MySQL インスタンスの自動起動・破棄、本番同等エンジンでのテスト隔離。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://perldoc.perl.org/prove">prove - Run tests through a harness</a> Perl 5 公式ドキュメント。<code>prove --shuffle</code> による実行順序ランダム化、<code>--state=save</code> / <code>--state=last</code> による失敗順序の再現機能。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-9-2" data-footnote-backref="" aria-label="Back to reference 9-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://testing.googleblog.com/2016/05/flaky-tests-at-google-and-how-we.html">Flaky Tests at Google and How We Mitigate Them</a> John Micco、Google Testing Blog、2016年5月18日。テスト規模の拡大に伴う非決定性の増加と、テスト順序ランダム化・プロセス分離による対策。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

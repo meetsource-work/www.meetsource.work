@@ -1,0 +1,175 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ADRに「却下」と書いた設計がそのまま実装された──記録の矛盾を見落とす「読んだつもり」の落とし穴 | Meetsource</title><meta name="description" content="「ADRを書いているから」「多重AIレビューを回しているから」という安心感の裏で、なぜ却下した設計が12話中11話で実装されてしまったのか。実例から学ぶ確証バイアスと、解釈を排して実物を数え直す設計レビュー規律。"><link rel="canonical" href="https://www.meetsource.work/blog/adr-rejection-implementation-blind-spot"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="ADRに「却下」と書いた設計がそのまま実装された──記録の矛盾を見落とす「読んだつもり」の落とし穴 | Meetsource"><meta property="og:description" content="「ADRを書いているから」「多重AIレビューを回しているから」という安心感の裏で、なぜ却下した設計が12話中11話で実装されてしまったのか。実例から学ぶ確証バイアスと、解釈を排して実物を数え直す設計レビュー規律。"><meta property="og:url" content="https://www.meetsource.work/blog/adr-rejection-implementation-blind-spot"><meta property="og:image" content="https://www.meetsource.work/blog/adr-rejection-implementation-blind-spot-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-24T08:10:22.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="ADRに「却下」と書いた設計がそのまま実装された──記録の矛盾を見落とす「読んだつもり」の落とし穴 | Meetsource"><meta name="twitter:description" content="「ADRを書いているから」「多重AIレビューを回しているから」という安心感の裏で、なぜ却下した設計が12話中11話で実装されてしまったのか。実例から学ぶ確証バイアスと、解釈を排して実物を数え直す設計レビュー規律。"><meta name="twitter:image" content="https://www.meetsource.work/blog/adr-rejection-implementation-blind-spot-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"ADRに「却下」と書いた設計がそのまま実装された──記録の矛盾を見落とす「読んだつもり」の落とし穴","description":"「ADRを書いているから」「多重AIレビューを回しているから」という安心感の裏で、なぜ却下した設計が12話中11話で実装されてしまったのか。実例から学ぶ確証バイアスと、解釈を排して実物を数え直す設計レビュー規律。","datePublished":"2026-08-24T08:10:22.000Z","image":"https://www.meetsource.work/blog/adr-rejection-implementation-blind-spot-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/adr-rejection-implementation-blind-spot"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-24T08:10:22.000Z" data-astro-cid-7jjqptxk> 2026.08.24 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#adr</span><span class="tag" data-astro-cid-7jjqptxk>#設計レビュー</span><span class="tag" data-astro-cid-7jjqptxk>#アーキテクチャ</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#レビュー</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>ADRに「却下」と書いた設計がそのまま実装された──記録の矛盾を見落とす「読んだつもり」の落とし穴</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/adr-rejection-implementation-blind-spot-hero.webp" alt="ADRに「却下」と書いた設計がそのまま実装された──記録の矛盾を見落とす「読んだつもり」の落とし穴" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>ADR（Architecture Decision Record：アーキテクチャ意思決定記録）とは、ソフトウェア設計における重要な意思決定の背景・理由・却下した代替案を、ソースコードと同一リポジトリに軽量な Markdown 形式で記録・追跡するドキュメント手法です<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。アジャイル開発の普及とともに思考の構造化ツールとして定着し<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>、進化型アーキテクチャにおける知識劣化を防ぐ標準プラクティスとして広く活用されています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>多くの開発チームでは、「ADR を残して設計意図を明文化している」「複数の独立した AI エージェントを組み込んだ多重レビューを回している」という体制が整うと、「これで設計の意図せぬ逸脱や重複は防げている」と安心しがちです。</p>
+<p>しかし、現実はそう単純ではありません。 <strong>「ADR に却下と明記され、独立したレビュー役が正面から矛盾を指摘したにもかかわらず、人間がそれを解釈で受け流し、本番直前まで見落とされた」</strong> という事故が、私たちの実際の開発現場で発生しました。全 12 話の技術連載を企画した際、初版の配列のうち <strong>12 話中 11 話が既存シリーズと重複した設計のまま進行していた</strong> のです。</p>
+<p>なぜ記録が存在し、指摘がなされたにもかかわらず「読んだつもり」になって素通りしてしまうのでしょうか。本記事では、この失敗の顛末と認知科学的な背景を解剖し、レビュー層を増やして疲弊する代わりに導入すべき「解釈で応じず実物を数え直す」シンプルな行動規律について解説します。</p>
+<h2 id="adrに却下と記録したはずの設計がなぜ12話中11話で実装されたのか">ADRに「却下」と記録したはずの設計が、なぜ12話中11話で実装されたのか</h2>
+<p>この事故は、自社で運用している物語形式の技術連載システムにおいて、新シリーズの全体設計を行っていたセッションで起きました。</p>
+<p>新シリーズを立ち上げるにあたり、私たちは ADR（<code>0002-domain-shift.md</code>）を作成し、扱う技術領域について検討しました。その際、分散システムの回復性パターン（リトライやサーキットブレーカー等）については、先行する連載群で扱い済みであることや受託導線としての新味に欠けることから、明確に「却下」と判断しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>ところが、その直後に作成された ADR の草案および初版の 12 話配列には、信じがたい記述が残されていました。</p>
+<p>ファイル: <code>agents/adr/0002-domain-shift.md</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#FE640B">## Considered Options</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#4C4F69"> 分散システムの回復性パターン（circuit-breaker / retry 等）: </span></span>
+<span class="line"><span style="color:#4C4F69">  warehouse の素材は最も厚いが、受託導線としては読者の課題感が漠然としており却下。</span></span>
+<span class="line"><span style="color:#4C4F69">  ただし鉄道メタファーとの一対一対応が良いため、AI運用の文脈に載せる形で実質的に採用した</span></span>
+<span class="line"></span></code></pre>
+<p>上記のように、ADR 本文の中で「却下」と書きながら、舌の根も乾かぬうちに「AI 運用の文脈に載せる形で実質的に採用した」という自己矛盾した正当化を行っていたのです。その結果、初版として組まれた 12 話のタスク定義には、以下の通り <strong>まさに却下したはずの回復性パターン一覧</strong> が全数割り当てられていました。</p>
+<ol>
+<li>リトライ＋指数バックオフ</li>
+<li>タイムアウト</li>
+<li>サーキットブレーカー</li>
+<li>フォールバック／縮退運転</li>
+<li>レート制限</li>
+<li>バルクヘッド／並行数制限</li>
+<li>冪等性</li>
+<li>デッドレターキュー（DLQ）</li>
+<li>ヘルスチェック／可観測性</li>
+<li>コスト・トークン上限</li>
+<li>グレースフルシャットダウン</li>
+<li>ストラングラーフィグ</li>
+</ol>
+<p>その後、私たちは設計の妥当性を検証するため、3 体の独立した AI エージェント（推進役・品質役・破壊役）による合議レビューを実施しました。</p>
+<p>推進役のエージェントは「即時着手して問題ありません。設計の完成度は過去最高クラスです」と絶賛しました。しかし、前提を疑う役割を与えられた <strong>破壊役のエージェント</strong> は、この矛盾を正確に見抜き、以下のように正面から指摘していました。</p>
+<blockquote><p>「ADR は技術領域として『分散システムの回復性』を却下したと書いているが、12話配列はまさにそれになっている」</p></blockquote>
+<h2 id="読んだつもりの正体なぜ多重レビューの指摘をスルーしてしまったのか">「読んだつもり」の正体：なぜ多重レビューの指摘をスルーしてしまったのか</h2>
+<p>破壊役のエージェントが完璧な指摘を出していたにもかかわらず、当時の書き手（人間）は作業を止めませんでした。「素材が厚いので実質採用したということだ」と自己都合で解釈し、既存記事との照合や配列の確認を一切行わずに進行してしまったのです。</p>
+<p>この「読んだつもり」を引き起こした背景には、2 つの重大な要因が存在します。</p>
+<h3 id="1-確証バイアスと事後正当化の罠">1. 確証バイアスと事後正当化の罠</h3>
+<p>人間は、自分が時間とエネルギーを投じて作成した成果物（「この 12 話配列は素晴らしい」「新しい AI 運用シリーズとして成立している」）に対して強い愛着を持ちます。認知科学の研究が示すように、人間は自分の仮説を肯定する情報（推進役の「即時着手して問題ありません」という称賛）を過大評価し、反証となる指摘（破壊役の矛盾指摘）を無意識に過小評価・事後正当化（Post-hoc rationalization）して受け流してしまいます<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>破壊役の言葉を読んだ瞬間、脳内では「指摘はもっともだが、今回は AI エージェントの運用という新しい文脈に載せているから別物だ」という都合の良い言い訳が自動生成され、文字通り「読んだつもり」になって処理を完了させてしまったのです。</p>
+<h3 id="2-表層プロファイルへの認知偏重と無意識の漂流">2. 表層プロファイルへの認知偏重と無意識の漂流</h3>
+<p>シリーズの差別化を検討する際、語り部の設定、縦軸のストーリー、登場人物、トーンといった「目立つ表層のプロファイル」に認知リソースの大半が奪われていました。その結果、最も本質的であるはずの「扱う技術項目そのものの重複」という構造的データの照合が抜け落ちていました。</p>
+<p>ソフトウェア工学において、Perry &#x26; Wolf（1992）はこれを <strong>アーキテクチャドリフト（Architectural Drift：無意識の漂流）</strong> と定義しています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。悪意あるルール違反ではなく、設計原則に対する無頓着さや「文脈を変えたから大丈夫」という局所的な自己正当化の積み重ねこそが、システムを当初の設計意図から大きく乖離させる最大の原因です。</p>
+<h2 id="adrの真の価値とレビュー層の多重化が抱える落とし穴">ADRの真の価値と「レビュー層の多重化」が抱える落とし穴</h2>
+<p>この失敗から得られた最大の教訓の 1 つは、 <strong>「ADR を書いていなければ、永遠に矛盾に気づけなかった」</strong> という事実です。</p>
+<p>ADR の真の価値は、採用した方針を記録すること以上に、「検討したが採用しなかった選択肢（Considered Options / Rejected）」を不変のドキュメントとして残すことにあります<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。もし ADR に「回復性パターンは却下した」という客観的な記録が存在しなければ、破壊役のエージェントが矛盾を突く足場すら存在せず、12 話をすべて書き切って公開した後に大事故として発覚していたはずです。</p>
+<p>一方で、今回の事例は「レビュー層を多重化すれば品質が担保できる」という考え方の限界も浮き彫りにしました。</p>
+<p>「エージェントの数を増やし、レビュー観点を細分化すれば見落としは防げるのではないか」と考えがちですが、現実は異なります。Atlassian 社が実施した 1 年間の大規模な AI コードレビュー実証研究（2026）によると、AI レビュアーが 38.70% という高い解決率で有効な指摘を出しているにもかかわらず、最終的に「人間側がその指摘をどう解釈・トリアージするか」が最大のボトルネックになると報告されています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>また、最新のベンチマーク調査でも、LLM によるレビューは局所的な構文やスタイルチェックに偏重しやすく、システム全体のアーキテクチャ整合性や仕様・ADR との意味的整合性の判定には限界があることが示されています<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。周辺コンテキストを拡張しても LLM による細粒度の欠陥検出や高精度な整合判定を完全に自動化するには依然として限界があり、人間による規律ある検証が不可欠だとする大規模実証研究もあります<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<p>設計レビューの品質は、レビュー層の多さではなく「指摘された矛盾を客観的に照合できる規律」があるかどうかで決定されます。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>レビュー方式</th><th>矛盾の検出力</th><th>人間の解釈によるスルー耐性</th><th>運用コスト</th><th>主な適用限界</th></tr></thead><tbody><tr><td><strong>単一レビュー（属人チェック）</strong></td><td>低〜中（見落としが多い）</td><td>極めて低い（自己の思い込みを疑えない）</td><td>最小</td><td>レビュアーの知識・体調・バイアスに依存</td></tr><tr><td><strong>多重AIレビュー単体（解釈依存）</strong></td><td>高（独立した破壊役が矛盾を突く）</td><td>低い（人間が「実質問題ない」と流す）</td><td>中（トークン費用）</td><td>指摘のトリアージが人間の確証バイアスに屈する</td></tr><tr><td><strong>ADR＋客観照合規律（実物を数える）</strong></td><td>極めて高い（記録が足場になる）</td><td>高い（解釈を排して実物・件数を突合）</td><td>最小（ルールを増やさない）</td><td>照合対象となる一覧・母数が可視化されている必要あり</td></tr></tbody></table>
+<p>独立した AI エージェントによる多重レビューは強力な検出力を持ちますが、それを受け取る人間側に「実物を数える規律」が備わっていなければ、せっかくの指摘も無効化されてしまいます。</p>
+<h2 id="記録と実物の矛盾を指摘されたら解釈で応じず実物を数え直す">「記録と実物の矛盾」を指摘されたら、解釈で応じず実物を数え直す</h2>
+<p>この 12 話中 11 話の重複が実際に発覚したのは、破壊役のレビューから数時間後、タスクファイルの一括生成を行う直前のことでした。プロジェクトオーナーから投げかけられた、何気ない一言が転機となりました。</p>
+<blockquote><p><strong>「タスクファイルは今作るのと後で作るので結果が変わらないと言える？」</strong></p></blockquote>
+<p>この依存関係を問う質問に答えるために入力データを調べ直し、既存の連載記事と突き合わせた瞬間、背筋が凍る事実が判明しました。過去に連載した 2 つのシリーズですでに回復性パターンおよび非同期処理が消費し尽くされており、新シリーズの 12 話中 11 話（約 92%）が完全な既出だったのです（新規は「コスト・トークン上限」の 1 話のみ）。</p>
+<p>私たちは直ちに ADR 0002 に訂正を追記し、世界観やキャラクター設定は維持したまま、12 話の配列を「非決定的出力」「従量課金」「プロンプト・モデルの版管理と回帰検知」といった <strong>LLM 運用固有の課題</strong> へ全面的に組み直しました。</p>
+<p>この経験から、私たちは設計レビューにおける 3 つの実践的な行動規律を確立しました。</p>
+<h3 id="1-指摘に対して言葉で弁明せず実物を数える">1. 指摘に対して言葉で弁明せず「実物を数える」</h3>
+<p>レビューで「あなたの記録と実物が矛盾している」という指摘が出た場合、人間が「これはこういう背景があって…」と言葉で反論・解説することを禁止します。代わりに、対象となる項目の一覧を書き出し、件数や重複を機械的に数え直します。</p>
+<p>ファイル: <code>tools/check-feature-overlap.py</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 記録と実装の重複を機械的に数える概念スクリプト</span></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> verify_plan_against_adr</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">adr_rejected_items</span><span style="color:#7C7F93">:</span><span style="color:#E64553;font-style:italic"> set</span><span style="color:#7C7F93">[</span><span style="color:#FE640B;font-style:italic">str</span><span style="color:#7C7F93">],</span><span style="color:#E64553;font-style:italic"> plan_items</span><span style="color:#7C7F93">:</span><span style="color:#E64553;font-style:italic"> list</span><span style="color:#7C7F93">[</span><span style="color:#FE640B;font-style:italic">str</span><span style="color:#7C7F93">])</span><span style="color:#7C7F93"> -></span><span style="color:#8839EF"> None</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">    plan_set </span><span style="color:#179299">=</span><span style="color:#FE640B;font-style:italic"> set</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">plan_items</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">    overlap </span><span style="color:#179299">=</span><span style="color:#4C4F69"> adr_rejected_items </span><span style="color:#179299">&#x26;</span><span style="color:#4C4F69"> plan_set</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> overlap</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">        raise</span><span style="color:#FE640B;font-style:italic"> ValueError</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#40A02B;font-style:italic">            f</span><span style="color:#40A02B">"ADRで却下された項目が実装に含まれています (</span><span style="color:#EA76CB">{</span><span style="color:#FE640B;font-style:italic">len</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">overlap</span><span style="color:#7C7F93">)</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">件): </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">overlap</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#7C7F93">        )</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">    print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"OK: 却下項目との重複なし (全</span><span style="color:#EA76CB">{</span><span style="color:#FE640B;font-style:italic">len</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">plan_items</span><span style="color:#7C7F93">)</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">件)"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 実行例</span></span>
+<span class="line"><span style="color:#4C4F69">rejected </span><span style="color:#179299">=</span><span style="color:#7C7F93"> {</span><span style="color:#40A02B">"retry"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "circuit-breaker"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "rate-limit"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "bulkhead"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "timeout"</span><span style="color:#7C7F93">}</span></span>
+<span class="line"><span style="color:#4C4F69">planned </span><span style="color:#179299">=</span><span style="color:#7C7F93"> [</span><span style="color:#40A02B">"retry"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "timeout"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "circuit-breaker"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "token-budget"</span><span style="color:#7C7F93">]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 解釈を挟まず集合演算で判定する</span></span>
+<span class="line"><span style="color:#1E66F5">verify_plan_against_adr</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">rejected</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> planned</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 出力: ValueError: ADRで却下された項目が実装に含まれています (3件): {'retry', 'circuit-breaker', 'timeout'}</span></span>
+<span class="line"></span></code></pre>
+<p>上記スクリプトのように、言葉の解釈ではなく「積集合（重複）」として機械的にカウントするステップを設けることで、確証バイアスによるスルーを物理的に遮断できます。</p>
+<h3 id="2-adr-の却下案considered-optionsを検査の入力にする">2. ADR の却下案（Considered Options）を検査の入力にする</h3>
+<p>ADR に書かれた「不採用にした選択肢」を単なる読み物で終わらせず、実装計画やタスク一覧に対するブラックリスト（禁止リスト）として扱います。</p>
+<h3 id="3-一括生成の前に成果物の依存関係を確認する">3. 一括生成の前に「成果物の依存関係」を確認する</h3>
+<p>テンプレート展開やタスク一括生成を行う前に、「この成果物は何を入力にしており、いつ作ると何が変わるのか」を自問します。この問いを持つことで、入力データの妥当性や過去資産との照合へ自然と意識が向くようになります。</p>
+<h3 id="よくある質問faq">よくある質問（FAQ）</h3>
+<h4 id="q1-adrに記録したのに実装が乖離アーキテクチャドリフトしてしまう主な原因は何ですか">Q1: ADRに記録したのに実装が乖離（アーキテクチャドリフト）してしまう主な原因は何ですか？</h4>
+<p><strong>A1</strong>: 設計規則への悪意ある違反ではなく、実装時やレビュー時に「文脈を変えたから新しい価値になる」と人間側が事後正当化（確証バイアス）を行い、記録と実物の客観的な突合をスキップしてしまう「無意識の漂流（Architectural Drift）」が主な原因です。</p>
+<h4 id="q2-多重aiエージェントによる設計レビューで矛盾の見落としを防ぐにはどうすればよいですか">Q2: 多重AIエージェントによる設計レビューで矛盾の見落としを防ぐにはどうすればよいですか？</h4>
+<p><strong>A2</strong>: レビュー役の数を増やすことではなく、レビューから「記録と実物が矛盾している」という指摘が出た際に、人間が自己解釈で弁明せず、対象の一覧・件数・依存関係を機械的に数え直す「反証確認ステップ」をプロセスに組み込むことが有効です。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本記事で解説した設計レビューにおける落とし穴と対策の要点は以下の通りです。</p>
+<ul>
+<li><strong>ADR の真の価値は却下案にある</strong>: 採用理由だけでなく「何を選ばなかったか（Considered Options）」を不変の記録として残すことで、初めて将来の矛盾を突く客観的な足場が生まれます。</li>
+<li><strong>多重レビューの指摘を人間の解釈で無効化しない</strong>: 独立した AI エージェントが高い精度で矛盾を指摘しても、人間が確証バイアスで「実質採用した」と受け流してしまえば、多重レビュー体制は形骸化します。</li>
+<li><strong>記録と実物の矛盾を指摘されたら実物を数え直す</strong>: レビューで矛盾を指摘されたら、言葉で反論・釈明するのをやめ、対象の一覧・件数・重複を機械的に数え直す規律を徹底します。</li>
+<li><strong>ルールを増やすより最小の照合規律を守る</strong>: レビュー層やチェックリストを無闇に積み増すのではなく、「解釈を排して実物を数える」という最小限の防波堤を設けることが、最も確実なアーキテクチャドリフト対策になります。</li>
+</ul>
+<p>開発プロセスの標準化、AI 運用（AI Operations）の導入設計、アーキテクチャや意思決定プロセスの見直しについて、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions">Documenting Architecture Decisions</a> Michael Nygard (Cognitect)、2011年11月15日。ADRの5大要素（Title, Context, Decision, Status, Consequences）と不変性の原則。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://martinfowler.com/bliki/ArchitectureDecisionRecord.html">Architecture Decision Record</a> Martin Fowler、2020年5月28日。ADRが単なる記録ではなく思考を構造化するツールである点、およびコードと同一リポジトリでの管理原則。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://www.thoughtworks.com/radar/techniques/lightweight-architecture-decision-records">Lightweight Architecture Decision Records</a> Thoughtworks Technology Advisory Board、2018年5月（Adopt）。進化型アーキテクチャにおける知識劣化防止プラクティスとしてのADR。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://adr.github.io/">Architectural Decision Records (ADRs)</a> Olaf Zimmermann, Oliver Kopp, Mirko Stocker et al.（MADR仕様）。Considered Options（検討した選択肢・却下理由）の記録必須性。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p>Rahul Mohanani, Iflaah Salman, Burak Turhan, Pilar Rodríguez, and Paul Ralph, “Cognitive Biases in Software Engineering: A Systematic Mapping Study,” IEEE Transactions on Software Engineering, Vol. 46, No. 12, pp. 1318-1339, 2020. ソフトウェア開発における確証バイアスと事後正当化、客観的反証プロセスの必要性。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p>Dewayne E. Perry &#x26; Alexander L. Wolf, “Foundations for the Study of Software Architecture,” ACM SIGSOFT Software Engineering Notes, Vol. 17, No. 4, pp. 40-52, 1992. Architectural Drift（無意識の漂流）の定義と、設計意図と実装の漸進的乖離のメカニズム。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://arxiv.org/abs/2601.01129">RovoDev Code Reviewer: A Large-Scale Online Evaluation of LLM-based Code Review Automation at Atlassian</a> Kla Tantithamthavorn et al. (Atlassian &#x26; Monash University)、2026年1月2日（ICSE 2026採択）。Atlassian本番環境におけるPRサイクル30.8%短縮、AI指摘解決率38.70%、および人間の解釈トリアージがボトルネックになる実態。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://arxiv.org/abs/2602.13377">A Survey of Code Review Benchmarks and Evaluation Practices in Pre-LLM and LLM Era</a> Taufiqul Islam Khan, Shaowei Wang, Haoxiang Zhang, and Tse-Hsun Chen、2026年2月13日。LLMコードレビューにおける局所的な構文偏重と全体アーキテクチャ整合性検証の不足。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://arxiv.org/abs/2511.07017">Benchmarking LLMs for Fine-Grained Code Review with Enriched Context in Practice</a> Ruida Hu et al.、2025年11月10日。ContextCRBenchによる67,910サンプルの実証研究。コンテキストを拡張しても細粒度整合の完全自動化には限界がある点。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 
