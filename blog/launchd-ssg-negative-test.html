@@ -1,0 +1,122 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>「200 OK」だけでは防げない ── launchdによるSSG日次自動デプロイと未来記事404のネガティブテスト | Meetsource</title><meta name="description" content="launchdはログインシェルを経由しないためPATHが空で渡ります。env -iによる事前検証と、デプロイ検収を「200 OK」だけで終わらせないネガティブテストの視点を、実際の運用例とともに解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/launchd-ssg-negative-test"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="「200 OK」だけでは防げない ── launchdによるSSG日次自動デプロイと未来記事404のネガティブテスト | Meetsource"><meta property="og:description" content="launchdはログインシェルを経由しないためPATHが空で渡ります。env -iによる事前検証と、デプロイ検収を「200 OK」だけで終わらせないネガティブテストの視点を、実際の運用例とともに解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/launchd-ssg-negative-test"><meta property="og:image" content="https://www.meetsource.work/blog/launchd-ssg-negative-test-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-11T14:18:06.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="「200 OK」だけでは防げない ── launchdによるSSG日次自動デプロイと未来記事404のネガティブテスト | Meetsource"><meta name="twitter:description" content="launchdはログインシェルを経由しないためPATHが空で渡ります。env -iによる事前検証と、デプロイ検収を「200 OK」だけで終わらせないネガティブテストの視点を、実際の運用例とともに解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/launchd-ssg-negative-test-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"「200 OK」だけでは防げない ── launchdによるSSG日次自動デプロイと未来記事404のネガティブテスト","description":"launchdはログインシェルを経由しないためPATHが空で渡ります。env -iによる事前検証と、デプロイ検収を「200 OK」だけで終わらせないネガティブテストの視点を、実際の運用例とともに解説します。","datePublished":"2026-08-11T14:18:06.000Z","image":"https://www.meetsource.work/blog/launchd-ssg-negative-test-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/launchd-ssg-negative-test"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-11T14:18:06.000Z" data-astro-cid-7jjqptxk> 2026.08.11 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#launchd</span><span class="tag" data-astro-cid-7jjqptxk>#env-i</span><span class="tag" data-astro-cid-7jjqptxk>#ssg</span><span class="tag" data-astro-cid-7jjqptxk>#negative-test</span><span class="tag" data-astro-cid-7jjqptxk>#deploy</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>「200 OK」だけでは防げない ── launchdによるSSG日次自動デプロイと未来記事404のネガティブテスト</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/launchd-ssg-negative-test-hero.webp" alt="「200 OK」だけでは防げない ── launchdによるSSG日次自動デプロイと未来記事404のネガティブテスト" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <h2 id="デプロイが自動化できたで終わっていないか">デプロイが自動化できた、で終わっていないか</h2>
+<p>SSG（Hugo、Astroなど）で作った静的サイトのビルド・デプロイを、macOSの<code>launchd</code>や<code>cron</code>で毎日自動実行させること自体は、それほど難しくありません。設定ファイルを1つ書いて、スケジュールを組めば動きます。</p>
+<p>難しいのは、その先です。「自動化できた」と「安全に自動化できている」は別の話です。</p>
+<p>この記事では、個人サイト（Hugo製）の日次自動デプロイを<code>launchd</code>で実際に組んだ実例をもとに、2つのポイントを解説します。1つは、<code>launchd</code>特有のPATH問題を本番発火させずに事前検証する<code>env -i</code>の使い方。もう1つは、デプロイの公開確認を「200 OKが返ってくること」だけで済ませず、「未公開の記事が404を返すこと」まで確認するネガティブテストという視点です。</p>
+<h2 id="launchdはログインシェルを経由しない">launchdはログインシェルを経由しない</h2>
+<p><code>launchd</code>は、現行macOSにおいてPID 1として動作するジョブ管理基盤です。かつての<code>init</code>を置き換えた存在であり、ログインシェルの起動プロセスとは別の経路でジョブを起動します。そのため、<code>.zshrc</code>や<code>.zprofile</code>のようなログインシェルの設定ファイルは一切読み込まれません。</p>
+<p><code>launchd.plist</code>の公式仕様では、環境変数を扱う<code>EnvironmentVariables</code>キーが次のように定義されています。</p>
+<blockquote><p>“This optional key is used to specify additional environmental variables to be set before running the job.”<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></p></blockquote>
+<p>ジョブ実行前に <strong>追加で</strong> 設定する環境変数、という説明であり、ログインシェルのdotfileへの言及はどこにもありません。つまり、手動のターミナル操作では通っていた<code>PATH</code>が、<code>launchd</code>経由の自動実行では素の状態（あるいはそれに近い状態）まで削られます。コミュニティの実測報告では、<code>launchd</code>デーモンのデフォルト<code>PATH</code>は<code>/usr/bin:/bin:/usr/sbin:/sbin</code>程度で、<code>/usr/local/bin</code>すら含まれないと報告されています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。手動実行では動くコマンドが、自動実行時にだけ<code>command not found</code>で落ちる典型的な原因です。</p>
+<p>対処はシンプルで、plistの<code>EnvironmentVariables</code>に<code>PATH</code>を明示します。今回の実例では、次のように指定しました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="xml"><code><span class="line"><span style="color:#179299">&#x3C;</span><span style="color:#1E66F5">key</span><span style="color:#179299">></span><span style="color:#4C4F69">EnvironmentVariables</span><span style="color:#179299">&#x3C;/</span><span style="color:#1E66F5">key</span><span style="color:#179299">></span></span>
+<span class="line"><span style="color:#179299">&#x3C;</span><span style="color:#1E66F5">dict</span><span style="color:#179299">></span></span>
+<span class="line"><span style="color:#179299">  &#x3C;</span><span style="color:#1E66F5">key</span><span style="color:#179299">></span><span style="color:#4C4F69">PATH</span><span style="color:#179299">&#x3C;/</span><span style="color:#1E66F5">key</span><span style="color:#179299">></span></span>
+<span class="line"><span style="color:#179299">  &#x3C;</span><span style="color:#1E66F5">string</span><span style="color:#179299">></span><span style="color:#4C4F69">/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin</span><span style="color:#179299">&#x3C;/</span><span style="color:#1E66F5">string</span><span style="color:#179299">></span></span>
+<span class="line"><span style="color:#179299">&#x3C;/</span><span style="color:#1E66F5">dict</span><span style="color:#179299">></span></span>
+<span class="line"></span></code></pre>
+<p>もう1つ、<code>launchd</code>特有の癖として押さえておきたいのが<code>StartCalendarInterval</code>によるスケジュール実行の挙動です。公式ドキュメントには次のように書かれています。</p>
+<blockquote><p>“If you schedule a <code>launchd</code> job by setting the <code>StartCalendarInterval</code> key and the computer is asleep when the job should have run, your job will run when the computer wakes up.”<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup></p></blockquote>
+<p>Macがスリープ中に予定時刻を過ぎても、起床後に1回だけ遅延実行されます（電源そのものが切れていた場合は、次回の指定時刻まで実行されません）。「その時刻に起きている」必要はなく、「その時刻以降に一度は起動する」で足りるということです。</p>
+<p>ただし、これを過信するのは禁物です。Apple Developer Technical SupportのエンジニアはDeveloper Forumsで、次のように明言しています。</p>
+<blockquote><p>“launchd doesn’t guarantee anything about the power state of the system when it starts your job based on StartCalendarInterval.”<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup></p></blockquote>
+<p><code>StartCalendarInterval</code>はスリープからの復帰を助けてくれますが、電源状態そのものについて<code>launchd</code>が何かを保証しているわけではありません。「起床後に必ず実行される」と読み替えるのは言い過ぎで、あくまで実装上の振る舞いとして理解しておくのが安全です。</p>
+<h2 id="本番発火で確かめない--env--iによるローカル事前検証">本番発火で確かめない ── <code>env -i</code>によるローカル事前検証</h2>
+<p>PATH問題への対処が必要だとわかっても、それを <strong>本番の<code>launchd</code>発火で確かめる</strong> のはリスクが高いやり方です。デプロイジョブである以上、本番発火はpushを伴います。設定ミスに気づかないまま発火させてしまえば、その時点で事故です。</p>
+<p>そこで使えるのが<code>env -i</code>です。BSD版<code>env</code>の<code>-i</code>オプションは、次のように定義されています。</p>
+<blockquote><p>“Execute the utility with only those environment variables specified by name=value options. The environment inherited by env is ignored completely.”<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup></p></blockquote>
+<p>指定した環境変数だけでコマンドを実行し、それ以外の継承環境は完全に無視する、という動作です。これを使えば、「<code>launchd</code>が渡してくる、ほぼ何も持たない<code>PATH</code>状態」を、pushを伴わずに手元で安全に再現できます。実際に使ったコマンドは次の通りです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">env</span><span style="color:#40A02B"> -i</span><span style="color:#40A02B"> PATH=/opt/homebrew/bin:/usr/bin:/bin</span><span style="color:#40A02B"> HOME=</span><span style="color:#4C4F69">$HOME </span><span style="color:#40A02B">/opt/homebrew/bin/mise</span><span style="color:#40A02B"> run</span><span style="color:#40A02B"> build</span></span>
+<span class="line"></span></code></pre>
+<p>2026年8月9日時点の記録では、このコマンドで3,006ページのビルドが27秒で成功しました。同じコマンドを2026年8月11日に再実行しても、pushを伴わずに成功することを確認しています（このときは3,025ページ・約28〜30秒でした。サイトの記事数は日々増えるため、ページ数や所要時間はそのときどきで変わる値です。数値を引用する際は、必ず計測した日付とセットで扱ってください）。</p>
+<p>なお、このコマンドで指定している<code>PATH</code>は<code>mise</code>自身と、<code>hugo</code>・<code>git</code>・<code>bash</code>が置かれているディレクトリだけです。ビルドタスクの実行時に<code>mise</code>が必要なツール（今回のケースではperl）を自動的に用意してくれるため、plistの<code>PATH</code>にそれらを個別に足す必要はありませんでした。</p>
+<h2 id="200-okだけでは防げない--ネガティブテストという視点">「200 OK」だけでは防げない ── ネガティブテストという視点</h2>
+<p><code>env -i</code>でPATH問題を潰せたら、次はデプロイ後の公開確認です。ここでよくあるのが、「公開記事にアクセスして200 OKが返ってくることを確認して終わり」というやり方です。しかし、これだけでは防げない事故があります。</p>
+<p>Hugoには<code>-F</code>（<code>--buildFuture</code>）というフラグがあります。</p>
+<blockquote><p>“-F, —buildFuture                include content with publishdate in the future”<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup></p></blockquote>
+<p>公式ドキュメントには、このフラグを付けない場合のデフォルト挙動として、公開日が未来のコンテンツをビルドしない旨が明記されています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。逆に言えば、もしこのフラグの扱いを誤って有効化してしまえば、 <strong>未公開の記事まで全部ビルド・公開されてしまう</strong> ということです。「公開済み記事が200を返すか」だけを見ていては、この種の設定ミスには気づけません。</p>
+<p>そこで、実際の運用では公開確認をもう一歩広げ、次の3本のURLを確認しました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>対象</th><th>期待</th><th>結果（08-09時点）</th><th>結果（08-11再検算）</th></tr></thead><tbody><tr><td>公開済み記事（当日公開分）</td><td>200</td><td>200</td><td>200</td></tr><tr><td>公開済み記事（前日公開分）</td><td>200</td><td>200</td><td>200</td></tr><tr><td>未公開の未来日付記事</td><td>404</td><td>404</td><td>404</td></tr></tbody></table>
+<p>「公開されるべきものが公開されている」ことに加えて、「公開されるべきでないものが公開されていない」ことまで確認する。これがネガティブテストという発想です。単純な成功/失敗の二値判定だけでは、こうした「全部が一律で成功してしまっている」型の事故は見抜けない、という指摘は一般的な信頼性設計の議論でもよく語られます。</p>
+<p>ただし、ここは正直に書いておく必要があります。この200/404チェックは、デプロイスクリプト自体に組み込まれた自動検証ではありません。実際にデプロイスクリプトの中身を確認したところ、200/404を検証するようなコードは存在せず、記録として残っていたのも、発火後に人間が手動で<code>curl</code>を打って確認した結果でした。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">curl</span><span style="color:#40A02B"> -s</span><span style="color:#40A02B"> -o</span><span style="color:#40A02B"> /dev/null</span><span style="color:#40A02B"> -w</span><span style="color:#40A02B"> "%{http_code}\n"</span><span style="color:#40A02B"> "https://example.com/2026/08/08/070705/"</span></span>
+<span class="line"></span></code></pre>
+<p>「自動化されたネガティブテスト」ではなく、「デプロイ後の手動チェックリスト」というのが、この実例の正確な位置づけです。過大に言わないことも、検収基準を疑う姿勢の一部だと考えています。</p>
+<h2 id="自分のssgスタックへの持ち帰りチェックリスト">自分のSSGスタックへの持ち帰りチェックリスト</h2>
+<p><code>launchd</code>やHugoに限らず、cronやGitHub Actions、他のSSGを使っている場合でも、応用できる考え方は同じです。</p>
+<ul>
+<li>ジョブ実行環境（<code>launchd</code>/<code>cron</code>/CI）の<code>PATH</code>を明示しているか</li>
+<li>本番発火の前に、<code>env -i</code>のような手段でその環境を安全にローカル再現できているか</li>
+<li>デプロイ後の確認は、「公開されるべきものが公開されているか」だけでなく「公開されるべきでないものが公開されていないか」まで見ているか</li>
+<li>その確認は自動化されているか、それとも運用者の記憶に依存した手動チェックのままか</li>
+</ul>
+<p>最後の1点については、今回の実例も「まだ手動」の段階です。次にやるべきことは、この2本の<code>curl</code>チェックをデプロイスクリプトに組み込んで自動化することでしょう。「自動化できた」で満足せず、検収の基準そのものを疑い続けることが、安全なデプロイ自動化への近道だと考えています。</p>
+<p>ご自身のSSG運用の自動化やデプロイ検証設計についてお困りの際は、<a href="/#contact">コンタクトフォーム</a>よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://www.manpagez.com/man/5/launchd.plist/">launchd.plist(5) Mac OS X Manual Page</a> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://lucaspin.medium.com/where-is-my-path-launchd-fc3fc5449864">Where is my PATH, launchd? - Medium</a> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/ScheduledJobs.html">Scheduled Jobs - Apple Developer (Archive)</a> <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://developer.apple.com/forums/thread/815034">launchd job power state guarantee - Apple Developer Forums Thread 815034</a> <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://ss64.com/mac/env.html">env - macOS command reference (ss64)</a> <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://gohugo.io/commands/hugo_build/">hugo build command reference</a> <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://gohugo.io/getting-started/usage/">Usage - Hugo Documentation</a> <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

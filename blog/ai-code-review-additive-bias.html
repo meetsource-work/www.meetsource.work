@@ -1,0 +1,289 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>AIレビュー3巡24件の指摘で、2つの軸が同じ欠陥を指していたのは3組だった ── 私が退けた1件の記録つき | Meetsource</title><meta name="description" content="私のセッションが実在と判定した24件の指摘のうち、2つの軸が同じ欠陥を指していたのは3組（6件）で、どれも同じ巡に並べた2軸レビュー（14件）の間でした。別モデル（agy／Gemini）の単発レビュー2巡と、規約と仕様に観点を分けた2軸レビュー1巡を、AI エージェントの役割定義を変えた1つの変更に当てた結果です。1巡目の指摘を私のセッションが範囲外として空振りに数え、3巡目に同じ文書の欠落が挙がって直した1件も記録します。"><link rel="canonical" href="https://www.meetsource.work/blog/ai-code-review-additive-bias"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="AIレビュー3巡24件の指摘で、2つの軸が同じ欠陥を指していたのは3組だった ── 私が退けた1件の記録つき | Meetsource"><meta property="og:description" content="私のセッションが実在と判定した24件の指摘のうち、2つの軸が同じ欠陥を指していたのは3組（6件）で、どれも同じ巡に並べた2軸レビュー（14件）の間でした。別モデル（agy／Gemini）の単発レビュー2巡と、規約と仕様に観点を分けた2軸レビュー1巡を、AI エージェントの役割定義を変えた1つの変更に当てた結果です。1巡目の指摘を私のセッションが範囲外として空振りに数え、3巡目に同じ文書の欠落が挙がって直した1件も記録します。"><meta property="og:url" content="https://www.meetsource.work/blog/ai-code-review-additive-bias"><meta property="og:image" content="https://www.meetsource.work/blog/ai-code-review-additive-bias-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-21T14:40:10.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="AIレビュー3巡24件の指摘で、2つの軸が同じ欠陥を指していたのは3組だった ── 私が退けた1件の記録つき | Meetsource"><meta name="twitter:description" content="私のセッションが実在と判定した24件の指摘のうち、2つの軸が同じ欠陥を指していたのは3組（6件）で、どれも同じ巡に並べた2軸レビュー（14件）の間でした。別モデル（agy／Gemini）の単発レビュー2巡と、規約と仕様に観点を分けた2軸レビュー1巡を、AI エージェントの役割定義を変えた1つの変更に当てた結果です。1巡目の指摘を私のセッションが範囲外として空振りに数え、3巡目に同じ文書の欠落が挙がって直した1件も記録します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/ai-code-review-additive-bias-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"AIレビュー3巡24件の指摘で、2つの軸が同じ欠陥を指していたのは3組だった ── 私が退けた1件の記録つき","description":"私のセッションが実在と判定した24件の指摘のうち、2つの軸が同じ欠陥を指していたのは3組（6件）で、どれも同じ巡に並べた2軸レビュー（14件）の間でした。別モデル（agy／Gemini）の単発レビュー2巡と、規約と仕様に観点を分けた2軸レビュー1巡を、AI エージェントの役割定義を変えた1つの変更に当てた結果です。1巡目の指摘を私のセッションが範囲外として空振りに数え、3巡目に同じ文書の欠落が挙がって直した1件も記録します。","datePublished":"2026-10-21T14:40:10.000Z","image":"https://www.meetsource.work/blog/ai-code-review-additive-bias-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/ai-code-review-additive-bias"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"観点を分けたレビューを重ねると、同じ指摘が増えるだけではないですか？","acceptedAnswer":{"@type":"Answer","text":"この変更では、同じ指摘も別の欠陥も出ました。同じ巡に並べて比べられたのは3巡目の2軸だけで、その14件のうち6件（3組）が同じ欠陥を指していました。一方、2軸レビューは、それまでの agy の2巡には無かった指摘（記事本文を査読する段階で話数が取れない欠陥など）も挙げています。1つの変更での観察で、どの構成でも同じになるとは言えません。"}},{"@type":"Question","name":"2軸レビューの Standards と Spec は何が違いますか？","acceptedAnswer":{"@type":"Answer","text":"Standards はリポジトリに文書化された規約に沿っているかを見る観点、Spec は元の Issue・仕様を忠実に実装しているかを見る観点です。2つを別々のサブエージェントに並列で見させ、結果も軸ごとに分けて報告します。この変更では、書き上げた記事本文を査読する段階で話数が取れないという欠陥を挙げたのは、Spec 軸だけでした。"}},{"@type":"Question","name":"差分だけを見るレビューは、差分の外の問題を拾えないのですか？","acceptedAnswer":{"@type":"Answer","text":"コードを対象にした研究では、入力を差分に絞ると全体の検出が落ちることや、エージェント型以外の手法では指摘に要る文脈が広がるほど検出が落ちる傾向が、著者のまとめとして報告されています。ただしこの変更では、別モデルが差分の外にある設計文書のカタログ未記載を1巡目で指摘していました（私のセッションの照合記録による）。それを範囲外として退けたのは、突き合わせた私の側でした。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-21T14:40:10.000Z" data-astro-cid-7jjqptxk> 2026.10.21 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#code-review</span><span class="tag" data-astro-cid-7jjqptxk>#llm</span><span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#subagents</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>AIレビュー3巡24件の指摘で、2つの軸が同じ欠陥を指していたのは3組だった ── 私が退けた1件の記録つき</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/ai-code-review-additive-bias-hero.webp" alt="AIレビュー3巡24件の指摘で、2つの軸が同じ欠陥を指していたのは3組だった ── 私が退けた1件の記録つき" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>別モデルに1回レビューさせれば足りるのか。観点を分けたレビューを重ねると、同じ指摘が増えるだけなのか、別の欠陥が出てくるのか。AI エージェントの役割定義やスキル定義を変えた1つの変更に、別モデルの単発レビューを2巡、観点を分けた2軸レビューを1巡当てて、返ってきた指摘を数え直しました。</p>
+<p>本記事でいう <strong>2軸レビュー</strong> とは、差分を「リポジトリに文書化された規約に沿っているか（Standards）」と「元の Issue・仕様を忠実に実装しているか（Spec）」の2つの観点に分け、別々のサブエージェントに並列で見させるレビューです<sup><a href="#user-content-fn-skill" id="user-content-fnref-skill" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>結果を先に書きます。私の Claude Code セッション（以下「私のセッション」）が現物と突き合わせて実在と判定した指摘は、6件 + 4件 + 14件 = 24件でした。そのうち、2つの軸が同じ欠陥を指していた組は3組（指摘の数では6件）で、3組とも3巡目の2軸の間でした。同じ巡に並べて比べられたのは3巡目の2軸だけで、その14件のうち6件が同じ欠陥を指していたことになります。もう1件、1巡目の別モデルが指摘していた、差分の外にある設計文書のカタログ未記載を、私のセッションは範囲外として退けており、この指摘は3巡目に拾い直されています。</p>
+<p>対象は実行可能なコードではなく、AI エージェントが読んで従う役割定義・スキル定義・用語集・ADR（設計判断の記録）を変えた1つの変更です。変更の中心は、連載記事を査読する判定役（<code>lead-reviewer</code>）の新設でした。その連載では「中堅層（mid-level）の読者は多くの場合決裁権を持たない」という仮説を実験として確かめようとしており、判定役がこの仮説を前提として持つと、答えを知った側が実験を査読することになります。以下で「仮説の漏洩」と呼ぶのは、この仮説が判定役に届いてしまう欠陥です。</p>
+<h2 id="3種類のレビューに渡したものは何が違うか">3種類のレビューに渡したものは何が違うか</h2>
+<p>agy と2軸レビューは、中で動くモデルも渡した資料も違います。2軸どうしは同じ Claude Code のサブエージェントで、違うのは渡した資料です。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>レビュー</th><th>中で動くモデル</th><th>渡したもの</th><th>リポジトリを読めたか</th></tr></thead><tbody><tr><td>agy 1巡目</td><td>プラグインの既定では Gemini（当日の割り当ては記録なし）</td><td>変更の差分、5つの観点（自己矛盾・循環参照／指示の曖昧さ・抜け漏れ／過剰・過小制約／関心事の混濁／SSOT 違反）、特に厳しく見てほしい点4つ（新設レビュアーの観点の重複、起動条件・入出力の実行可能性、用語集との整合、ADR の論理）</td><td>読める状態（ディレクトリを指定して起動）。読むファイルは指定していない</td></tr><tr><td>agy 2巡目</td><td>同上</td><td>修正後の差分、1巡目の指摘6件への対応一覧、疑う観点 A〜E</td><td>同上</td></tr><tr><td>2軸レビュー（Standards / Spec）</td><td>Claude Code のサブエージェント</td><td>Standards: AGENTS.md・用語集（CONTEXT.md）・コードの臭い（smell）の一覧。Spec: 元の Issue・変更の説明文・ADR（依頼文の抜粋。Spec 軸自身は記事末のフォーマット部品も仕様として照合したと書いている）</td><td>読める（Spec 軸の出力は記事ファイルのフロントマターにも言及している）</td></tr></tbody></table>
+<p>したがって agy と2軸の違いは、モデルの差とも資料の差とも切り分けられません。</p>
+<p>agy は Google Antigravity の CLI です<sup><a href="#user-content-fn-agydocs" id="user-content-fnref-agydocs" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。私は Claude Code から第三者のプラグイン経由で呼び出しており、プラグインの既定のモデルは Gemini です<sup><a href="#user-content-fn-agyplugin" id="user-content-fnref-agyplugin" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>1巡目の依頼文のうち、観点を並べた部分を抜粋します。実行するコードではなく、agy に渡したプロンプトそのものです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>以下の差分を「懐疑的なシニアエンジニア」の視点でコードレビューしてください。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>この差分は実行可能なコードではなく、**AIエージェント(Claude Code)が読んで従うスキル定義・役割定義・用語集・ADR** です。</span></span>
+<span class="line"><span>そのため、通常のコードレビューとは見るべき対象が異なります:</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>1. **自己矛盾・循環参照**: あるファイルの指示が、別のファイルの指示や前提と衝突していないか</span></span>
+<span class="line"><span>2. **指示の曖昧さ・抜け漏れ**: エージェントがこの指示を読んで実行するとき、判断に迷う箇所や暗黙の前提がないか</span></span>
+<span class="line"><span>3. **過剰制約・過小制約**: 厳しすぎて記事が書けなくなる制約や、緩すぎて意図した品質が出ない穴がないか</span></span>
+<span class="line"><span>4. **関心事の混濁**: 「1つのエージェントは1つの関心事だけを見る」という原則が破られていないか</span></span>
+<span class="line"><span>5. **SSOT違反**: 同じ設定・用語・手順が複数箇所に重複定義され、片方だけ更新されるリスクがないか</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>（中略）</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>各指摘を `file:line — issue` 形式で重大度(高/中/低)付きで。推測や好みの問題ではなく、実在する欠陥だけを挙げてください。日本語で。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この依頼文に、どのファイルを読めという指定はありません。</p>
+<p>「実在」と「空振り」は、私のセッションが指摘を現物と突き合わせて判定したものです。機械的に照合した記録が残っているのは3巡目の5件で、5件とも事実でした。判定が外れていた例は、後の節で1件扱います。</p>
+<h2 id="3巡24件の内訳">3巡24件の内訳</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>巡</th><th>レビュー</th><th>指摘</th><th>私のセッションの判定</th></tr></thead><tbody><tr><td>1巡目</td><td>agy</td><td>8件</td><td>実在6件、空振り2件</td></tr><tr><td>2巡目</td><td>agy</td><td>5件</td><td>実在4件、提案の向きが実際の修正と逆の1件</td></tr><tr><td>3巡目</td><td>Standards 軸</td><td>6件</td><td>実在6件</td></tr><tr><td>3巡目</td><td>Spec 軸</td><td>8件</td><td>実在8件</td></tr></tbody></table>
+<p>表の数え方に、4つ断りがあります。</p>
+<ul>
+<li>2巡目の逆向きの1件は、引数が漏れているという指摘自体は事実でした。ただし提案（引数を足せ）と、実際に私が採った修正（引数を外す）が逆だったため、24件には数えていません</li>
+<li>3巡目の14件のうち、実在の判定を機械的に照合した記録があるのは5件です</li>
+<li>Standards 軸の出力には7項目が並びますが、私のセッションの集計は6件です。どれを数えなかったかは記録から確定できず、本記事は一次ログの内訳（実績0回の分岐の規定を数えない）に従います</li>
+<li>1巡目の8件のうち、逐語記録に本文が残っているのは6項目で、空振り2件の中身は私のセッションの照合文からしか分かりません</li>
+</ul>
+<h2 id="各レビューが拾ったもの">各レビューが拾ったもの</h2>
+<p>重大度は各レビューが自分で付けた値を書きます。私のセッションが付け直した値とは混ぜません。</p>
+<h3 id="agy-1巡目">agy 1巡目</h3>
+<p>実在と判定した6件は次のとおりです（重大度は agy の値）。</p>
+<ul>
+<li>判定役の定義が「読者層が <code>mid-level</code> 以下の場合、読者本人は多くの場合決裁権を持ちません」と断定している（高）</li>
+<li>企画の段階だけ査読しても、執筆の段階で導線が消える穴がある（高）</li>
+<li>観点の見出しの1つだけが否定形になっている（中）</li>
+<li>用語集が避けると定めた語が、見出しに残っている（中）</li>
+<li>起動条件の判定基準が未定義（中）</li>
+<li>独立レビューのあとの遷移が書かれていない（低）</li>
+</ul>
+<p>1件目について、agy は「過剰制約」として出していました。それを、検証中の仮説を査読役に前提として持たせている問題と位置づけ直したのは私のセッションです。この漏洩が経路を変えて3回起きた経緯は、<a href="/blog/ai-reviewer-implicit-arguments">レビュー役に「まず読め」と書いた1行が、答えを渡していた</a> に書きました。</p>
+<p>空振りと判定した2件は、(1) 文書の置き場所についての指摘と、(2) レビューの仕組みを一元管理する設計文書の「カタログ未記載」です。(1) について、私のセッションは「リポジトリ固有のルールを読まずに一般論を出した」と判定しました（agy の原文は記録にありません）。(2) は、後の節で扱います。</p>
+<h3 id="agy-2巡目">agy 2巡目</h3>
+<p>依頼文には「これらの修正が本当に問題を解決したかを疑うことです」と書き、1巡目の修正を疑わせました。</p>
+<p>実在と判定した4件は次のとおりです（重大度は agy の値）。</p>
+<ul>
+<li>禁止に添えた理由文が、隠すべき命題をそのまま渡している（B・高）</li>
+<li>観点の本文が、「企画」を主語にしたまま残っている（A・中）</li>
+<li>執筆後の段階で重い指摘が出たときの行き先が、未定義（C・高）</li>
+<li>ADR の訂正が、弁明寄りになっている（D・低）</li>
+</ul>
+<p>逆向きの1件（E・高）は、起動引数に読者層が漏れているので追記せよ、という指摘です。漏れは事実でした。しかし私のセッションは引数を足さず、判定役の入力から読者層を外しました。当時の私のセッションの判断は、推定の材料を渡さなければ推定は起きない、というものでした。この判断は3巡目に、別のファイル経由で材料が渡っていたと分かって崩れています（Spec 軸の最重の指摘）。</p>
+<p>私の編集で生じた重複文が1つありました。これは agy の指摘になく、私のセッションが照合中に見つけています。</p>
+<h3 id="standards-軸">Standards 軸</h3>
+<p>ハードな指摘が3件、判断の指摘が3件です。</p>
+<ul>
+<li>ハード: レビューの仕組みを一元管理する設計文書が更新されていません。同じ変更で書き足した記述と矛盾し、カタログにもレビュアーが載っていません。載っていない2体のうち、<code>continuity-reviewer</code> はこの変更より前からあるレビュアーです</li>
+<li>ハード: 2巡目で追加した自己照合の grep が、未コミット分しか見ない比較になっています。防ぎたかった事故を捕まえません</li>
+<li>ハード: ADR の追記が、現物と食い違っています</li>
+<li>判断: 判定役の名前（<code>lead-reviewer</code>）が、用語集の避ける語に接触しています</li>
+<li>判断: 起動の判定が、散文の文字列一致（Primitive Obsession）になっています</li>
+<li>判断: 判定・引数・理由文が複数箇所に重複しています（Duplicated Code / Shotgun Surgery）</li>
+</ul>
+<p>出力にはほかに、実績0回の分岐を規定している点（Speculative Generality・低）が並んでいますが、6件には数えていません。設計文書の指摘は、AGENTS.md にある、知見や設定を1か所に集約するという規約を引いていました。</p>
+<h3 id="spec-軸">Spec 軸</h3>
+<p>最初に挙がったのは、書き上げた記事本文を査読する段階（Phase 4）で、「今回の話数」（連載の何話目か）を取得する手段が無いという指摘です（A1・高）。話数が取れないと、判定役の観点の1つが Phase 4 で評価できません。</p>
+<p>次に、最重の指摘が1件ありました（C1）。読者層の引数を外したあとでも、判定役に必読を指示したファイルに、検証中の仮説が逐語で載っていたのです。この経路も <a href="/blog/ai-reviewer-implicit-arguments">前回の記事</a> に書いています。</p>
+<p>そのほかは、次の5件です。</p>
+<ul>
+<li>自己照合の grep が対象を取り逃す（C2・中）</li>
+<li>3択の1つが実験の設計を壊す（C3・中）</li>
+<li>呼び出し元の列挙が未更新（A2・中）</li>
+<li>追記位置の誤り（A3・中）</li>
+<li>起動判定のキーの規定が無い（A4・中）</li>
+</ul>
+<p>名前が避ける語と紛らわしいという指摘（低）も挙げています。</p>
+<h2 id="2つの軸が同じ欠陥を指していたのは3組だった">2つの軸が同じ欠陥を指していたのは3組だった</h2>
+<p>ここでいう同じ欠陥とは、同じ時点の、同じ箇所の、同じ仕組みの欠陥です。重なりは、4つのレビュー出力のどの2つの間でも数えました。ただし前の巡の指摘を直してから次の巡を当てているので、巡をまたいで同じ欠陥が指されるには、前の巡で指摘された欠陥が直されずに残っている必要があります。本件でその例は、次の節で扱う設計文書のカタログ欠落の1件だけで、私のセッションが空振りとして24件から外したため、3組には入っていません。実在と判定した24件の指摘のうち、2つの軸が同じ欠陥を指していたのは3組（6件）で、どれも3巡目の2軸の間でした。同じ巡に並べた2軸の14件で見ると、6件が重なっていたことになります。</p>
+<p>全24件の一覧ではなく、重なりの3組と、重なりを確かめた単独の指摘を並べた抜粋です。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>欠陥</th><th>agy 1巡目</th><th>agy 2巡目</th><th>Standards 軸</th><th>Spec 軸</th></tr></thead><tbody><tr><td>自己照合 grep の不具合</td><td>—</td><td>—</td><td>○</td><td>○</td></tr><tr><td>エージェント名の紛らわしさ</td><td></td><td></td><td>○</td><td>○</td></tr><tr><td>起動判定が散文の文字列一致</td><td>—</td><td></td><td>○</td><td>○</td></tr><tr><td>設計文書のカタログ欠落</td><td>△（指摘したが空振り扱い）</td><td></td><td>○</td><td></td></tr><tr><td>Phase 4 で話数が取れない</td><td>—</td><td></td><td></td><td>○</td></tr><tr><td>必読ファイル経由の漏洩</td><td>※</td><td>※</td><td></td><td>○</td></tr></tbody></table>
+<p>○ は指摘した、△ は指摘したが私のセッションが範囲外として退けた、— はその巡の時点で欠陥が無かった、※ は記録から判定できない、空欄は出力に該当する指摘が無い、を表します。</p>
+<p>表に補足が3つあります。</p>
+<ul>
+<li>自己照合の grep は、2巡目の後の修正で入れたものなので、1〜2巡目は「—」です</li>
+<li>起動判定を文字列一致にしたのは、1巡目の「判定基準が未定義」という指摘を受けた1巡目の修正です。そのため1巡目は「—」で、1巡目の指摘は「判定基準が無い」という別の欠陥なので、この行には数えていません</li>
+<li>必読ファイルの経路は、2巡目の修正で引数を外した後に残った経路として露見しました。「まず記事末のフォーマット部品を読め」という指示と、その部品に仮説が書かれた状態が、1〜2巡目の時点で既にあったかは、記録から判定できません</li>
+</ul>
+<p>重なった3組は、どれも同じ巡で並べて走らせた2軸の間でした。</p>
+<h2 id="1巡目の指摘を私が範囲外として退けた1件">1巡目の指摘を、私が範囲外として退けた1件</h2>
+<p>1巡目の agy は、差分に含まれない設計文書の「カタログ未記載」を指摘していました。私のセッションの照合記録には、その設計文書のカタログ更新は「別タスクで扱う範囲」と書いてあります。私のセッションはこれを理由に、空振りに数えました。agy の指摘の原文は記録に残っていないので、書けるのは「同じ設計文書のカタログ未記載を指摘していた」までです。何が欠けていると指摘したのかは分かりません。なお、agy 1巡目の依頼文には、観点の1つとして「SSOT違反」を入れていました。</p>
+<p>3巡目の Standards 軸は、同じ設計文書について、カタログにレビュアーが載っていないことを挙げました。私のセッションはこれを実在と判定し、3巡目の修正で、設計文書のパスとカタログを直しています。変更ファイルにも、その設計文書が入っています。</p>
+<p>私のセッションの振り返りにも、この経緯は残っていません。変更の終了後にまとめた検出差の記録は、設計文書の追従漏れについて「agy は2巡とも見逃し」と書いています。</p>
+<p>整理すると、記録から言えるのは次のことです。範囲外として退けた文書が、同じ変更の中で直されました。3巡目に、1巡目の判定を誤りと認める発言は残っていません。また、Standards 軸が挙げたレビュアー2体のうち <code>continuity-reviewer</code> は変更前からあるもので、範囲外という判断にも一理あったことは事実です。</p>
+<p>突き合わせる側が外部の「高」判定を、一次情報で正しく格下げした例は、<a href="/blog/orchestrator-downgrade-subagent-severity">サブエージェントの「高」判定を、そのまま信じない</a> に書きました。今回の1件は、その逆に、範囲外として退けた文書が同じ変更の中で直された例にあたります。</p>
+<h2 id="コードレビューの研究と照らすと何が言えるか">コードレビューの研究と照らすと、何が言えるか</h2>
+<p>以下の研究の対象はコードで、別ファイルの文書の追従漏れを測ったものではありません。そのうえで、本件と照らせる範囲を引きます。</p>
+<p>ICML 2025 の論文<sup><a href="#user-content-fn-lu" id="user-content-fnref-lu" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup> は、産業用の C++ コードを対象に、レビューへ渡す文脈の切り出し方を比べています。著者のまとめでは、差分や親関数だけを入力にする方式は効果が低く、文脈をより細かく切り出すと重要なバグを含みやすくなります。最も長い文脈を与えた方式が、一段短い方式を全体として下回った理由について、著者は長い文脈でのモデルの能力低下によると推測しています。切り出し方ごとに、ほぼそれぞれの方式だけが当てた事例もありました。</p>
+<p>AACR-Bench<sup><a href="#user-content-fn-aacr" id="user-content-fnref-aacr" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>（査読前の論文）は、複数言語のコードの PR を対象に、指摘に要る文脈を差分・ファイル・リポジトリの3段に分けています。著者のまとめでは、エージェント型以外の手法は、要る文脈が広がるほど再現率が落ちます（表には例外があります）。エージェント型（Claude Code で実装）は、著者によれば全体として逆の傾向を示します。ただし全体の再現率は低く（たとえば Claude-4.5-Sonnet で 10.10%）、著者は、外部の依存にとらわれて差分の中の目立つ問題を見落とす可能性を挙げています。</p>
+<p>SWR-Bench<sup><a href="#user-content-fn-swr" id="user-content-fnref-swr" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>（FSE 2026 掲載）は、実際のレビューコメントを生成させる評価です。著者によれば、既存のツールは、バグのような機能的な欠陥のほうが、古くなったドキュメントのような非機能的な問題より検出しやすいといいます。ここでのドキュメントは、コード内のコメント等を指します。</p>
+<p>本件では、差分の外にある設計文書のカタログ未記載を、agy が1巡目で指摘していました（私のセッションの照合記録による）。agy はリポジトリを読める状態でした。ただし、それが当たった理由だとは言えません。同じ巡に、agy がリポジトリ固有のルールを読まずに一般論を出したと私のセッションが判定した指摘も、別にあるからです。研究が示す「差分の外は拾いにくい」傾向と本件は、対立しません。「拾えたかどうか」と「拾った指摘を採ったかどうか」は、別の段でした。</p>
+<p>私の感想として書くと、レビューを入れたかどうかより、そのレビュアーに何を読ませたかで、拾える欠陥の種類が決まって見えました。1つの変更での観察なので、因果までは言えません。</p>
+<h2 id="1つの変更で言えること言えないこと">1つの変更で言えること・言えないこと</h2>
+<ul>
+<li>母数は1つの変更・3巡です。対象はコードではなく、エージェントが読む文書です</li>
+<li>「実在」「空振り」は私のセッションの判定で、機械的に照合した記録は5件だけです。空振りの判定が外れていた例が1件あります</li>
+<li>agy と2軸は、モデルと渡したものが同時に違うので、差の原因を分けられません。agy の中のモデルは記録にありません</li>
+<li>2軸レビューは、agy の2巡で直したあとの差分を見ています。同じ差分に3つを同時に当てた比較ではありません</li>
+</ul>
+<p>私の感想を書くと、3巡にわたって実在の欠陥が出続けたこと自体が、レビューの精度より、レビューされる側の設計に構造の問題が残っていた合図だったと思います。この変更では、検証中の仮説が漏れる経路が、断定・理由文・必読ファイルと形を変えて3巡残っていました。経路ごとに別の欠陥として数えているので、前の節の「同じ欠陥」の定義とは食い違いません。経路の詳細は <a href="/blog/ai-reviewer-implicit-arguments">前回の記事</a> にあります。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-観点を分けたレビューを重ねると同じ指摘が増えるだけではないですか">Q. 観点を分けたレビューを重ねると、同じ指摘が増えるだけではないですか？</h3>
+<p><strong>A.</strong> この変更では、同じ指摘も別の欠陥も出ました。同じ巡に並べて比べられたのは3巡目の2軸だけで、その14件のうち6件（3組）が同じ欠陥を指していました。一方、2軸レビューは、それまでの agy の2巡には無かった指摘（記事本文を査読する段階で話数が取れない欠陥など）も挙げています。1つの変更での観察で、どの構成でも同じになるとは言えません。</p>
+<h3 id="q-2軸レビューの-standards-と-spec-は何が違いますか">Q. 2軸レビューの Standards と Spec は何が違いますか？</h3>
+<p><strong>A.</strong> Standards はリポジトリに文書化された規約に沿っているかを見る観点、Spec は元の Issue・仕様を忠実に実装しているかを見る観点です<sup><a href="#user-content-fn-skill" id="user-content-fnref-skill-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。2つを別々のサブエージェントに並列で見させ、結果も軸ごとに分けて報告します。この変更では、書き上げた記事本文を査読する段階で話数が取れないという欠陥を挙げたのは、Spec 軸だけでした。</p>
+<h3 id="q-差分だけを見るレビューは差分の外の問題を拾えないのですか">Q. 差分だけを見るレビューは、差分の外の問題を拾えないのですか？</h3>
+<p><strong>A.</strong> コードを対象にした研究では、入力を差分に絞ると全体の検出が落ちること<sup><a href="#user-content-fn-lu" id="user-content-fnref-lu-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>や、エージェント型以外の手法では指摘に要る文脈が広がるほど検出が落ちる傾向<sup><a href="#user-content-fn-aacr" id="user-content-fnref-aacr-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>が、著者のまとめとして報告されています。ただしこの変更では、別モデルが差分の外にある設計文書のカタログ未記載を1巡目で指摘していました（私のセッションの照合記録による）。それを範囲外として退けたのは、突き合わせた私の側でした。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li>別モデルの単発レビューに観点を分けたレビューを足すと、この変更では、同じ指摘も別の欠陥も出ました</li>
+<li>実在と判定した24件の指摘のうち、2つの軸が同じ欠陥を指していたのは3組（6件）で、どれも同じ巡に並べた2軸の間でした。その2軸の14件で見ると6件が重なっています</li>
+<li>書き上げた記事本文を査読する段階（Phase 4）で話数が取れない欠陥は、2巡目の agy と Standards 軸の出力には無く、Spec 軸だけが挙げました</li>
+<li>差分の外にある設計文書のカタログ未記載は、1巡目の agy が指摘していましたが、突き合わせた側が範囲外として退けました。3巡目の Standards 軸が拾い直し、同じ変更の中で直されています</li>
+<li>重なった3組はどれも、同じモデルで渡した資料だけが違う2軸の間でした。agy と2軸の差は、モデルの差とも資料の差とも言えません</li>
+<li>私の感想では、レビューを入れたかどうかより、そのレビュアーに何を読ませたかで、拾える欠陥の種類が決まって見えました。1つの変更での観察で、因果は言えません</li>
+</ul>
+<p>AI レビューを開発プロセスにどう組み込むか、観点の分け方や返ってきた指摘の扱い方について、<a href="/#contact">コンタクトフォーム</a> からご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-skill">
+<p><a href="https://github.com/mattpocock/skills/blob/5c89081d4bbeb3d039a42093653f90bb698d780e/skills/engineering/code-review/SKILL.md">code-review/SKILL.md</a> Matt Pocock、mattpocock/skills リポジトリ、2026年8月19日のコミット時点の版。Standards と Spec の定義、および並列サブエージェントでの実行は冒頭の説明、軸ごとに分けて報告する理由は「Why two axes」節。 <a href="#user-content-fnref-skill" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-skill-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-agydocs">
+<p><a href="https://antigravity.google/docs/cli/headless/">Headless mode - Antigravity CLI</a> Google Antigravity Docs、2026年10月21日閲覧。CLI のコマンド名が <code>agy</code> であることは、同ページのコード例で確認できる。 <a href="#user-content-fnref-agydocs" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-agyplugin">
+<p><a href="https://github.com/yuting0624/antigravity-for-claude-code/blob/45e90f1aea5f0785c5e01f953854d06003650370/README.md">antigravity-for-claude-code README</a> yuting0624、第三者の OSS プラグイン、2026年8月21日のコミット時点の版。Claude Code から agy を呼ぶプラグインで、段（tier）の表では <code>pro</code> 段が Gemini 3.1 Pro (High)、“agy is multi-model.” と書かれ、段の既定は Gemini とされる。レビュー当日にインストールされていた版は確認できないため、当日のモデル名は断定できない。 <a href="#user-content-fnref-agyplugin" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-lu">
+<p><a href="https://arxiv.org/html/2505.17928v2">Towards Practical Defect-Focused Automated Code Review</a> Junyi Lu ほか6名、ICML 2025（PMLR 267）、arXiv 2505.17928 v2。対象は産業用の C++ コード。差分・親関数のみの入力と文脈の切り出し方の比較、長い文脈での低下に関する著者の推測、切り出し方ごとの固有の成功事例は、いずれも 5.2 節（RQ2. Effectiveness of Code Slicing）。 <a href="#user-content-fnref-lu" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-lu-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-aacr">
+<p><a href="https://arxiv.org/html/2601.19494">AACR-Bench: Evaluating Automatic Code Review with Holistic Repository-Level Context</a> Lei Zhang ほか13名、arXiv 2601.19494（v3）、査読前。全体の評価指標は Precision・Recall・F1 の3つで、文脈段ごとの比較は再現率のみ。エージェント型の再現率 10.10%（Claude-4.5-Sonnet）は Metrics の表と「Comparison between Agent-based and traditional approaches」の段、文脈段ごとの傾向と外部の依存への言及は「The impacts derived from contextual levels」の段。 <a href="#user-content-fnref-aacr" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-aacr-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-swr">
+<p><a href="https://arxiv.org/html/2509.01494">SWR-Bench: Assessing LLM Performance in Real-World Code Review Comment Generation</a> Zhengran Zeng ほか、FSE 2026（PACMSE、DOI 10.1145/3808144）。リンクは arXiv HTML 版。機能的な欠陥と非機能的な問題の検出のしやすさの違いは 1 Introduction。 <a href="#user-content-fnref-swr" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 
