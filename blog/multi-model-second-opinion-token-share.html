@@ -1,0 +1,375 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>別系統のモデルに第二意見を任せる ── 完走したモデルと返らなかったモデル、そしてサブエージェントはトークンの9%だった | Meetsource</title><meta name="description" content="Claude Code のサブエージェントや検証処理を Gemini や Kimi などの別系統モデルに委譲する際、多ファイル横断での完走可否や maxTokens 設定、数値丸めのリスクを実測検証。セッション全体のトークン内訳を測るとサブエージェントは全体の9%（メイン会話が91%）に過ぎず、分散の効果を見極める前にまず内訳を測るべき理由を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/multi-model-second-opinion-token-share"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="別系統のモデルに第二意見を任せる ── 完走したモデルと返らなかったモデル、そしてサブエージェントはトークンの9%だった | Meetsource"><meta property="og:description" content="Claude Code のサブエージェントや検証処理を Gemini や Kimi などの別系統モデルに委譲する際、多ファイル横断での完走可否や maxTokens 設定、数値丸めのリスクを実測検証。セッション全体のトークン内訳を測るとサブエージェントは全体の9%（メイン会話が91%）に過ぎず、分散の効果を見極める前にまず内訳を測るべき理由を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/multi-model-second-opinion-token-share"><meta property="og:image" content="https://www.meetsource.work/blog/multi-model-second-opinion-token-share-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-28T05:02:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="別系統のモデルに第二意見を任せる ── 完走したモデルと返らなかったモデル、そしてサブエージェントはトークンの9%だった | Meetsource"><meta name="twitter:description" content="Claude Code のサブエージェントや検証処理を Gemini や Kimi などの別系統モデルに委譲する際、多ファイル横断での完走可否や maxTokens 設定、数値丸めのリスクを実測検証。セッション全体のトークン内訳を測るとサブエージェントは全体の9%（メイン会話が91%）に過ぎず、分散の効果を見極める前にまず内訳を測るべき理由を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/multi-model-second-opinion-token-share-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"別系統のモデルに第二意見を任せる ── 完走したモデルと返らなかったモデル、そしてサブエージェントはトークンの9%だった","description":"Claude Code のサブエージェントや検証処理を Gemini や Kimi などの別系統モデルに委譲する際、多ファイル横断での完走可否や maxTokens 設定、数値丸めのリスクを実測検証。セッション全体のトークン内訳を測るとサブエージェントは全体の9%（メイン会話が91%）に過ぎず、分散の効果を見極める前にまず内訳を測るべき理由を解説します。","datePublished":"2026-10-28T05:02:00.000Z","image":"https://www.meetsource.work/blog/multi-model-second-opinion-token-share-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/multi-model-second-opinion-token-share"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"サブエージェントを安価なオープンモデルや外部APIに置き換えれば、開発全体のコストは大幅に下がりますか？","acceptedAnswer":{"@type":"Answer","text":"結論として、対話型のコーディング開発においては、推測ほど大幅な削減効果は得られません。 自社パイプラインの全 139 セッション（7.3 億トークン）の実測では、消費トークンの約 91% をメイン会話が占めており、サブエージェントの消費は全体の約 9% に過ぎませんでした。仮にサブエージェントをすべて無料のモデルに置き換えても、削減できるのは理論上最大で 9% です。 さらにメイン会話は 96% 以上のプロンプトキャッシュ読出（90〜95% 割引）が効いているため、外部委譲に伴うコンテキスト再送信のコストも考慮する必要があります。"}},{"@type":"Question","name":"別系統のLLMをコードレビューや検証の第二意見として安全に組み込むための必須条件は何ですか？","acceptedAnswer":{"@type":"Answer","text":"結論として、「タスク規模に見合ったモデルの選定」と「親エージェントまたは人間による事実照合ゲートの設置」の 2 点が必須条件です。 実機検証の結果、Gemini 3.8 Flash High のように多ファイル横断の長文検証（約 100KB）を完走できるモデルがある一方で、Kimi-K2.6 のように多ファイル検証では途中でターンを終了してしまうモデルも存在します。 また、短文生成であっても数値幅の端折りや架空体験談の創作が発生するため、委譲先モデルの出力を無条件に信用せず、元資料との照合ルールを必ず挟む必要があります。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-28T05:02:00.000Z" data-astro-cid-7jjqptxk> 2026.10.28 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#llm</span><span class="tag" data-astro-cid-7jjqptxk>#ai-cost-optimization</span><span class="tag" data-astro-cid-7jjqptxk>#コードレビュー</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>別系統のモデルに第二意見を任せる ── 完走したモデルと返らなかったモデル、そしてサブエージェントはトークンの9%だった</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/multi-model-second-opinion-token-share-hero.webp" alt="別系統のモデルに第二意見を任せる ── 完走したモデルと返らなかったモデル、そしてサブエージェントはトークンの9%だった" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>Claude Code などの対話型コーディングエージェントを日々の開発業務に導入すると、セッションの長期化や反復的なタスク実行に伴って消費トークンが急増し、API コストの増大という現実的な壁に直面します。この課題に対して、「重い検証処理やサブエージェントを安価な外部モデルへオフロードしてコストを抑えたい」「Claude 単体では見落としがちな盲点を、別系統のモデルに第二意見として突かせてレビュー品質を上げたい」と考えるのは自然な発想です。</p>
+<p><strong>異種LLMルーティング（Heterogeneous LLM Routing）</strong> とは、タスクの規模や難度に応じて異なる系統の AI モデルへ処理を振り分け、コスト削減と多角的な視点を両立するアーキテクチャパターンです <sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。しかし、事前の実測や挙動の検証を行わずに推測だけでモデルルーティングを組むと、「委譲した外部モデルが途中で止まって結果が返らない」「指示した数値を勝手に丸めたり、存在しない体験談を創作したりする」といった破綻に見舞われます。本検証でも、その両方が実際に起きました。</p>
+<p>さらに重要なのは、モデルを切り替える前に「そもそもサブエージェントや検証処理が、セッション全体のトークン消費のうち何割を占めているのか」という構造を把握しているかどうかです。実際にセッション全体のトークン内訳を測ってみると、サブエージェントが占めていたのは全体のわずか 9% に過ぎず、強力なプロンプトキャッシュ（読出率 96% 超）の恩恵も加味すると、安易な外部オフロードによるコスト削減は極めて限定的であることがわかりました。</p>
+<p>つまり、異種モデルへの委譲が真に価値を発揮するのは、コスト削減目的ではなく「Claude 単体では拾えない死角を突く第二意見（品質向上）」です。</p>
+<p>本記事では、自社のブログ執筆・検証パイプラインにおける実機検証ログ（Gemini 3.8 Flash High と Kimi-K2.6 の挙動比較）と、リポジトリ全セッション 7.3 億トークンの実測内訳から、別モデル委譲における「完走と破綻の境界線」および「第二意見を安全に得るためのアーキテクチャ設計」を解明します。</p>
+<h2 id="検証環境と調査スコープ">検証環境と調査スコープ</h2>
+<p>本調査では、複数のエージェントを並列実行して観点別にコードレビューを自動化する実践事例 <sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup> を背景としつつ、実際に運用している業務自動化パイプラインにおいて異種モデルを連携させた際の実機ログを分析対象としました。</p>
+<p>検証環境の仕様および調査スコープは以下の通りです。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>項目</th><th>検証環境のスペック・条件</th></tr></thead><tbody><tr><td>対象システム</td><td>自社ブログ執筆・検証パイプライン（検証工程 <code>blog-verify</code>）</td></tr><tr><td>実行環境</td><td>macOS Sequoia (Darwin arm64)</td></tr><tr><td>ランタイム</td><td>Node.js v24.15.0</td></tr><tr><td>計測実施時期</td><td>2026年10月19日（追加検算: 2026年10月28日）</td></tr><tr><td>メインエージェント</td><td>Claude Code（Anthropic <code>claude-opus-5</code>, <code>claude-opus-5-5</code>, <code>claude-sonnet-5-5</code>）</td></tr><tr><td>第二意見レビュアー A</td><td>agy CLI v1.4.8（Google <code>gemini-3.8-flash-high</code>）※親プロセスから呼び出す外部 CLI ラッパー</td></tr><tr><td>第二意見レビュアー B</td><td>pi CLI（Moonshot AI <code>Kimi-K2.6 / sakura-ai</code>、CLI拡張スクリプト <code>sakura.ts</code>）※親プロセスから呼び出す外部 CLI ラッパー</td></tr><tr><td>トークン集計環境</td><td>Node.js 製集計スクリプト（<code>scripts/token-usage.mjs</code>）</td></tr></tbody></table>
+<p>調査の対象として、以下の 4 つのタスク規模におけるモデルの挙動とトークン消費を追跡しました。</p>
+<ol>
+<li><strong>検証規模タスク</strong>: 詳細設計書（約 100KB）と複数の関連ドキュメント・ログファイルを横断照合し、事実関係の矛盾や規則違反を洗い出す長文レビュータスク</li>
+<li><strong>単一ファイルレビュータスク</strong>: 単一の設計書ファイルのみを対象とし、1 文の簡潔なプロンプトで記述の粗さを指摘させる軽量タスク</li>
+<li><strong>短文生成タスク</strong>: 記事の SNS 共有用文案（280 重み以内）の作成タスク（「記事に無い事実や数値を足さない」制約付き）</li>
+<li><strong>全セッショントークン集計</strong>: リポジトリ内の全 139 トランスクリプト（メイン会話 41 件、サブエージェント 98 件）の消費比率およびキャッシュ読出率の計測</li>
+</ol>
+<h2 id="評価基準と前提となるアーキテクチャ概念">評価基準と前提となるアーキテクチャ概念</h2>
+<p>異種モデルへのタスク委譲やサブエージェントの経済性を評価するにあたっては、近年の LLM アーキテクチャが持つ 2 つの基礎的な仕様を理解しておく必要があります。</p>
+<h3 id="1-プロンプトキャッシュとコールドスタートの損益分岐点">1. プロンプトキャッシュとコールドスタートの損益分岐点</h3>
+<p>Anthropic の Prompt Caching 仕様では、512 トークン以上のプロンプトプレフィックス（ツール定義、システムプロンプト、会話履歴）が一致する場合、キャッシュからの読み出し（<code>cache_read_input_tokens</code>）は通常入力単価の 0.1×（90% 割引）となります。さらに Claude Opus 5.5 や Claude Sonnet 5.5 などの主力モデルでは 0.05×（95% 割引）という極めて強力な割引率が適用されます <sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>対話型の開発セッションでは、コンテキスト長が数万から十数万トークンに達しても、その 9 割以上がキャッシュから読み出されるため、1 ターンあたりの実質的な入力コストは大幅に低減されます。</p>
+<p>一方、Claude Code のサブエージェントは、親セッションのコンテキスト肥大化やツール汚染を防ぐ目的で、メイン会話とは完全に独立した専用のコンテキストウィンドウで起動されます <sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>この独立性は、メインセッションに蓄積されたプロンプトキャッシュの恩恵をリセットすることを意味します。外部モデルやサブエージェントへタスクを切り出す際、前提ドキュメントやルール定義を改めて送る必要があるため、コールドスタートとしてのキャッシュ書き込みコストが起動のたびに発生すると考えられます。別モデルへの切り出しは、見かけのモデル単価差に加えて「キャッシュ恩恵の喪失」というペナルティを背負う、というのが筆者の見立てです（このペナルティの大きさ自体は今回計測していません）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#9CA0B0;font-style:italic">&#x3C;!-- ファイル: subagent-definition.md --></span></span>
+<span class="line"><span style="color:#179299">---</span></span>
+<span class="line"><span style="color:#4C4F69">name: second-opinion-reviewer</span></span>
+<span class="line"><span style="color:#4C4F69">description: 設計書の技術的妥当性を独立した視点で検証するサブエージェント</span></span>
+<span class="line"><span style="color:#4C4F69">tools:</span></span>
+<span class="line"><span style="color:#179299">  -</span><span style="color:#4C4F69"> Read</span></span>
+<span class="line"><span style="color:#179299">  -</span><span style="color:#4C4F69"> Grep</span></span>
+<span class="line"><span style="color:#179299">---</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">あなたは独立した技術レビュアーです。</span></span>
+<span class="line"><span style="color:#4C4F69">メインセッションの会話履歴を前提とせず、渡されたファイル群の記述のみに基づいて</span></span>
+<span class="line"><span style="color:#4C4F69">事実関係の矛盾や設計上のリスクを客観的に指摘してください。</span></span>
+<span class="line"></span></code></pre>
+<p>上記は Claude Code におけるカスタムサブエージェント定義の最小構成例です。独立したプロンプトで起動することにより安全な作業空間が確保される反面、前提知識の再注入が必要となるアーキテクチャ上のトレードオフが存在します。</p>
+<h3 id="2-最大生成トークン枠maxtokensと思考thinkingの共有">2. 最大生成トークン枠（maxTokens）と思考（Thinking）の共有</h3>
+<p>近年の推論モデル（Extended Thinking 対応モデル）では、モデルが内部で行う推論・思考トークンと、最終的にユーザーへ返される可視出力トークンが、同一の最大生成トークン枠（<code>max_tokens</code>）を共有します <sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<p>推論モデルを CLI やカスタムハーネスから呼び出す際、ツール側の既定値（例えば 8,192 トークンなど）が小さく設定されていると、難度の高いタスクに対してモデルが深く思考しただけで上限枠を使い果たしてしまい、可視出力（本文テキスト）が完全に空のまま終了コード 1 で異常終了する現象が発生します。また、API の停止理由パラメータが最大トークン超過なのか、モデル自身が自律的にターンを終了したのか（自然終了等）を正しく区別してハンドリングしなければ、原因究明が困難になります <sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<h2 id="各モデルの個別挙動と特徴">各モデルの個別挙動と特徴</h2>
+<p>同一の検証タスクおよび短文生成タスクを投入した際、agy（Gemini 3.8 Flash High）と pi（Kimi-K2.6）が示した対照的な挙動を実測ログに基づいて見ていきます。</p>
+<h3 id="agygemini-38-flash-highの挙動-262秒で完走し4件中3件が妥当">agy（Gemini 3.8 Flash High）の挙動: 262秒で完走し4件中3件が妥当</h3>
+<p>自社パイプラインの検証タスクにおいて、約 100KB の設計書および複数ファイルを agy CLI 経由で Gemini 3.8 Flash High に投入しました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># agy による並列検証実行コマンド</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">agy</span><span style="color:#40A02B"> --model</span><span style="color:#40A02B"> gemini-3.8-flash-high</span><span style="color:#40A02B"> --output-format</span><span style="color:#40A02B"> json</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  --add-dir</span><span style="color:#40A02B"> .company/cache</span><span style="color:#40A02B"> --add-dir</span><span style="color:#40A02B"> specs/blog-posts/issue-example</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  -p</span><span style="color:#40A02B"> "Read specs/blog-posts/issue-example/verify-prompt.md and follow the instructions in it exactly. Reply in Japanese."</span></span>
+<span class="line"></span></code></pre>
+<p>Gemini 3.8 Flash High は、多ファイル横断の長大な指示に対しても自律的な読み込みループを維持し、261.73 秒（約 262 秒）で最後まで完走して正常終了（exit=0）しました <sup><a href="#user-content-fn-hands-on-1" id="user-content-fnref-hands-on-1" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>SUCCESS 261.734784 {'input_tokens': 113168, 'output_tokens': 27273, 'thinking_tokens': 22424, 'cache_read_tokens': 1625510, 'total_tokens': 140441}</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>上は agy の JSON 出力から所要秒数と <code>usage</code> を抜き出して表示した実行ログです。<code>total_tokens</code>（140,441）は <code>input_tokens</code> と <code>output_tokens</code> の和で、キャッシュからの読み出し（<code>cache_read_tokens</code>）は含みません。</p>
+<p>出力された指摘 4 件の内容を一次資料と突き合わせて検証した結果、4 件中 3 件が妥当な指摘でした。同じ設計書を Claude だけで検証した工程は指摘 0 件で通しており、そこで見落とされていた欠陥を agy が拾った形です。</p>
+<ol>
+<li><strong>逐語記録と矛盾する数値主張の検出（重要度: 高）</strong>: 設計書が「希望・依頼形は base 条件で 0 件」と誇張して書いていたのに対し、逐語記録上は A 題材で平均 2.0 回、C 題材で平均 7.3 回出現していた事実を引き当てて数値の誤りを指摘。</li>
+<li><strong>規則数の取り違え検出（重要度: 中）</strong>: 条件 C の規則数が「2」ではなく「3」である整合性違反を検出。</li>
+<li><strong>脚注 URL の指定不備検出（重要度: 中）</strong>: 論文の本文キャッシュには数値が存在するものの、引用 URL が概要ページ（abs）のままになっていた不備を指摘。</li>
+</ol>
+<p>残る 1 件は、脚注の採番順に関する社内ルールの適用対象を取り違えた誤検出でした。それでも長文コンテキストに耐えて検証を完走できたため、社内の検証パイプラインに並列レビュアーとして組み込みました。</p>
+<h3 id="pikimi-k26の検証規模タスク-4回中4回ともターン未完完走率-04">pi（Kimi-K2.6）の検証規模タスク: 4回中4回ともターン未完（完走率 0/4）</h3>
+<p>同じ検証規模タスク（約 100KB）を、pi CLI を介して Kimi-K2.6（sakura-ai）に実行させました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># pi による検証規模タスクの試行の形（実際の指示は約 25KB のプロンプトで渡した）</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">timeout</span><span style="color:#FE640B"> 900</span><span style="color:#40A02B"> pi</span><span style="color:#40A02B"> --mode</span><span style="color:#40A02B"> json</span><span style="color:#40A02B"> --tools</span><span style="color:#40A02B"> read</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  -p</span><span style="color:#40A02B"> "specs/blog-posts/issue-example/design.md を検証して"</span></span>
+<span class="line"></span></code></pre>
+<p>結果は、4 回の試行すべてにおいて検証結果を出力することなく途中でターンを閉じてしまい、完走率は 0/4（0%）に終わりました <sup><a href="#user-content-fn-hands-on-2" id="user-content-fnref-hands-on-2" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。</p>
+<p>試行ごとに条件と終わり方は異なります。テキストモードの 1 回目は結論を出さずに終了し、JSON モードの 2 回目は 500 秒以上無出力のまま止まったため強制終了しました。タイムアウトを 900 秒に延ばした 3 回目は、思考ブロックに「次は○○を確認します」と書いたまま、本文（text）が空の状態で <code>stopReason=stop</code> を返して終了しました。ファイルパスを個別に渡した 4 回目も、関連ファイルを読み込む途中でターンを終えています。なお、単一の <code>package.json</code> を読ませるだけの軽量タスクでは 3.7 秒で正常終了してツール呼び出しも機能したため、ツール連携機能自体の不具合ではなく、多ファイル横断・長文プロンプトの規模に対する自律ループ維持の限界と考えられます。</p>
+<h3 id="pikimi-k26の-maxtokens-設定と単一ファイルでの完走">pi（Kimi-K2.6）の maxTokens 設定と単一ファイルでの完走</h3>
+<p>検証規模タスクから切り離し、単一ファイル（設計書 1 ファイルのみ）に対する 1 文の簡潔なレビュー依頼を pi（Kimi-K2.6）に投入しました。</p>
+<p>ところが、初期設定のままでは 2 回連続で本文が空のまま異常終了（exit 1）しました <sup><a href="#user-content-fn-hands-on-3" id="user-content-fnref-hands-on-3" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。</p>
+<p>原因を調査した結果、CLI 拡張スクリプト（<code>sakura.ts</code>）内の設定で <code>maxTokens: 8192</code> とハードコードされていたことが判明しました。推論モデルである Kimi-K2.6 が思考プロセスでトークンを消費し、上限の 8,192 トークンに達したことで本文を生成できず切断されていたのです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#9CA0B0;font-style:italic">// sakura.ts L17 の設定変更差分</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#4C4F69"> maxTokens</span><span style="color:#7C7F93">:</span><span style="color:#FE640B"> 8192</span></span>
+<span class="line"><span style="color:#179299">+</span><span style="color:#4C4F69"> maxTokens</span><span style="color:#7C7F93">:</span><span style="color:#FE640B"> 32768</span></span>
+<span class="line"></span></code></pre>
+<p><code>maxTokens</code> を 32,768 へ引き上げたうえで再実行したところ、約 128 秒で完走し、単一ファイル内の表現の不一致（「半減した」の表現の揺れや実験本数の内訳の齟齬など）に関する 5 件の指摘を出力できました。</p>
+<p>モデルを切り替える際は、モデル自体の性能だけでなく、呼び出し側のハーネスや CLI 拡張の既定値（maxTokens など）がタスク規模に見合っているかを点検する必要があります。</p>
+<h3 id="pikimi-k26の短文生成における数値丸めと体験談創作">pi（Kimi-K2.6）の短文生成における数値丸めと体験談創作</h3>
+<p>続いて、SNS 共有用の短文作成（280 重み以内）を「記事に無い事実や数値を足さないこと」という強い制約を設けて pi（Kimi-K2.6）に依頼しました <sup><a href="#user-content-fn-hands-on-4" id="user-content-fnref-hands-on-4" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup>。</p>
+<p>テキストモードでは 38.9 秒で 3 案が出力されました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>エージェントに複数確認を一括で投げさせていたら、選択肢番号がぶつかってユーザーが「1問目は1です」と補正入力するハメになっていた。3回中2回も発生して、打鍵コストは15倍に膨れ上がる。自分のエージェントの問いかけ方、見直したほうがいいかもしれない。</span></span>
+<span class="line"><span>---</span></span>
+<span class="line"><span>AIエージェントの確認ダイアログで、画面をロックして待たされるのが地味にストレスだった。さらに番号が重複して「1問目はA、2問目は2」みたいに補正入力させられると、本来2打鍵で済むものが30〜40打鍵に膨れる。自分の対話設計、こっそり確認したくなる話。</span></span>
+<span class="line"><span>---</span></span>
+<span class="line"><span>エージェントに一括で3つ確認を任せていたら、選択肢の番号が全部「1,2,3」で被っていて、回答が通じない事故が3回中2回も起きていた。モーダル画面で待たされる上に、打鍵コストが20倍に膨れ上がる。自分のプロンプト設計、実はこんな落とし穴が潜んでいるかも。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>出力された文案を元記事ドキュメントと突き合わせると、以下のような事実の変形が確認されました。</p>
+<ul>
+<li><strong>案1</strong>: 「打鍵コストは15倍に膨れ上がる」と記述。元記事本文は「打鍵コストは約 15〜20 倍」であり、数値幅の下限のみを抜き出して断定表現に丸めています。</li>
+<li><strong>案2</strong>: 「画面をロックして待たされるのが地味にストレスだった」と記述。元記事本文にはそのような一人称の感情・体験談の記述はなく、架空の体験談を創作しています（ハルシネーション）。</li>
+<li><strong>案3</strong>: 「打鍵コストが20倍」と記述。元記事本文の数値幅の上限のみを抜き出して断定表現に丸めています。</li>
+</ul>
+<p>「事実を足さない」とプロンプトで厳格に命じても、モデルが要約の過程で数値幅を勝手に単一の数値へ丸めたり、文脈を補うために架空の体験談を創作したりするリスクを完全に防ぐことはできません。安価なモデルに短文生成を任せる場合でも、人間または親エージェントによる事実照合ゲートが不可欠です。</p>
+<h2 id="共通点と相違点の比較">共通点と相違点の比較</h2>
+<p>外部モデルへのタスク委譲においては、モデル単体のカタログスペック以上に「タスクの入力規模（コンテキスト長とファイル数）」および「思考トークン枠の割り当て」が完走可否を分ける決定的な境界となります。</p>
+<p>各モデルおよびタスク規模ごとの挙動の差異を以下のマトリクス表に整理しました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>モデル・実行環境</th><th>タスク規模</th><th>入力・コンテキスト長</th><th>参照ファイル数</th><th>完走可否</th><th>検出力・出力品質</th><th>主なリスク・課題</th><th>実測所要時間</th></tr></thead><tbody><tr><td>Claude Code（メイン会話）</td><td>検証規模</td><td>長文（約 100KB）</td><td>複数ファイル横断</td><td>完走可</td><td>基準（単体では数値誇張等の見落としあり）</td><td>セッション長期化時のコスト増大</td><td>-</td></tr><tr><td>agy（Gemini 3.8 Flash High）</td><td>検証規模</td><td>長文（約 100KB）</td><td>複数ファイル横断</td><td><strong>完走可</strong>（1/1）</td><td>高い（数値誇張・規則数の誤りを検出）</td><td>親プロセスでの結果集約が必要</td><td>約 262 秒</td></tr><tr><td>pi（Kimi-K2.6）検証規模</td><td>検証規模</td><td>長文（約 100KB）</td><td>複数ファイル横断</td><td><strong>未完</strong>（0/4）</td><td>判定不能（結論出力前に停止）</td><td>長文でのターン途中終了（stopReason=stop）</td><td>タイムアウト（900秒等）</td></tr><tr><td>pi（Kimi-K2.6）単一ファイル</td><td>小規模</td><td>短文（1文指示）</td><td>単一ファイル</td><td><strong>完走可</strong>（32k時）</td><td>限定的（単一ファイル内の表現点検）</td><td>maxTokens 不足による空出力（8k時）</td><td>1〜2分強（約128秒）</td></tr><tr><td>pi（Kimi-K2.6）短文生成</td><td>極小</td><td>短文指示</td><td>なし（元記事渡し）</td><td><strong>完走可</strong></td><td>要検収（事実変形あり）</td><td>数値の丸め・架空体験談の創作</td><td>38.9 秒</td></tr></tbody></table>
+<p>以上の比較から明らかなように、多ファイル横断の重厚な検証タスクに耐えられるのは長文追従性と安定した自律ループを持つモデル（Gemini 3.8 Flash High 等）に限られます。外部モデルへの委譲は、コスト削減目的ではなく、Claude 単体では見落とす盲点を突く「第二意見としての品質向上」を狙う場合にこそ真価を発揮します。しかし、多ファイルでの停止や数値丸めのリスクを抱えたままでは、第二意見を安定して得ることはできません。これらを防ぎ、品質向上の果実を安全に手に入れるための推奨実装が以下の設計です。</p>
+<h2 id="ベストプラクティスと推奨実装">ベストプラクティスと推奨実装</h2>
+<p>実機検証から導き出された、異種モデルを自社エージェント運用に安全に組み込むための「安全境界ルール」は以下の 3 点です。</p>
+<h3 id="1-タスク規模に応じたモデルルーティング">1. タスク規模に応じたモデルルーティング</h3>
+<ul>
+<li><strong>多ファイル横断・長文指示の検証タスク</strong>: 長文耐性と自律ループの完走実績があるモデル（Gemini 3.8 Flash High 等）のみを起用し、完走が確認できないモデルへの丸投げは避ける。</li>
+<li><strong>単一ファイルレビュー・短文生成</strong>: 入力コンテキストを 1〜2 ファイル以内に限定して渡す。単発タスクにおける複数エージェント間の調整コスト増大を避けるためにも、対象スコープを明確に閉じることが重要です <sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">14</a></sup>。</li>
+</ul>
+<h3 id="2-ハーネス側の-maxtokens-と思考枠の事前確認">2. ハーネス側の maxTokens と思考枠の事前確認</h3>
+<p>推論モデルを CLI やスクリプトから呼び出す際は、<code>maxTokens</code> が思考トークンと可視出力トークンの合算枠であることを前提に、最低でも 16,384〜32,768 トークンを確保する設定にします。</p>
+<h3 id="3-サンドイッチ型検証親エージェントによる事実照合ゲート">3. サンドイッチ型検証（親エージェントによる事実照合ゲート）</h3>
+<p>本記事では、親エージェントがコンテキストを絞り込んで外部モデルへ渡し、その出力を親エージェントや検証スクリプトが機械照合する防壁パターンを「<strong>サンドイッチ型検証</strong>」と呼びます。</p>
+<p>安価なモデルに出力させたテキストや指摘は、そのまま公開やコミットに進めず、元資料との差分を突き合わせる事実照合ゲートを通します。「事実を足さない」「数値を丸めない」という指示はモデル側で破綻しやすいため、機械的な照合ルールを挟むことが安全運用の鍵となります。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="javascript"><code><span class="line"><span style="color:#9CA0B0;font-style:italic">// ファイル: verify-wrapper.mjs</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">// 親プロセスから外部モデルを呼び出し、出力を機械検証するラッパーの最小サンプル</span></span>
+<span class="line"><span style="color:#8839EF">import</span><span style="color:#7C7F93"> {</span><span style="color:#4C4F69"> execSync </span><span style="color:#7C7F93">}</span><span style="color:#8839EF"> from</span><span style="color:#40A02B"> 'node:child_process'</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> fs </span><span style="color:#8839EF">from</span><span style="color:#40A02B"> 'node:fs'</span><span style="color:#7C7F93">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">export</span><span style="color:#8839EF"> function</span><span style="color:#1E66F5;font-style:italic"> runSecondOpinion</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">inputFile</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> prompt</span><span style="color:#7C7F93">)</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  // 1. コンテキストを単一ファイルに絞り込んで呼び出す</span></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> cmd </span><span style="color:#179299">=</span><span style="color:#40A02B"> `timeout 300 pi --mode json --tools read -p "</span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">prompt</span><span style="color:#7C7F93">}</span><span style="color:#7C7F93"> ${</span><span style="color:#4C4F69">inputFile</span><span style="color:#7C7F93">}</span><span style="color:#40A02B">"`</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">  let</span><span style="color:#4C4F69"> rawOutput </span><span style="color:#179299">=</span><span style="color:#40A02B"> ''</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">  try</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#4C4F69">    rawOutput </span><span style="color:#179299">=</span><span style="color:#1E66F5;font-style:italic"> execSync</span><span style="color:#4C4F69">(cmd</span><span style="color:#7C7F93">,</span><span style="color:#7C7F93"> {</span><span style="color:#4C4F69"> encoding</span><span style="color:#179299">:</span><span style="color:#40A02B"> 'utf8'</span><span style="color:#7C7F93"> }</span><span style="color:#4C4F69">)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">  }</span><span style="color:#8839EF"> catch</span><span style="color:#4C4F69"> (err) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#7C7F93"> {</span><span style="color:#4C4F69"> status</span><span style="color:#179299">:</span><span style="color:#40A02B"> 'FAILED'</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> reason</span><span style="color:#179299">:</span><span style="color:#40A02B"> 'Execution timeout or process error'</span><span style="color:#7C7F93"> };</span></span>
+<span class="line"><span style="color:#7C7F93">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  // 2. 空出力およびターン未完の判定</span></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#4C4F69"> (</span><span style="color:#179299">!</span><span style="color:#4C4F69">rawOutput </span><span style="color:#179299">||</span><span style="color:#4C4F69"> rawOutput</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">trim</span><span style="color:#4C4F69">() </span><span style="color:#179299">===</span><span style="color:#40A02B"> ''</span><span style="color:#4C4F69">) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#7C7F93"> {</span><span style="color:#4C4F69"> status</span><span style="color:#179299">:</span><span style="color:#40A02B"> 'FAILED'</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> reason</span><span style="color:#179299">:</span><span style="color:#40A02B"> 'Empty output (maxTokens exhaustion suspected)'</span><span style="color:#7C7F93"> };</span></span>
+<span class="line"><span style="color:#7C7F93">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> result </span><span style="color:#179299">=</span><span style="color:#FE640B"> JSON</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">parse</span><span style="color:#4C4F69">(rawOutput)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#4C4F69"> (</span><span style="color:#179299">!</span><span style="color:#4C4F69">result</span><span style="color:#179299">.</span><span style="color:#4C4F69">text </span><span style="color:#179299">||</span><span style="color:#4C4F69"> result</span><span style="color:#179299">.</span><span style="color:#4C4F69">text</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">trim</span><span style="color:#4C4F69">() </span><span style="color:#179299">===</span><span style="color:#40A02B"> ''</span><span style="color:#4C4F69">) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#7C7F93"> {</span><span style="color:#4C4F69"> status</span><span style="color:#179299">:</span><span style="color:#40A02B"> 'INCOMPLETE'</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> reason</span><span style="color:#179299">:</span><span style="color:#40A02B"> 'Turn ended without conclusion text'</span><span style="color:#7C7F93"> };</span></span>
+<span class="line"><span style="color:#7C7F93">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  // 3. 事実照合ゲート（元資料との数値・表現突き合わせの最小スケルトン）</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  // ※本コードは単語境界による数値存在チェックを行う最小例です。</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  // 実務では「約15〜20倍」から「15倍」への丸めや文脈改変を防ぐため、</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  // 構文解析（AST/正規表現）やセマンティック差分照合を組み合わせて検知します。</span></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> originalText </span><span style="color:#179299">=</span><span style="color:#4C4F69"> fs</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">readFileSync</span><span style="color:#4C4F69">(inputFile</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> 'utf8'</span><span style="color:#4C4F69">)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> numbersInOutput </span><span style="color:#179299">=</span><span style="color:#4C4F69"> result</span><span style="color:#179299">.</span><span style="color:#4C4F69">text</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">match</span><span style="color:#4C4F69">(</span><span style="color:#EA76CB">/</span><span style="color:#8839EF">\b</span><span style="color:#EA76CB">\d</span><span style="color:#179299">+</span><span style="color:#40A02B">(</span><span style="color:#1E66F5">?:</span><span style="color:#EA76CB">\.\d</span><span style="color:#179299">+</span><span style="color:#40A02B">)</span><span style="color:#179299">?</span><span style="color:#8839EF">\b</span><span style="color:#EA76CB">/</span><span style="color:#8839EF">g</span><span style="color:#4C4F69">) </span><span style="color:#179299">||</span><span style="color:#4C4F69"> []</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> suspiciousNumbers </span><span style="color:#179299">=</span><span style="color:#4C4F69"> numbersInOutput</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">filter</span><span style="color:#4C4F69">(</span></span>
+<span class="line"><span style="color:#7C7F93">    (</span><span style="color:#E64553;font-style:italic">n</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> =></span><span style="color:#179299"> !</span><span style="color:#8839EF;font-weight:bold">new</span><span style="color:#1E66F5;font-style:italic"> RegExp</span><span style="color:#4C4F69">(</span><span style="color:#40A02B">`(?:^|[^0-9.])</span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">n</span><span style="color:#7C7F93">}</span><span style="color:#40A02B">(?:[^0-9.]|$)`</span><span style="color:#4C4F69">)</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">test</span><span style="color:#4C4F69">(originalText)</span></span>
+<span class="line"><span style="color:#4C4F69">  )</span><span style="color:#7C7F93">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">  return</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#4C4F69">    status</span><span style="color:#179299">:</span><span style="color:#40A02B"> 'SUCCESS'</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">    data</span><span style="color:#179299">:</span><span style="color:#4C4F69"> result</span><span style="color:#179299">.</span><span style="color:#4C4F69">text</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">    suspiciousNumbers</span><span style="color:#7C7F93">,</span><span style="color:#9CA0B0;font-style:italic"> // 元資料に存在しない数値があればフラグを立てる</span></span>
+<span class="line"><span style="color:#7C7F93">  };</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span></code></pre>
+<p>上記のように、親プロセス側でタイムアウト制御、空出力チェック、および元ドキュメントとの単語境界・数値突き合わせを行うことで、外部モデルの不完全終了やハルシネーションが下流工程へ流出するのを防ぐことができます（本サンプルは最小実装であり、実際のパイプラインでは数値幅の単一化や架空体験談の検知に向けたルールベースの機械照合スクリプトを多層に配置しています）。</p>
+<h2 id="実機ベンチマークと検証ログ">実機ベンチマークと検証ログ</h2>
+<p>ここまでの検証で、モデルごとの完走境界や安全対策が明らかになりました。では、なぜここまで防壁を設けて外部モデルの完走性や安全枠を管理する必要があるのでしょうか。「サブエージェントを安価なモデルに移せば大幅なコスト削減になるはずだ」という当初の目論見と、実際のトークン消費構造はどう乖離していたのでしょうか。</p>
+<h3 id="全139セッションのトークン内訳実測">全139セッションのトークン内訳実測</h3>
+<p>2026年10月19日時点における、リポジトリ内の全セッショントランスクリプト（メイン会話 41 件、サブエージェント 98 件、計 139 件）からトークン消費量を実測しました <sup><a href="#user-content-fn-hands-on-5" id="user-content-fnref-hands-on-5" data-footnote-ref="" aria-describedby="footnote-label">15</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># トークン内訳の集計コマンド</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">node</span><span style="color:#40A02B"> scripts/token-usage.mjs</span><span style="color:#40A02B"> --all</span></span>
+<span class="line"></span></code></pre>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>--- トークン消費実測 ---</span></span>
+<span class="line"><span>対象トランスクリプト: メイン 41 件 / サブエージェント 98 件</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>■ 合計</span></span>
+<span class="line"><span>  総トークン: 731,505,813</span></span>
+<span class="line"><span>  メイン: 664,384,012 (3004 req) / サブエージェント: 67,121,801 (793 req)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>■ モデル別</span></span>
+<span class="line"><span>  claude-opus-5</span></span>
+<span class="line"><span>    合計 137,102,611 = 入力 1,312 + 出力 561,817 + キャッシュ書込 4,569,574 + キャッシュ読出 131,969,908  (656 req)</span></span>
+<span class="line"><span>  claude-opus-5-5</span></span>
+<span class="line"><span>    合計 543,027,124 = 入力 5,644 + 出力 1,902,671 + キャッシュ書込 16,824,687 + キャッシュ読出 524,294,122  (2745 req)</span></span>
+<span class="line"><span>  claude-sonnet-5-5</span></span>
+<span class="line"><span>    合計 51,376,078 = 入力 820 + 出力 272,539 + キャッシュ書込 2,152,217 + キャッシュ読出 48,950,502  (393 req)</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>集計の結果、全体のトークン消費の実に <strong>90.82%（約 91%）</strong> をメイン会話が占めており、サブエージェントが消費していたのは全体の <strong>9.18%（約 9%）</strong> に過ぎないことが判明しました。また、入力トークンの <strong>96.41%</strong> はプロンプトキャッシュから高速かつ安価に読み出されていました。</p>
+<p>なお、2026年10月28日時点の再集計においても、総トークン数は 878,291,903 トークンに増加したものの、メイン会話 90.5%、サブエージェント 9.5%、キャッシュ読出率 96.4% と、その構造比率は極めて安定していました。</p>
+<p>パイプラインの中で最もトークンを消費するレビュー工程（合計 154.2M トークン、全体の 21.1%）に着目しても、サブエージェントによる消費は 10.4M トークンであり、レビュー工程全体の 6.7% に留まります。</p>
+<h3 id="コスト削減効果の冷静な試算">コスト削減効果の冷静な試算</h3>
+<p>並列エージェントや外部レビューの導入によって処理時間やトークン消費が数倍に膨れ上がるという実務上の課題が報告されています <sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">16</a></sup>。</p>
+<p>今回の実測データから試算すると、「サブエージェントが行っている作業をすべてゼロコストの外部モデルに置き換えた」という極端な仮定を置いたとしても、リポジトリ全体で削減できるトークン消費量は理論上最大でも <strong>約 9%</strong>（レビュー工程に限れば約 7%）に過ぎません。</p>
+<p>さらに、メイン会話のトークンは 96% 以上がキャッシュから読み出されており、Anthropic の 90% 割引（Claude Opus 5.5 / Sonnet 5.5 では 95% 割引）の恩恵を最大級に受けています <sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。外部モデルへの安易な切り出しは、メイン会話の強力なキャッシュコンテキストを捨てて外部でコールドスタートを発生させるため、見かけの API 単価差ほどコストは下がらず、むしろ連携ハーネスの管理コストや完走失敗のリスクが増大する懸念があります（モデル単価差とキャッシュ読出率を考慮した精緻な試算が必要です）。</p>
+<p>別モデルへのタスク分散を検討する際は、向いている作業を推測で並べる前に、まず会話全体のトークン内訳（メインセッションとサブエージェントの比率）を計測すべきです。外部モデルへの委譲は、「コスト削減」を主目的にするのではなく、Claude 単体では拾えない死角を突く「第二意見（品質向上）」としてこそ投資価値があります。そしてその品質向上を安全に手に入れるための武器が、前節で示したサンドイッチ型の安全境界設計なのです。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q1-サブエージェントを安価なオープンモデルや外部apiに置き換えれば開発全体のコストは大幅に下がりますか">Q1: サブエージェントを安価なオープンモデルや外部APIに置き換えれば、開発全体のコストは大幅に下がりますか？</h3>
+<p><strong>結論として、対話型のコーディング開発においては、推測ほど大幅な削減効果は得られません。</strong></p>
+<p>自社パイプラインの全 139 セッション（7.3 億トークン）の実測では、消費トークンの約 91% をメイン会話が占めており、サブエージェントの消費は全体の約 9% に過ぎませんでした。仮にサブエージェントをすべて無料のモデルに置き換えても、削減できるのは理論上最大で 9% です。</p>
+<p>さらにメイン会話は 96% 以上のプロンプトキャッシュ読出（90〜95% 割引）が効いているため、外部委譲に伴うコンテキスト再送信のコストも考慮する必要があります。</p>
+<h3 id="q2-別系統のllmをコードレビューや検証の第二意見として安全に組み込むための必須条件は何ですか">Q2: 別系統のLLMをコードレビューや検証の第二意見として安全に組み込むための必須条件は何ですか？</h3>
+<p><strong>結論として、「タスク規模に見合ったモデルの選定」と「親エージェントまたは人間による事実照合ゲートの設置」の 2 点が必須条件です。</strong></p>
+<p>実機検証の結果、Gemini 3.8 Flash High のように多ファイル横断の長文検証（約 100KB）を完走できるモデルがある一方で、Kimi-K2.6 のように多ファイル検証では途中でターンを終了してしまうモデルも存在します。</p>
+<p>また、短文生成であっても数値幅の端折りや架空体験談の創作が発生するため、委譲先モデルの出力を無条件に信用せず、元資料との照合ルールを必ず挟む必要があります。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本調査を通じて得られた、異種モデル連携とトークン最適化に関する主要な命題は以下の 4 点です。</p>
+<ol>
+<li><strong>モデル分散の前にまず内訳を測る</strong>: サブエージェントや外部委譲の経済効果を推測する前に、セッション全体のトークン内訳を計測してください。メイン会話が 9 割以上を占める環境では、サブエージェントの置き換えによる削減効果は最大でも 1 割弱に留まります。</li>
+<li><strong>第二意見はタスク規模でモデルを選ぶ</strong>: 長文指示・多ファイル横断の重厚な検証には完走実績のあるモデル（Gemini 3.8 Flash High 等）を起用し、軽量モデルは 1〜2 ファイル・短文指示の閉じたタスクに限定してください。</li>
+<li><strong>推論モデルの maxTokens 枠を確認する</strong>: 思考機能を備えたモデルを呼び出す際は、思考トークンで出力枠が枯渇しないよう十分な maxTokens（16k〜32k 以上）を確保してください。</li>
+<li><strong>外部生成物には必ず事実照合ゲートを挟む</strong>: 「事実を足さない」指示を与えても数値丸めや体験談創作は発生するため、親エージェントや検証スクリプトによる機械的な検収を省略してはなりません。</li>
+</ol>
+<p>AI エージェント運用のトークンコスト最適化や、複数モデルを組み合わせた安全な検証・レビューパイプラインの設計支援について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://jangwook.net/ja/blog/ja/heterogeneous-llm-agent-fleet-cost-optimization/">Cut Agent Fleet Costs by 90% with Heterogeneous LLM Architecture</a> Jangwook、2026年3月9日。導入部およびコスト試算モデル。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://developer.nvidia.com/blog/route-ai-agent-workloads-across-models-with-nvidia-nemo-switchyard/">Route AI Agent Workloads Across Models with NVIDIA NeMo Switchyard</a> Michelle Horton（NVIDIA Technical Blog）、2026年8月11日。“System of Models” セクション。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://zenn.dev/shota_web305/articles/lazy-code-review-reviewer">ズボラ運用術コードレビュー編！Claude Codeに丸投げできるマルチエージェントレビューを作った</a> shota_web305、2026年2月22日。アーキテクチャ構成図。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://zenn.dev/mgdx_blog/articles/8f7994ad84151d">コードレビューにClaude Code subagentsを導入したら、レビューレベルが改善した話</a> mgdx_blog、2026年3月5日。導入効果セクション。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching">Prompt Caching (beta)</a> Anthropic Documentation、2024年（2026年参照）。Pricing, How prompt caching works。キャッシュ読出単価が基本入力の 0.1×（90%割引、Claude Opus 5.5 / Sonnet 5.5 では 0.05× / 95%割引）であること、最小対象トークン数が 512 トークンであること。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://docs.anthropic.com/en/docs/claude-code/sub-agents">Create custom subagents</a> Claude Code Documentation、2025年（2026年参照）。Overview, Configuration。サブエージェントがメイン会話と独立したコンテキストウィンドウで起動し、履歴を直接共有しないこと。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://zenn.dev/ino_h/articles/2025-09-10-claude-code-subagents-basics">Claude Code のサブエージェント機能の基本的な使い方</a> ino_h、2026年9月10日。サブエージェントの特徴セクション。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking">Extended Thinking</a> Anthropic Documentation、2025年（2026年参照）。Token considerations。<code>max_tokens</code> が思考トークンと可視出力の合計枠であり、<code>budget_tokens</code> は <code>max_tokens</code> 未満でなければならないこと。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://docs.anthropic.com/en/docs/api/messages#response-stop-reason">Messages API: Response Stop Reasons</a> Anthropic API Reference、2024年（2026年参照）。Response body: 停止理由ステータス。最大トークン到達や自然終了等のステータス定義。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-hands-on-1">
+<p>Meetsource 一次計測ログ、2026年10月19日。261.73 秒で完走、指摘4件中3件妥当（baseで0件の誇張検出、規則数3の検出、誤検出1件）。 <a href="#user-content-fnref-hands-on-1" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-hands-on-2">
+<p>Meetsource 一次計測ログ、2026年10月19日。長文・多ファイル検証で4回中4回とも stopReason=stop でターン未完。 <a href="#user-content-fnref-hands-on-2" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-hands-on-3">
+<p>Meetsource 一次計測ログ、2026年10月19日。sakura.ts の maxTokens: 8192 により本文空、32768 へ引き上げて単一ファイル完走。 <a href="#user-content-fnref-hands-on-3" data-footnote-backref="" aria-label="Back to reference 12" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-hands-on-4">
+<p>Meetsource 一次計測ログ、2026年10月19日。「約15〜20倍」→「15倍」「20倍」への丸め、架空感情体験談の創作。 <a href="#user-content-fnref-hands-on-4" data-footnote-backref="" aria-label="Back to reference 13" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://www.hexabase.com/column/multi-ai-agent-workflow-design-patterns-70-percent-reduction">70%削減の裏側。マルチAIエージェントを『遅く』せずに『速く』する設計パターン5選</a> 株式会社ヘキサベース、2026年。単発タスクとマルチエージェント。単発タスクにおける複数エージェント調整コストの増大と使い分けの必要性。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 14" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-hands-on-5">
+<p>Meetsource 一次計測ログ、2026年10月19日（2026年10月28日検算）。全139セッションでメイン 90.8%、サブ 9.2%、キャッシュ読出 96.4%（2026-10-28 再集計でもメイン 90.5%、サブ 9.5%、キャッシュ読出 96.4%）。 <a href="#user-content-fnref-hands-on-5" data-footnote-backref="" aria-label="Back to reference 15" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://zenn.dev/edash_tech_blog/articles/4577f7d4780bef">実務において敵対的レビューはどの程度有効なのか</a> e-dash Tech Blog、2026年10月1日。課題セクション: トークンコスト。複数モデル・並列エージェントによるレビューで時間とトークン消費が数倍に膨らむ実務課題。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 16" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

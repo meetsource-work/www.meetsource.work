@@ -1,0 +1,130 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>「日付が過去＝公開済み」が成立しないサイトで、公開判定をどう作るか | Meetsource</title><meta name="description" content="手動デプロイの静的サイト（Hugo/Astro）で未デプロイ記事の404リンクを告知しないよう、メタデータではなく実際のHTTP 200応答で公開判定を取る設計パターンを解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/ssg-publish-status-check"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="「日付が過去＝公開済み」が成立しないサイトで、公開判定をどう作るか | Meetsource"><meta property="og:description" content="手動デプロイの静的サイト（Hugo/Astro）で未デプロイ記事の404リンクを告知しないよう、メタデータではなく実際のHTTP 200応答で公開判定を取る設計パターンを解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/ssg-publish-status-check"><meta property="og:image" content="https://www.meetsource.work/blog/ssg-publish-status-check-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-07T07:39:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="「日付が過去＝公開済み」が成立しないサイトで、公開判定をどう作るか | Meetsource"><meta name="twitter:description" content="手動デプロイの静的サイト（Hugo/Astro）で未デプロイ記事の404リンクを告知しないよう、メタデータではなく実際のHTTP 200応答で公開判定を取る設計パターンを解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/ssg-publish-status-check-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"「日付が過去＝公開済み」が成立しないサイトで、公開判定をどう作るか","description":"手動デプロイの静的サイト（Hugo/Astro）で未デプロイ記事の404リンクを告知しないよう、メタデータではなく実際のHTTP 200応答で公開判定を取る設計パターンを解説します。","datePublished":"2026-08-07T07:39:00.000Z","image":"https://www.meetsource.work/blog/ssg-publish-status-check-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/ssg-publish-status-check"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-07T07:39:00.000Z" data-astro-cid-7jjqptxk> 2026.08.07 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#hugo</span><span class="tag" data-astro-cid-7jjqptxk>#astro</span><span class="tag" data-astro-cid-7jjqptxk>#ssg</span><span class="tag" data-astro-cid-7jjqptxk>#ci-cd</span><span class="tag" data-astro-cid-7jjqptxk>#automation</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>「日付が過去＝公開済み」が成立しないサイトで、公開判定をどう作るか</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/ssg-publish-status-check-hero.webp" alt="「日付が過去＝公開済み」が成立しないサイトで、公開判定をどう作るか" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>Hugo や Astro などの静的サイトジェネレータ（SSG）でブログを運用していると、記事の公開判定を「フロントマターの日付（<code>date</code> や <code>publishDate</code>）が現在時刻より過去であるか」で評価してしまいがちです。</p>
+<p>しかし、定期的な自動デプロイ（Scheduled CI/CD）を組んでおらず手動デプロイで運用しているサイトでは、<strong>「日付が過去＝公開済み」という前提は簡単に崩壊します</strong>。メタデータ上の日付は過去であっても、本番サーバへのビルド・デプロイが叩かれていなければ、実際の URL は <code>404 Not Found</code> のまま放置されているためです。</p>
+<p>本記事では、未デプロイ記事の 404 リンクを SNS 自動告知や外部システムへ誤配信しないために、単なるメタデータ比較ではなく <strong>実際の本番 URL に対する HTTP 200 OK 応答確認</strong> をゲートとする堅牢な自動化設計パターンを解説します。</p>
+<hr>
+<h2 id="1-導入-日付が過去公開済みという暗黙の前提が引き起こす事故">1. 導入: 「日付が過去＝公開済み」という暗黙の前提が引き起こす事故</h2>
+<p>静的サイトでブログ記事を書き貯め、フロントマターに過去や予約投稿の日付を記述して運用するスタイルは一般的です。ここで、記事の更新を検知して X（旧Twitter）への自動投稿や RSS フィード、sitemap 生成を外部スクリプトで自動化しているケースを考えます。</p>
+<p>自動化スクリプトが以下のような判定ロジックを持っていた場合、大きなトラブルにつながります。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># ❌ メタデータ（日付）だけに頼った危険な判定ロジック</span></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#7C7F93"> [</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$ARTICLE_DATE</span><span style="color:#40A02B">"</span><span style="color:#179299"> &#x3C;=</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$CURRENT_DATE</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> ];</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # 日付が過去なので公開されたとみなして SNS に投稿</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">    post_to_sns</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$ARTICLE_URL</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#8839EF">fi</span></span>
+<span class="line"></span></code></pre>
+<p>記事のフロントマターに「2026-08-01」と記載していても、著者が手動デプロイコマンド（<code>mise run deploy</code> や <code>tools/gh-pages.sh</code> 等）を叩いていなければ、本番サーバ上に静的 HTML は一瞬たりとも生成されていません。</p>
+<p>この状態で自動化スクリプトが動くと、<strong>まだアクセスできない 404 URL を SNS や外部に拡散・告知してしまう誤投稿事故</strong> が発生します。アクセスした読者は 404 エラーページに案内され、サイトの信頼性を損ねる結果となります。SSG の記事メタデータは、あくまで「著者が希望する表示上の日時」であって、本番環境におけるファイルの存在を一切保証しません。</p>
+<hr>
+<h2 id="2-実録-未デプロイ記事8本が全部404だった--実測ログで見る危険性">2. 実録: 未デプロイ記事8本が全部404だった — 実測ログで見る危険性</h2>
+<p>この落とし穴は単なる理論上のリスクではありません。実際に Hugo で運用している自社ブログにおいて、過去の日付がフロントマターに設定されていたにもかかわらず手動デプロイが未実行であった未公開記事 8 件に対してアクセス検証を行った実測データがあります<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="実測アクセス検証の結果">実測アクセス検証の結果</h3>
+<ul>
+<li><strong>対象</strong>: フロントマターの日付は経過済みだが、手動デプロイが未実行だった未公開記事 8 件</li>
+<li><strong>実測アクセス結果</strong>: 8 件すべてが <strong><code>HTTP 404 Not Found</code></strong>（404 発生率 100%）</li>
+</ul>
+<p>本番 URL に対するアクセスの明暗は、以下の検証例からも明らかです。</p>
+<ul>
+<li><strong>公開済み記事</strong>: <code>https://www.nqou.net/2026/07/29/070705/</code> → <strong><code>HTTP 200 OK</code></strong></li>
+<li><strong>未デプロイ記事</strong>: <code>https://www.nqou.net/2026/08/11/070705/</code> → <strong><code>HTTP 404 Not Found</code></strong> （※フロントマター上で指定日時は経過しているが、デプロイコマンド未実行のためサーバ上に HTML が存在しない）</li>
+</ul>
+<p>もし「日付が過去であること」だけをトリガーにして投稿キューを生成していた場合、これら 8 件の 404 URL がすべて X に誤自動投稿されるところでした。</p>
+<p>投稿処理の直前に「対象 URL に HTTP アクセスし、200 OK が返るものだけをキューに投入する」という判定ゲートを噛ませた結果、<strong>未デプロイ記事の誤告知事故を 8 件中 0 件（完全遮断）に抑え込むことに成功しました</strong><sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<hr>
+<h2 id="3-構造的課題-なぜメタデータ日付判定は失敗するのか">3. 構造的課題: なぜメタデータ（日付）判定は失敗するのか</h2>
+<p>なぜ「日付の比較」という直感的な判定が失敗するのでしょうか。それには 3 つの構造的理由が存在します。</p>
+<h3 id="1-手動デプロイと-ssg-ビルドタイミングの乖離">(1) 手動デプロイと SSG ビルドタイミングの乖離</h3>
+<p>WordPress などの動的 CMS であれば、リクエスト時にデータベースを参照して「日時が過去なら描画する」という動的判定が可能です。しかし SSG の場合、HTML が作られるのは「ビルドコマンドが実行された瞬間」のみです。デプロイを手動操作に依存している環境では、「著者が意図した日時」と「HTML が本番に並ぶ日時」は構造的に乖離します。</p>
+<h3 id="2-ssg-フレームワークのビルド除外仕様">(2) SSG フレームワークのビルド除外仕様</h3>
+<p>SSG フレームワーク自体も、デフォルトでは未来日付や下書き記事を出力しません。</p>
+<ul>
+<li><strong>Hugo の仕様</strong>: ビルド実行時点のサーバ時刻より未来の <code>publishDate</code> や <code>date</code> を持つコンテンツ、および <code>draft: true</code> が設定されたファイルは、静的 HTML の出力対象から除外されます<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。<code>-F</code> (<code>--buildFuture</code>) フラグを明示的に付与してビルドを行わない限り、ファイル自体が生成されません。</li>
+<li><strong>Astro の仕様</strong>: コンテンツコレクションにおいて <code>getCollection('blog', ({ data }) => data.pubDate &#x3C;= new Date())</code> のようにビルド時にフィルタリングを行う実装パターンが一般的です<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。SSG モードではビルドした瞬間の HTML が固定されるため、ビルドが走らない限り時間の経過だけで記事が出現することはありません。</li>
+</ul>
+<h3 id="3-cicd-スケジュールビルドの非決定性">(3) CI/CD スケジュールビルドの非決定性</h3>
+<p>「GitHub Actions などの cron (<code>on: schedule</code>) で定期自動ビルドを回せば解決するのではないか」と考えるかもしれません。しかし、Scheduled CI/CD にも以下の制限が存在します。</p>
+<ul>
+<li><strong>実行タイミングの遅延</strong>: GitHub Actions の Scheduled events はベストエフォート（best-effort）で動作します<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。毎時 00 分などのピーク時間帯には、数分から 1 時間以上の実行遅延やスキップが発生することが公式にドキュメント化されています。</li>
+<li><strong>リポジトリ無活動による自動停止</strong>: リポジトリに 60 日間アクティビティがない場合、Scheduled workflow は自動的に pause（一時停止）されます<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+</ul>
+<p>したがって、自動デプロイを組んでいたとしても「指定日時に必ず 200 OK になっている」という保証はできません。</p>
+<hr>
+<h2 id="4-設計パターン-実際の-http-200-ok-応答をゲートとする公開判定">4. 設計パターン: 実際の HTTP 200 OK 応答をゲートとする公開判定</h2>
+<p>この課題を解決する堅牢な設計パターンはシンプルです。</p>
+<blockquote><p><strong>設計原則</strong>: 「設定値（メタデータ）は希望的観測であり、HTTP 200 応答のみが事実である」</p></blockquote>
+<p>自動化パイプラインの処理順序を以下のように組み替えます。</p>
+<p><img src="/blog/ssg-publish-status-check-diagram-1.webp" alt="HTTP 200 OK 疎通確認による公開判定パイプライン構成図"></p>
+<h3 id="curl-を使った疎通確認の実装例">curl を使った疎通確認の実装例</h3>
+<p>投稿直前に <code>curl</code> で本番 URL のステータスコードを検証します<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#EA76CB;font-style:italic">#!/usr/bin/env bash</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">TARGET_URL</span><span style="color:#179299">=</span><span style="color:#40A02B">"https://www.nqou.net/2026/07/29/070705/"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># レスポンスボディを破棄し、ステータスコードのみを取得</span></span>
+<span class="line"><span style="color:#4C4F69">HTTP_STATUS</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">curl</span><span style="color:#40A02B"> -s</span><span style="color:#40A02B"> -o</span><span style="color:#40A02B"> /dev/null</span><span style="color:#40A02B"> -w</span><span style="color:#40A02B"> "%{http_code}"</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$TARGET_URL</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#7C7F93"> [</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$HTTP_STATUS</span><span style="color:#40A02B">"</span><span style="color:#179299"> -eq</span><span style="color:#FE640B"> 200</span><span style="color:#7C7F93"> ];</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    echo</span><span style="color:#40A02B"> "【確認成功】 200 OK: 投稿処理を続行します。"</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # 投稿スクリプトの呼び出し</span></span>
+<span class="line"><span style="color:#8839EF">else</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    echo</span><span style="color:#40A02B"> "【スキップ】 HTTP </span><span style="color:#4C4F69">$HTTP_STATUS</span><span style="color:#40A02B">: 未デプロイのため投稿を見送ります。"</span></span>
+<span class="line"><span style="color:#8839EF">fi</span></span>
+<span class="line"></span></code></pre>
+<div class="callout" data-callout="note" data-collapsible="false"><div class="callout-title"><div class="callout-title-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="2" x2="22" y2="6"></line><path d="M7.5 20.5 19 9l-4-4L3.5 16.5 2 22z"></path></svg></div><div class="callout-title-text">Note</div></div><div class="callout-content"><p><strong>GET vs HEAD リクエストの注意点</strong>
+高速化のために <code>curl -I</code> (HEAD リクエスト) を使いたくなりますが、推奨されません。一部の CDN / エッジサーバーやオリジンの設定・WAF によっては、HEAD リクエストに対して <code>405 Method Not Allowed</code> や <code>403</code> を返したり、キャッシュのパージ挙動が GET と異なるケースがあるためです。<code>curl -s -o /dev/null</code> を指定した <strong>GET リクエストでボディを破棄する方式</strong> が最も確実です<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p></div></div>
+<hr>
+<h2 id="5-実装上のハマりどころと注意点">5. 実装上のハマりどころと注意点</h2>
+<p>実際の自動化パイプラインを構築するにあたっては、以下の 2 つの実装ポイントに注意してください。</p>
+<h3 id="1-x-twitter-の-tco-文字数計算と重み付け">(1) X (Twitter) の t.co 文字数計算と重み付け</h3>
+<p>SNS 告知文の組み立てにおいて、URL の長さ判定には注意が必要です。X では投稿に含まれるすべての URL が <code>t.co</code> ショートリンクに自動変換され、元の文字列長に関わらず <strong>一律 23 文字</strong> (<code>transformedURLLength: 23</code>) として計算されます<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>単純に <code>url.length</code> で文字数を加算して 280 文字（重み）の超過チェックを行うと、長い URL を含む投稿が「文字数オーバー」と誤判定されて弾かれてしまいます。告知スクリプト内では、URL 部分を一律 23 文字として計算する重み付け判定関数（<code>post_weight()</code>）を独立させて文字数制限を制御します<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="2-追記式台帳による二重投稿防止と冪等性">(2) 追記式台帳による二重投稿防止と冪等性</h3>
+<p>HTTP 200 OK チェックを通過して告知が成功した記事は、<code>x-post-ledger.tsv</code> などの追記式台帳ファイルに URL や slug を記録します。</p>
+<ul>
+<li><strong>台帳の欠損対策</strong>: 台帳ファイルが存在しない場合は、空の台帳を自動生成せず異常終了させる安全設計を推奨します<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+</ul>
+<hr>
+<h2 id="6-まとめ-状態はメタデータではなく実際の応答で取る">6. まとめ: 状態はメタデータではなく実際の応答で取る</h2>
+<p>システム設計における黄金律は、「<strong>外部依存や手動ステップが介在する処理において、状態の判定をソースコード内のメタデータで行ってはならない</strong>」ということです。</p>
+<ul>
+<li>フロントマターの日付は、あくまでコンテンツの「表示用データ」</li>
+<li>本番環境でユーザーに届くかどうかの真偽は「実際の HTTP レスポンス」</li>
+</ul>
+<p>自動化スクリプトや CI/CD 連携を構築する際は、必ず本番 URL への HTTP 200 OK アクセス確認を最終ゲートとして組み込み、誤告知のない堅牢なシステムを構築しましょう。</p>
+<hr>
+<p>静的サイトの自動化運用や CI/CD 構築に関するご相談は <a href="/#contact">コンタクトフォーム</a> よりお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p>当社の一次検証ログ <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://gohugo.io/content-management/build-options/">Hugo Build Options Documentation</a> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://docs.astro.build/en/guides/content-collections/">Astro Content Collections Guide</a> <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows">GitHub Actions Scheduled Events Docs</a> <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://curl.se/docs/manpage.html">curl Manual / Status Code Options</a> <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p>twitter-text Official Specification <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

@@ -1,0 +1,418 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>macOS 27 の「fm」コマンド入門 — API キーなしで使えるが、M1 Pro ではコーディングエージェントのモデルにならなかった | Meetsource</title><meta name="description" content="macOS 27 に標準で入った fm コマンドを、使えるようになるまでの待ち方から fm respond・fm schema・fm serve まで実測で解説。M1 Pro では 4,096 トークンの AFM 3 Core が載り、opencode をつなぐと上限超過で止まった。"><link rel="canonical" href="https://www.meetsource.work/blog/macos-27-fm-command"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="macOS 27 の「fm」コマンド入門 — API キーなしで使えるが、M1 Pro ではコーディングエージェントのモデルにならなかった | Meetsource"><meta property="og:description" content="macOS 27 に標準で入った fm コマンドを、使えるようになるまでの待ち方から fm respond・fm schema・fm serve まで実測で解説。M1 Pro では 4,096 トークンの AFM 3 Core が載り、opencode をつなぐと上限超過で止まった。"><meta property="og:url" content="https://www.meetsource.work/blog/macos-27-fm-command"><meta property="og:image" content="https://www.meetsource.work/blog/macos-27-fm-command-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-09-24T01:57:13.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="macOS 27 の「fm」コマンド入門 — API キーなしで使えるが、M1 Pro ではコーディングエージェントのモデルにならなかった | Meetsource"><meta name="twitter:description" content="macOS 27 に標準で入った fm コマンドを、使えるようになるまでの待ち方から fm respond・fm schema・fm serve まで実測で解説。M1 Pro では 4,096 トークンの AFM 3 Core が載り、opencode をつなぐと上限超過で止まった。"><meta name="twitter:image" content="https://www.meetsource.work/blog/macos-27-fm-command-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"macOS 27 の「fm」コマンド入門 — API キーなしで使えるが、M1 Pro ではコーディングエージェントのモデルにならなかった","description":"macOS 27 に標準で入った fm コマンドを、使えるようになるまでの待ち方から fm respond・fm schema・fm serve まで実測で解説。M1 Pro では 4,096 トークンの AFM 3 Core が載り、opencode をつなぐと上限超過で止まった。","datePublished":"2026-09-24T01:57:13.000Z","image":"https://www.meetsource.work/blog/macos-27-fm-command-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/macos-27-fm-command"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"fm available が modelNotReady を返すときはどうすればいい？","acceptedAnswer":{"@type":"Answer","text":"モデルがまだ Mac に届いていない状態です。fm にモデルをインストールするサブコマンドは無いので、まず Siri（Apple Intelligence）が有効になっているかを確かめます。私の Mac（macOS 27.0）では、システム設定の「Siri」の項目で有効にしました。オフのあいだも fm available は appleIntelligenceNotEnabled ではなく modelNotReady を返し、有効にしてしばらく待つと System model available に変わりました。Apple のドキュメントによると、ダウンロードはネットワークの状態・バッテリー残量・システムの負荷に応じて自動で行われます。有効にしたあとはネットワークにつないだまましばらく置いておき、fm available を打ち直すとよいでしょう。"}},{"@type":"Question","name":"fm コマンドを Claude Code から使えますか？","acceptedAnswer":{"@type":"Answer","text":"Bash ツールから fm respond などを呼ぶ使い方はできます。一方、fm serve は Claude Code が公式にサポートするモデルの接続先ではなく、そのままでは形式が合いません。Claude Code の接続先は Anthropic Messages などの形式に限られ、fm serve は Chat Completions 形式だけだからです。"}},{"@type":"Question","name":"fm のコンテキスト長はどれくらい？","acceptedAnswer":{"@type":"Answer","text":"Mac によって違います。私の M1 Pro では AFM 3 Core・4,096 トークンでした。上位の AFM 3 Core Advanced では 8,192 トークンという報告があります。自分の Mac の値は SystemLanguageModel.default.contextSize で確かめられます。"}},{"@type":"Question","name":"fm と Ollama の違いは？","acceptedAnswer":{"@type":"Answer","text":"fm は macOS 27 に最初から入っていて、インストールも API キーも要りません。使うのは Apple のモデルで、私の Mac の fm で選べたのはオンデバイスのモデル（system）だけでした（WWDC26 のデモでは Private Cloud Compute 上のモデルも指定しています）。Ollama は、自分でモデルを選んで入れる仕組みです。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-09-24T01:57:13.000Z" data-astro-cid-7jjqptxk> 2026.09.24 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#ローカルLLM</span><span class="tag" data-astro-cid-7jjqptxk>#llm</span><span class="tag" data-astro-cid-7jjqptxk>#apple-silicon</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>macOS 27 の「fm」コマンド入門 — API キーなしで使えるが、M1 Pro ではコーディングエージェントのモデルにならなかった</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/macos-27-fm-command-hero.webp" alt="macOS 27 の「fm」コマンド入門 — API キーなしで使えるが、M1 Pro ではコーディングエージェントのモデルにならなかった" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>macOS 27 にアップデートしたら、ターミナルに <code>fm</code> というコマンドが増えていました。ローカル LLM には興味があっても、Ollama を入れてモデルを選んでダウンロードして……という手間を面倒に感じて手を出していなかった人には、気になる存在だと思います。</p>
+<p>macOS 27 の <code>fm</code> コマンド（Apple Foundation Models CLI）とは、Mac に内蔵された Apple のオンデバイス言語モデル（Apple Foundation Models）を、ターミナルから API キーなしで呼び出すための標準コマンドです。平たく言えば、追加のアプリも API キーも要らない、OS に最初から入っているローカル LLM の入口です。<code>man fm</code> の説明にも、<code>fm</code> は Apple Foundation Models のコマンドラインインターフェースで、Chat Completions API のサーバーも立てられると書かれています。Apple も WWDC26 で「<code>fm</code> コマンドラインツールは macOS 27 にプリインストールされている」と紹介しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>ところが、私の Mac で <code>fm chat</code> と <code>fm respond 'What is Swift?'</code> を打ってみると、どちらも <code>Error: The model is not available. Try again later.</code> が返ってきました。</p>
+<p>この記事では、次の3つを順に確かめます。</p>
+<ol>
+<li><code>fm</code> が使えるようになるまでに、何をして、何を待てばよいか</li>
+<li>スクリプトの部品として <code>fm respond</code>・<code>fm schema</code>・<code>fm serve</code> をどう使うか</li>
+<li>コーディングエージェントのモデルとしてつなぐと、どこで止まるか</li>
+</ol>
+<p>私が自分で打ったのは、使えなかったときのエラーと <code>fm available</code> の確認だけです。それ以外の検証は、Claude（Claude Code）に私の Mac（Apple M1 Pro、macOS 27.0）で実測させました。実測はいずれも 2026年9月23日〜24日の1回ずつの実行で、応答の文面や所要時間は実行するたびに変わります。</p>
+<h2 id="fm-コマンドでできることとこの記事で試した経路"><code>fm</code> コマンドでできることと、この記事で試した経路</h2>
+<p><code>fm --help</code> に並ぶサブコマンドは次の7つです。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>サブコマンド</th><th><code>fm --help</code> の説明</th></tr></thead><tbody><tr><td><code>available</code></td><td>Check model availability</td></tr><tr><td><code>chat</code></td><td>Start an interactive chat session</td></tr><tr><td><code>count-tokens</code></td><td>Count tokens in a prompt or instructions</td></tr><tr><td><code>license</code></td><td>Show and agree to the Legal Notice &#x26; Terms</td></tr><tr><td><code>respond</code></td><td>Generate a response to a prompt</td></tr><tr><td><code>schema</code></td><td>Generate a structured output generation schema</td></tr><tr><td><code>serve</code></td><td>Start a Chat Completions API server</td></tr></tbody></table>
+<p>この記事で試した経路と結果を、先に図にしておきます。</p>
+<pre class="mermaid">flowchart LR
+    subgraph Mac["Mac（macOS 27）"]
+      M["オンデバイスモデル&#x3C;br>（この Mac では AFM 3 Core・4,096 トークン）"]
+      CLI["fm respond / fm schema"]
+      SV["fm serve&#x3C;br>（Chat Completions API）"]
+      CLI --> M
+      SV --> M
+    end
+    SH["シェルスクリプト・jq"] -->|動いた| CLI
+    CU["curl"] -->|動いた| SV
+    OC["opencode"] -->|13,762 トークンで上限超過| SV
+    CC["Claude Code"] -->|Bash ツールから fm を呼ぶ（本記事の実測の手段）| CLI</pre>
+<p>シェルスクリプトや curl から呼ぶ経路は動きました。opencode をモデルとしてつないだ経路は、コンテキスト長の上限で止まりました。Claude Code の矢印は、この記事の実測そのものが Claude Code の Bash ツールから <code>fm</code> を呼んだものであることを表しています。</p>
+<h2 id="fm-が使えるようになるまで-fm-license-と-fm-available"><code>fm</code> が使えるようになるまで: <code>fm license</code> と <code>fm available</code></h2>
+<p>最初の関門は2つあります。利用規約への同意と、モデルが Mac に届くことです。</p>
+<p><code>man fm</code> によると、初回は利用規約への同意が必要で、同意していないと <code>fm</code> は status 69 で終了します。同意は “Agreeing applies to every user on the machine, so it must be run as a privileged user: run ‘sudo fm license’.”（マシン上のすべてのユーザーに適用されるため、管理者権限で実行する）とされています。同意したかどうかは <code>fm license --status</code> で、モデルが使えるかどうかは <code>fm available</code> で確かめます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">sudo</span><span style="color:#40A02B"> fm</span><span style="color:#40A02B"> license</span><span style="color:#9CA0B0;font-style:italic">        # 初回のみ。規約を読んで同意する</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">fm</span><span style="color:#40A02B"> license</span><span style="color:#40A02B"> --status</span><span style="color:#9CA0B0;font-style:italic">    # 同意済みかを確認</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">fm</span><span style="color:#40A02B"> available</span><span style="color:#9CA0B0;font-style:italic">           # モデルが使えるかを確認</span></span>
+<span class="line"></span></code></pre>
+<p>私の Mac で Claude に確認させた時点では、規約にはすでに同意済みでした。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Agreed to license FM1 version 1.0 on 2026年9月23日 19:51.</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>それでも <code>fm available</code> の出力はこうでした。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>System model unavailable: modelNotReady</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>モデルが無いなら入れればよいと思って <code>fm --help</code> を見ても、モデルをダウンロード・インストールするサブコマンドはありません（前節の7つだけです）。<code>fm available</code> を何度か打ち直しても、出力は変わりませんでした。</p>
+<h3 id="fm-available-の3つの状態の違い"><code>fm available</code> の3つの状態の違い</h3>
+<p><code>fm</code> が動かないとき、まず <code>fm available</code> の出力で3つの状態のどれかを見分けます。Foundation Models のドキュメントは、モデルが使えない理由を次の3つに分けています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>状態（Foundation Models の理由）</th><th>Apple の説明</th><th>読者がすること</th></tr></thead><tbody><tr><td><code>deviceNotEligible</code></td><td>”The device does not support Apple Intelligence.”</td><td>対応機種か確かめる（Apple サポートでは、Mac は M1 以降が対象<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>）</td></tr><tr><td><code>appleIntelligenceNotEnabled</code></td><td>”Apple Intelligence is not enabled on the system.”</td><td>システム設定で Apple Intelligence がオンになっているか確かめる</td></tr><tr><td><code>modelNotReady</code></td><td>”The models aren’t available on the user’s device.”</td><td>Apple Intelligence が有効かを確かめたうえで、モデルが届くのを待つ（ダウンロードは自動）</td></tr></tbody></table>
+<p>私の Mac で出たのは3つ目の <code>modelNotReady</code> でした。ただ、このとき私は Siri（Apple Intelligence）を有効にしていませんでした。macOS 27 にする前から使っておらず、オフのままだったのです。表の説明からは2つ目の <code>appleIntelligenceNotEnabled</code> が出そうな状況ですが、返ってきたのは <code>modelNotReady</code> のほうでした。3つ目の行に「Apple Intelligence が有効かを確かめたうえで」と書いたのはこのためです。</p>
+<p><code>modelNotReady</code> について、Apple のドキュメントは “Models are downloaded automatically based on factors like network status, battery level, and system load.”（ネットワークの状態・バッテリー残量・システムの負荷に応じて、モデルは自動でダウンロードされる）とだけ書いており、所要時間の目安は示していません<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。必要なストレージは、M3 以降かつユニファイドメモリ 12GB 以上の Mac で最大 14GB、その他の Mac で最大 8GB とされています<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。私の M1 Pro は後者にあたります。</p>
+<p>その夜遅くまで <code>fm available</code> は <code>modelNotReady</code> のままでした。そこで、システム設定の「Siri」の項目で Siri（Apple Intelligence）を有効にして、しばらく待ってからもう一度打つと、出力は次のとおりでした。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>System model available</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>その夜のうちに使えるようになりました。1回の観察なので、有効にしたことがきっかけだったとまでは言い切れませんが、オフのあいだは何度打っても <code>modelNotReady</code> のままで、有効にしたあとに変わった、という順序です。</p>
+<p>OS 標準を掲げるなら、モデルの準備状況はターミナルから見えてほしいところです。macOS 27 にして最初に <code>fm</code> を打ったとき、<code>Try again later.</code> とだけ言われても、いつ使えるのかが分かりませんでした。Apple Intelligence がオフだったことも、<code>fm available</code> の出力からは読み取れませんでした。</p>
+<h2 id="載っているモデルを確かめる-この-mac-は-afm-3-core4096-トークン">載っているモデルを確かめる: この Mac は AFM 3 Core・4,096 トークン</h2>
+<p>同じ macOS 27 でも、載るモデルとコンテキスト長は Mac によって違います。以降の実測に入る前に、自分の Mac で確かめておきます。</p>
+<p>Foundation Models の <code>SystemLanguageModel.default</code> から、モデルの名前とコンテキスト長を表示するワンライナーです。同じ確認方法は Qiita の記事でも紹介されています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">swift</span><span style="color:#40A02B"> -e</span><span style="color:#40A02B"> 'import FoundationModels; let m = SystemLanguageModel.default; print(m.variant.displayName); print(m.contextSize)'</span></span>
+<span class="line"></span></code></pre>
+<p>私の M1 Pro で Claude に実行させた出力です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>AFM 3 Core</span></span>
+<span class="line"><span>4096</span></span>
+<span class="line"><span></span></span></code></pre>
+<ul>
+<li><code>variant</code> は、<code>core3</code>（AFM 3 Core）と <code>coreAdvanced3</code>（AFM 3 Core Advanced）のどちらかを返します<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。Apple の説明では、AFM 3 Core は 30 億パラメータの dense モデル、AFM 3 Core Advanced は 200 億パラメータの sparse モデルで、“unlocked by and optimized for our most capable Apple silicon systems”（最も高性能な Apple silicon のシステムで使えるようになり、それに最適化されている）とされています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup></li>
+<li><code>contextSize</code> は、モデルが扱えるトークン数の上限です<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。入力と生成を合わせた上限なので、4,096 は指示・入力・応答をすべて合わせた量になります。Apple のドキュメントでは日本語は1文字がおおよそ1トークンとされており<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>、4,096 トークンは日本語でおよそ4千字分です</li>
+</ul>
+<p>コンテキスト長は Apple の文書の間でも数字が揃っていません。“Managing the context window” は “4096 tokens per session” と書いています<sup><a href="#user-content-fn-9" id="user-content-fnref-9-2" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。一方、WWDC26 の Foundation Models のセッションでは <code>contextSize</code> のコード例のコメントが <code>// 8192</code> で、この値を使って「アプリを動作するハードウェアに適応させてほしい」と話しています<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。先の Qiita の記事でも、同じワンライナーの出力は <code>AFM 3 Core Advanced</code>・<code>8192</code> でした<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>どのチップでどちらのモデルになるかを、Apple は公表していません。「M3 以降かつユニファイドメモリ 12GB 以上」を目安とする記事もあります<sup><a href="#user-content-fn-5" id="user-content-fnref-5-3" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>が、その記事が根拠に挙げる Apple サポートの文書にあるのはストレージ要件の区分で、モデルとの対応は書かれていません<sup><a href="#user-content-fn-3" id="user-content-fnref-3-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<h2 id="ステップ1-fm-respond-で答えさせる要約させるやり方">ステップ1: <code>fm respond</code> で答えさせる・要約させるやり方</h2>
+<p>スクリプトに組み込める最小の単位が <code>fm respond</code> です。引数でプロンプトを渡すと、応答を標準出力に返します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">fm</span><span style="color:#40A02B"> respond</span><span style="color:#40A02B"> 'Swift とは何ですか？日本語で2文で答えてください。'</span></span>
+<span class="line"></span></code></pre>
+<p>Claude に実行させた出力です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Swift は、安全で効率的なプログラミングを行うための言語です。オープンソースとして開発されており、開発者にとって便利なツールを提供しています。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>次は、ファイルの中身をパイプで渡して要約させます。入力として、次の4行を <code>notes.txt</code> に保存します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>macOS 27 には fm というコマンドが入っている。</span></span>
+<span class="line"><span>オンデバイスの Apple Foundation Model をターミナルから呼べる。</span></span>
+<span class="line"><span>初回は利用規約への同意が必要で、モデルはバックグラウンドでダウンロードされる。</span></span>
+<span class="line"><span>ダウンロードが終わるまで fm available は modelNotReady を返す。</span></span>
+<span class="line"><span></span></span></code></pre>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#40A02B"> notes.txt</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> fm</span><span style="color:#40A02B"> respond</span><span style="color:#40A02B"> --instructions</span><span style="color:#40A02B"> '日本語で要点を3つの箇条書きにまとめてください'</span></span>
+<span class="line"></span></code></pre>
+<p>出力です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>* fm コマンドでオンデバイスの Apple Foundation Model をターミナルから呼び出せる。</span></span>
+<span class="line"><span>* 初回利用時は利用規約への同意が必要。</span></span>
+<span class="line"><span>* ダウンロードが完了するまで fm available は modelNotReady を返す。</span></span>
+<span class="line"><span></span></span></code></pre>
+<ul>
+<li><code>--instructions</code>（<code>-i</code>）はモデルに従わせる指示で、標準入力がプロンプトになります。<code>fm respond --help</code> の USAGE にも <code>echo 'What is Swift?' | fm respond</code> という例があります</li>
+<li><code>time</code> で測った所要時間（real）は、1回ずつの実行でそれぞれ 3.84 秒と 2.10 秒でした。同じプロンプトを実行し直すと、別の文面の応答が返りました</li>
+<li><code>fm respond --help</code> の MODELS 欄にあるのは <code>system</code>（オンデバイスのモデル）だけでした。WWDC26 の <code>fm</code> のセッションでは <code>--model pcc</code> で Private Cloud Compute（PCC）上のモデルを指定するデモがあります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>が、私の Mac の <code>fm</code> には <code>pcc</code> の記載がありませんでした</li>
+</ul>
+<h2 id="ステップ2-fm-schema-で-json-を受け取るやり方">ステップ2: <code>fm schema</code> で JSON を受け取るやり方</h2>
+<p><code>fm schema</code> で出力の形を作り、<code>--schema</code> で渡し、<code>jq</code> で読みます。ここでは、変更内容の説明からコミットメッセージの種別と要約を JSON で受け取ります（<code>jq</code> が入っていなければ、先に導入しておきます）。</p>
+<p>まず、スキーマを <code>commit-schema.json</code> に書き出します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">fm</span><span style="color:#40A02B"> schema</span><span style="color:#40A02B"> object</span><span style="color:#40A02B"> --name</span><span style="color:#40A02B"> Commit</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  --string</span><span style="color:#40A02B"> type</span><span style="color:#40A02B"> --description</span><span style="color:#40A02B"> 'feat, fix, docs, refactor のいずれか'</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  --string</span><span style="color:#40A02B"> summary</span><span style="color:#40A02B"> --description</span><span style="color:#40A02B"> '変更内容の要約（日本語、30文字以内）'</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  --boolean</span><span style="color:#40A02B"> breaking</span><span style="color:#40A02B"> --description</span><span style="color:#40A02B"> '破壊的変更か'</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#179299">  ></span><span style="color:#40A02B"> commit-schema.json</span></span>
+<span class="line"></span></code></pre>
+<p>生成された <code>commit-schema.json</code> です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>{</span></span>
+<span class="line"><span>  "type" : "object",</span></span>
+<span class="line"><span>  "title" : "Commit",</span></span>
+<span class="line"><span>  "additionalProperties" : false,</span></span>
+<span class="line"><span>  "x-order" : [</span></span>
+<span class="line"><span>    "type",</span></span>
+<span class="line"><span>    "summary",</span></span>
+<span class="line"><span>    "breaking"</span></span>
+<span class="line"><span>  ],</span></span>
+<span class="line"><span>  "required" : [</span></span>
+<span class="line"><span>    "type",</span></span>
+<span class="line"><span>    "summary",</span></span>
+<span class="line"><span>    "breaking"</span></span>
+<span class="line"><span>  ],</span></span>
+<span class="line"><span>  "properties" : {</span></span>
+<span class="line"><span>    "breaking" : {</span></span>
+<span class="line"><span>      "description" : "破壊的変更か",</span></span>
+<span class="line"><span>      "type" : "boolean"</span></span>
+<span class="line"><span>    },</span></span>
+<span class="line"><span>    "type" : {</span></span>
+<span class="line"><span>      "description" : "feat, fix, docs, refactor のいずれか",</span></span>
+<span class="line"><span>      "type" : "string"</span></span>
+<span class="line"><span>    },</span></span>
+<span class="line"><span>    "summary" : {</span></span>
+<span class="line"><span>      "description" : "変更内容の要約（日本語、30文字以内）",</span></span>
+<span class="line"><span>      "type" : "string"</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>  }</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>このスキーマを渡して応答させ、<code>jq</code> で取り出します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">fm</span><span style="color:#40A02B"> respond</span><span style="color:#40A02B"> --no-stream</span><span style="color:#40A02B"> --schema</span><span style="color:#40A02B"> commit-schema.json</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  'README のインストール手順が古かったので、Homebrew を使う手順に書き直した'</span><span style="color:#179299"> ></span><span style="color:#40A02B"> out.json</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">jq</span><span style="color:#40A02B"> -r</span><span style="color:#40A02B"> '.type + ": " + .summary'</span><span style="color:#40A02B"> out.json</span></span>
+<span class="line"></span></code></pre>
+<p><code>out.json</code> の中身と、<code>jq</code> の出力です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>{"summary": "インストール手順を Homebrew 方式に変更", "breaking": false, "type": "docs"}</span></span>
+<span class="line"><span>docs: インストール手順を Homebrew 方式に変更</span></span>
+<span class="line"><span></span></span></code></pre>
+<ul>
+<li>ストリーミングは既定でオン（<code>--[no-]stream</code>）なので、JSON を丸ごと受け取るために <code>--no-stream</code> を付けています</li>
+<li><code>type</code> はスキーマ上ただの string です。<code>docs</code> が入ったのは、description に書いた候補からモデルが選んだ結果で、列挙型で縛っているわけではありません。確かめたのは1回の実行です</li>
+<li>WWDC26 の <code>fm</code> のセッションでも、<code>fm schema object</code> → <code>fm respond --schema</code> → <code>jq</code> の流れでファイルを仕分けるデモが紹介されています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></li>
+</ul>
+<p>小さなオンデバイスモデルを仕組みに組み込むなら、自由文を返させるより <code>fm schema</code> で出力の形を決めて受け取るほうが扱いやすいと考えています。上の例でも、応答をそのまま <code>jq</code> に渡せました。</p>
+<h2 id="ステップ3-fm-serve-で-api-にして-curl-から呼ぶやり方">ステップ3: <code>fm serve</code> で API にして curl から呼ぶやり方</h2>
+<p><code>fm serve</code> は、Chat Completions 形式のローカル API サーバーを立てます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">fm</span><span style="color:#40A02B"> serve</span><span style="color:#40A02B"> --port</span><span style="color:#FE640B"> 1976</span></span>
+<span class="line"></span></code></pre>
+<p>起動すると次の表示が出ます。既定ではループバック（自分の Mac）からの接続だけを受け付けます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Apple Foundation Models Serve</span></span>
+<span class="line"><span>  url    http://127.0.0.1:1976</span></span>
+<span class="line"><span>  access loopback-only</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  · POST /v1/chat/completions</span></span>
+<span class="line"><span>  · GET  /v1/models</span></span>
+<span class="line"><span>  · GET  /health</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>  · listening on http://127.0.0.1:1976  (press Ctrl+C to stop)</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><code>fm serve --help</code> によると、エンドポイントは <code>GET /health</code>・<code>GET /v1/models</code>・<code>POST /v1/chat/completions</code> の3つです。別のターミナルから curl で呼びます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">curl</span><span style="color:#40A02B"> -s</span><span style="color:#40A02B"> localhost:1976/health</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">curl</span><span style="color:#40A02B"> -s</span><span style="color:#40A02B"> localhost:1976/v1/chat/completions</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  -H</span><span style="color:#40A02B"> 'Content-Type: application/json'</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  -d</span><span style="color:#40A02B"> '{"model":"system","stream":false,"messages":[{"role":"user","content":"日本の首都はどこ？一言で。"}]}'</span></span>
+<span class="line"></span></code></pre>
+<p>出力です（2行目の <code>...</code> は、usage の内訳と id を省いた箇所です）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>{"models":[{"name":"system","available":true}],"status":"fm serve is running"}</span></span>
+<span class="line"><span>{"created":1790176516,"choices":[{"index":0,"message":{"refusal":null,"role":"assistant","content":"東京。"},"finish_reason":"stop"}],"model":"system","usage":{"prompt_tokens":64,"completion_tokens":5,"total_tokens":69,...},"object":"chat.completion",...}</span></span>
+<span class="line"><span></span></span></code></pre>
+<ul>
+<li>リクエストに認証ヘッダーは付けていません。API キーの指定はどこにもありません</li>
+<li>応答は <code>"content":"東京。"</code>、<code>"finish_reason":"stop"</code> で、<code>usage</code> は入力 64 トークン・出力 5 トークンでした</li>
+</ul>
+<h3 id="fm-serve-でツール呼び出しを試した結果"><code>fm serve</code> でツール呼び出しを試した結果</h3>
+<p>エージェントとして使うには、ツール呼び出しが要ります。Claude に、<code>tools</code> に <code>get_weather</code> 関数を1つ渡して「東京の天気を調べて」と送らせました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">curl</span><span style="color:#40A02B"> -s</span><span style="color:#40A02B"> localhost:1976/v1/chat/completions</span><span style="color:#40A02B"> -H</span><span style="color:#40A02B"> 'Content-Type: application/json'</span><span style="color:#40A02B"> -d</span><span style="color:#40A02B"> '{"model":"system","stream":false,"messages":[{"role":"user","content":"東京の天気を調べて"}],"tools":[{"type":"function","function":{"name":"get_weather","description":"指定した都市の天気を返す","parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}]}'</span></span>
+<span class="line"></span></code></pre>
+<p>応答のうち <code>choices</code> の部分です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>"choices":[{"finish_reason":"stop","index":0,"message":{"role":"assistant","content":"&#x3C;start_of_turn>model\n{\n  \"tool_call\": [\n    {\n      \"name\": \"get_weather\",\n      \"arguments\": {\n        \"city\": \"東京\"\n      }\n    }\n  ]\n}","refusal":null}}]</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>OpenAI の仕様では、モデルがツールを呼ぶとき、応答の <code>message</code> に <code>tool_calls</code> 配列が入り、<code>finish_reason</code> は <code>tool_calls</code> になります<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。今回の応答には <code>tool_calls</code> 欄が無く、<code>content</code> に <code>&#x3C;start_of_turn>model</code> で始まる文字列としてツール呼び出しらしきものが入り、<code>finish_reason</code> は <code>stop</code> でした。試した1回では、OpenAI 形式の <code>tool_calls</code> としては返ってきませんでした。確かめたのは <code>fm serve</code> が返した応答だけで、<code>fm serve</code> の変換とモデルのどちらに原因があるかは切り分けていません。</p>
+<div class="callout" data-callout="warning" data-collapsible="false"><div class="callout-title"><div class="callout-title-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div><div class="callout-title-text">Warning</div></div><div class="callout-content"><p><code>fm license --show</code> で表示される規約には、“YOU ARE ALSO AGREEING TO NOT PROGRAMMATICALLY ACCESS OR USE APPLE MODELS THROUGH APPLE SOFTWARE OR SERVICES EXCEPT AS EXPRESSLY PERMITTED.” という一文があります。シェルスクリプトから <code>fm</code> を呼ぶ使い方は、Apple 自身も WWDC26 のセッションで <code>fm</code> と <code>jq</code> を組み合わせて紹介しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。一方、<code>fm serve</code> を他のアプリやエージェントからつなぐ使い方がどこまで許可されているかは、この規約の文面だけでは読み取れません。始める前に、規約を自分で読んでおいてください。</p></div></div>
+<h2 id="ステップ4-fm-serve-はコーディングエージェントのモデルとして使えるか">ステップ4: <code>fm serve</code> はコーディングエージェントのモデルとして使えるか</h2>
+<p>結論から言うと、この Mac ではコーディングエージェントのモデルになりませんでした。</p>
+<h3 id="opencode-からつなぐと-4096-トークンの上限で止まる">opencode からつなぐと 4,096 トークンの上限で止まる</h3>
+<p>opencode のカスタムプロバイダとして <code>fm serve</code> を登録します。書式は opencode の公式ドキュメントにある <code>@ai-sdk/openai-compatible</code> と <code>options.baseURL</code> のとおりです<sup><a href="#user-content-fn-12" id="user-content-fnref-12" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>{</span></span>
+<span class="line"><span>  "$schema": "https://opencode.ai/config.json",</span></span>
+<span class="line"><span>  "provider": {</span></span>
+<span class="line"><span>    "fm": {</span></span>
+<span class="line"><span>      "npm": "@ai-sdk/openai-compatible",</span></span>
+<span class="line"><span>      "name": "Apple Foundation Model (fm serve)",</span></span>
+<span class="line"><span>      "options": { "baseURL": "http://localhost:1976/v1" },</span></span>
+<span class="line"><span>      "models": { "system": { "name": "system" } }</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>  }</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><code>fm serve --port 1976</code> を起動したまま、<code>opencode.json</code> を置いたディレクトリで実行します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">opencode</span><span style="color:#40A02B"> run</span><span style="color:#40A02B"> -m</span><span style="color:#40A02B"> fm/system</span><span style="color:#40A02B"> '日本の首都はどこ？一言で。'</span></span>
+<span class="line"></span></code></pre>
+<p>Claude に実行させた、opencode 1.18.26 の出力です（exit 1）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Error: {"message":"The session's transcript exceeded the model's context size.","type":"server_error","code":"500"}</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><code>fm serve</code> 側のログには、こう出ていました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>0:18:55 · STREAM ERROR Content contains 13762 tokens, which exceeds the maximum allowed context size of 4096.</span></span>
+<span class="line"><span></span></span></code></pre>
+<ul>
+<li>一言で答える質問でも、opencode から <code>fm serve</code> に届いたリクエストは 13,762 トークンありました。opencode は同じエラーのままリクエストを6回繰り返し、最後に exit 1 で終わりました</li>
+<li>コーディングエージェントは、質問文のほかに自分用の指示や道具の定義も一緒にモデルへ送ります。ただ、13,762 トークンのうち何が何トークンだったかまでは測っていません。この値は 2026年9月24日時点の opencode 1.18.26 と上の設定での値で、設定や版によって変わります。なお、13,762 は 8,192 も上回るので、同じ設定のままでは 8,192 トークンの AFM 3 Core Advanced でも上限を超える数字です</li>
+<li>別の方が公開している個人のリポジトリの README には、8,192 トークンの環境でも「opencode の既定のエージェントには小さい（ツール定義だけで約7千トークン）」とする記述があります<sup><a href="#user-content-fn-13" id="user-content-fnref-13" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup></li>
+</ul>
+<h3 id="claude-code-と-codex-cli-はモデルの性能以前に接続方式が合わない">Claude Code と Codex CLI はモデルの性能以前に接続方式が合わない</h3>
+<p>これとは別の話として、Claude Code と Codex CLI は、接続方式が合わないため <code>fm serve</code> をモデルの接続先として使えません。<code>fm serve</code> の形式は Claude Code が公式にサポートする接続方式に含まれず、Codex CLI では実際に設定の段階でエラーになりました。</p>
+<p>Claude Code の接続先には、Anthropic Messages・Amazon Bedrock InvokeModel・Google Cloud Agent Platform rawPredict のいずれかの形式が必要です<sup><a href="#user-content-fn-14" id="user-content-fnref-14" data-footnote-ref="" aria-describedby="footnote-label">14</a></sup>。さらに Anthropic は、“doesn’t support routing Claude Code to non-Claude models through any gateway.”（どのゲートウェイを通しても、Claude Code を Claude 以外のモデルへルーティングすることはサポートしない）としています<sup><a href="#user-content-fn-15" id="user-content-fnref-15" data-footnote-ref="" aria-describedby="footnote-label">15</a></sup>。<code>fm serve</code> は Chat Completions 形式だけなので、Claude Code が公式にサポートする接続先には含まれません。</p>
+<p>Codex CLI はそもそも Chat Completions 形式の接続先を受け付けません。Codex は Chat Completions 対応の廃止を告知しており、2025年12月の告知では2026年2月初めに完全に削除する予定としていました<sup><a href="#user-content-fn-16" id="user-content-fnref-16" data-footnote-ref="" aria-describedby="footnote-label">16</a></sup>。手元の Codex CLI 0.152.1 で Claude に試させても、<code>wire_api = "chat"</code> を設定すると <code>`wire_api = "chat"` is no longer supported.</code> というエラーで止まりました。</p>
+<p>一方で、Claude Code から <code>fm</code> を「部品」として呼ぶことはできます。エラーの確認と <code>fm available</code> を除き、この記事の実測は Claude Code の Bash ツールから <code>fm respond</code> や <code>fm serve</code> を呼んで結果を受け取ったものです。</p>
+<p>この Mac の <code>fm</code> をどこから呼んだかで、結果ははっきり分かれました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>呼び出し元</th><th>経路</th><th>結果（2026年9月24日。「実測」は1回の実行、「文書」は公式ドキュメントからの判断）</th></tr></thead><tbody><tr><td>シェルスクリプト・jq</td><td><code>fm respond</code> / <code>fm schema</code></td><td>実測: 動いた</td></tr><tr><td>curl</td><td><code>fm serve</code> の <code>/v1/chat/completions</code></td><td>実測: 会話は動いた。ツール呼び出しは <code>tool_calls</code> として返らなかった</td></tr><tr><td>opencode 1.18.26</td><td><code>fm serve</code> をモデルとして接続</td><td>実測: 13,762 トークンで上限 4,096 を超え、500 で停止</td></tr><tr><td>Claude Code</td><td>Bash ツールから <code>fm</code> を実行</td><td>実測: エラーの確認と <code>fm available</code> 以外の実測はこの経路で行った</td></tr><tr><td>Claude Code</td><td><code>fm serve</code> をモデルとして接続</td><td>文書: 接続先は Anthropic Messages などの形式に限られ、Chat Completions の <code>fm serve</code> は対象外</td></tr></tbody></table>
+<p>この Mac の <code>fm</code> は、スクリプトの部品としては動いても、コーディングエージェントの頭脳にはなりませんでした。</p>
+<h2 id="どこまでローカルに任せどこからクラウドのモデルに回すか">どこまでローカルに任せ、どこからクラウドのモデルに回すか</h2>
+<p>短い要約・抽出・JSON 化のような小さな仕事は <code>fm</code> に、エージェントの頭脳や長い文脈が要る仕事はクラウドのモデルに任せる、というのが実測から引ける線です。</p>
+<p>Apple 自身も、オンデバイスのモデルをそう位置づけています。Foundation Models のドキュメントは “On-device models excel at a diverse range of text generation tasks, like summarization, entity extraction, text and image understanding, refinement, dialog for games, generating creative content, and more. When you need more reasoning capabilities and context size, use Private Cloud Compute or any server model provider.”（オンデバイスのモデルは要約や情報の抽出などが得意で、推論能力やコンテキストの大きさが要るときは Private Cloud Compute やサーバー側のモデルを使う）と書いています<sup><a href="#user-content-fn-17" id="user-content-fnref-17" data-footnote-ref="" aria-describedby="footnote-label">17</a></sup>。別のページでも “Because of their smaller size, on-device models have limited reasoning abilities.”（サイズが小さいため推論能力は限られる）としています<sup><a href="#user-content-fn-18" id="user-content-fnref-18" data-footnote-ref="" aria-describedby="footnote-label">18</a></sup>。エージェント的なツール利用と複雑な推論は、サーバー側の最上位モデルである AFM 3 Cloud Pro の担当とされています<sup><a href="#user-content-fn-7" id="user-content-fnref-7-2" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>以前、<a href="/blog/ollama-local-llm-reality-check">Ollama で M1 Pro 上のローカル LLM を試した記事</a>では、ローカル LLM は実験目的や完全オフライン時の限定利用にとどめる、という結論にしました。<code>fm</code> はセットアップが要らない点でその敷居を下げますが、エージェントの頭脳にならない点は変わりませんでした。</p>
+<p>それでも、OS に最初から入っていて API キーも要らないことには意義があると考えています。その意義は性能の高さではなく、「誰の Mac でも最初から使える」という裾野の広さにあります。なお、他のアプリやエージェントからつなぐ使い方は、ステップ3で触れた規約の一文を確かめてから判断してください。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="fm-available-が-modelnotready-を返すときはどうすればいい"><code>fm available</code> が <code>modelNotReady</code> を返すときはどうすればいい？</h3>
+<p><strong>A.</strong> モデルがまだ Mac に届いていない状態です。<code>fm</code> にモデルをインストールするサブコマンドは無いので、まず Siri（Apple Intelligence）が有効になっているかを確かめます。私の Mac（macOS 27.0）では、システム設定の「Siri」の項目で有効にしました。オフのあいだも <code>fm available</code> は <code>appleIntelligenceNotEnabled</code> ではなく <code>modelNotReady</code> を返し、有効にしてしばらく待つと <code>System model available</code> に変わりました。Apple のドキュメントによると、ダウンロードはネットワークの状態・バッテリー残量・システムの負荷に応じて自動で行われます。有効にしたあとはネットワークにつないだまましばらく置いておき、<code>fm available</code> を打ち直すとよいでしょう。</p>
+<h3 id="fm-コマンドを-claude-code-から使えますか"><code>fm</code> コマンドを Claude Code から使えますか？</h3>
+<p><strong>A.</strong> Bash ツールから <code>fm respond</code> などを呼ぶ使い方はできます。一方、<code>fm serve</code> は Claude Code が公式にサポートするモデルの接続先ではなく、そのままでは形式が合いません。Claude Code の接続先は Anthropic Messages などの形式に限られ、<code>fm serve</code> は Chat Completions 形式だけだからです。</p>
+<h3 id="fm-のコンテキスト長はどれくらい"><code>fm</code> のコンテキスト長はどれくらい？</h3>
+<p><strong>A.</strong> Mac によって違います。私の M1 Pro では <code>AFM 3 Core</code>・4,096 トークンでした。上位の <code>AFM 3 Core Advanced</code> では 8,192 トークンという報告があります。自分の Mac の値は <code>SystemLanguageModel.default.contextSize</code> で確かめられます。</p>
+<h3 id="fm-と-ollama-の違いは"><code>fm</code> と Ollama の違いは？</h3>
+<p><strong>A.</strong> <code>fm</code> は macOS 27 に最初から入っていて、インストールも API キーも要りません。使うのは Apple のモデルで、私の Mac の <code>fm</code> で選べたのはオンデバイスのモデル（<code>system</code>）だけでした（WWDC26 のデモでは Private Cloud Compute 上のモデルも指定しています）。Ollama は、自分でモデルを選んで入れる仕組みです。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li>macOS 27 の <code>fm</code> は OS に最初から入っているが、モデルが届くまでは <code>fm available</code> が <code>modelNotReady</code> を返す。モデルをインストールするサブコマンドは無く、ダウンロードは自動で、ターミナルからは進捗が見えない</li>
+<li>私の Mac では、Siri（Apple Intelligence）がオフでも <code>fm available</code> は <code>modelNotReady</code> を返した。<code>modelNotReady</code> が出たら、まず Apple Intelligence が有効かを確かめる</li>
+<li>載るモデルとコンテキスト長は Mac によって違う。私の M1 Pro では <code>AFM 3 Core</code>・4,096 トークンだった</li>
+<li><code>fm respond</code> と <code>fm schema</code> は、API キーなしでシェルスクリプトや <code>jq</code> と組み合わせられる部品になる</li>
+<li><code>fm serve</code> は Chat Completions 形式の API を立てるが、1回の試行ではツール呼び出しは <code>tool_calls</code> として返らなかった</li>
+<li>4,096 トークンの M1 Pro では、opencode をつなぐとリクエストが上限を超えて止まり、コーディングエージェントのモデルにはならなかった</li>
+<li>Claude Code と Codex CLI は、モデルの性能以前に接続方式（Chat Completions）が合わない。<code>fm serve</code> の形式は Claude Code が公式にサポートする接続方式に含まれず、Codex CLI では設定の段階でエラーになった</li>
+<li>エージェントの頭脳はクラウドのモデルに任せ、<code>fm</code> はスクリプトから呼ぶ小さな部品として見るのが現実的。他のアプリやエージェントからつなぐ使い方は、<code>fm</code> の規約の一文（プログラムからの利用は明示的に許可された場合に限る）を自分で読んでから判断する</li>
+</ul>
+<p>この記事で試したような、ローカルのモデルやクラウドのモデルを業務の仕組みにどう組み込むか、どこまでを AI エージェントに任せるかの設計についてのご相談は、<a href="/#contact">コンタクトフォーム</a> からお気軽にどうぞ。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://developer.apple.com/videos/play/wwdc2026/334/">Build AI-powered scripts with the fm CLI and Python SDK</a> Apple、WWDC26 Session 334。<code>fm</code> が macOS 27 にプリインストールされていること（“The fm command line tool comes pre-installed with macOS 27.”）、<code>fm respond ... --model pcc</code> のデモ、<code>fm schema object</code> → <code>fm respond --schema</code> → <code>jq</code> でファイルを仕分けるデモ。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel/availability-swift.enum/unavailablereason">SystemLanguageModel.Availability.UnavailableReason</a> Apple Developer Documentation（Foundation Models）。<code>deviceNotEligible</code>・<code>appleIntelligenceNotEnabled</code>・<code>modelNotReady</code> の3つの理由とそれぞれの説明文。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://support.apple.com/ja-jp/121115">次世代のApple Intelligenceの入手方法</a> Apple サポート、文書 121115（日本語版 2026年9月15日公開）。対応機種（M1 以降を搭載した Mac）、必要なストレージ（M3 以降かつユニファイドメモリ 12GB 以上の Mac は最大 14GB、その他は最大 8GB）、27.0 ソフトウェアリリースへのアップデートで対象デバイスでは自動的に利用可能になること。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-3-3" data-footnote-backref="" aria-label="Back to reference 3-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel/availability-swift.enum/unavailablereason/modelnotready">modelNotReady</a> Apple Developer Documentation（Foundation Models）。Discussion 節に、モデルはネットワークの状態・バッテリー残量・システムの負荷に応じて自動でダウンロードされるという記述。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://qiita.com/chibicco/items/ef1a9e40c4cdf15d8e21">macOS 27にはローカルLLMが入っている</a> chibicco、Qiita、2026年9月17日。「実際に動いているモデルを確認する」節に <code>swift -e</code> での確認方法とその出力（<code>AFM 3 Core Advanced</code> / <code>8192</code>）、「M3以降かつユニファイドメモリ12GB以上」という目安（記事は Apple サポートを根拠に挙げている）。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-5-3" data-footnote-backref="" aria-label="Back to reference 5-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel/variant-swift.struct">SystemLanguageModel.Variant</a> Apple Developer Documentation（Foundation Models）。<code>core3</code>（AFM 3 Core）と <code>coreAdvanced3</code>（AFM 3 Core Advanced）。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://machinelearning.apple.com/research/introducing-third-generation-of-apple-foundation-models">Introducing the Third Generation of Apple’s Foundation Models</a> Apple Machine Learning Research、2026年6月8日。AFM 3 Core（30 億パラメータの dense モデル）、AFM 3 Core Advanced（200 億パラメータの sparse モデル、“unlocked by and optimized for our most capable Apple silicon systems”）、エージェント的なツール利用と複雑な推論を担う AFM 3 Cloud Pro。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-7-2" data-footnote-backref="" aria-label="Back to reference 7-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel/contextsize">contextSize</a> Apple Developer Documentation（Foundation Models）。モデルが扱えるトークン数の上限（“The maximum context size in tokens that the model supports.”）。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://developer.apple.com/documentation/foundationmodels/managing-the-context-window">Managing the context window</a> Apple Developer Documentation（Foundation Models）。“4096 tokens per session” の記述と、日本語では1トークンがおおよそ1文字にあたるという記述。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-9-2" data-footnote-backref="" aria-label="Back to reference 9-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://developer.apple.com/videos/play/wwdc2026/241/">What’s new in the Foundation Models framework</a> Apple、WWDC26 Session 241。<code>contextSize</code> のコード例（コメント <code>// 8192</code>）と、ハードウェアに合わせてアプリを適応させるよう勧める発言。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create">Create chat completion</a> OpenAI API Reference。応答の <code>message.tool_calls</code> と、<code>finish_reason</code> の値 <code>tool_calls</code>。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-12">
+<p><a href="https://opencode.ai/docs/providers/">Providers</a> OpenCode docs。カスタムプロバイダの設定（<code>npm</code> に <code>@ai-sdk/openai-compatible</code>、<code>options.baseURL</code>）。 <a href="#user-content-fnref-12" data-footnote-backref="" aria-label="Back to reference 12" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-13">
+<p><a href="https://github.com/1duo/apple-fm-serve">apple-fm-serve</a> 1duo、GitHub の個人リポジトリ（README）。“The 8192-token on-device window is small for opencode’s default agent (full tool schemas ≈ 7k tokens + transcript)” という記述。 <a href="#user-content-fnref-13" data-footnote-backref="" aria-label="Back to reference 13" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-14">
+<p><a href="https://code.claude.com/docs/en/llm-gateway-protocol">Claude Code gateway compatibility guide</a> Anthropic、Claude Code docs。接続先に必要な API 形式の表（Anthropic Messages / Amazon Bedrock InvokeModel / Google Cloud Agent Platform rawPredict）。 <a href="#user-content-fnref-14" data-footnote-backref="" aria-label="Back to reference 14" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-15">
+<p><a href="https://code.claude.com/docs/en/llm-gateway">Other LLM gateways</a> Anthropic、Claude Code docs。“doesn’t support routing Claude Code to non-Claude models through any gateway.” という記述。 <a href="#user-content-fnref-15" data-footnote-backref="" aria-label="Back to reference 15" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-16">
+<p><a href="https://github.com/openai/codex/discussions/7782">Deprecating chat/completions support in Codex</a> OpenAI Codex、GitHub Discussion #7782、2025年12月9日。Chat Completions 対応の廃止の告知（“Full removal is slated for early February 2026.”）。 <a href="#user-content-fnref-16" data-footnote-backref="" aria-label="Back to reference 16" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-17">
+<p><a href="https://developer.apple.com/documentation/foundationmodels">Foundation Models</a> Apple Developer Documentation（フレームワーク概要）。オンデバイスのモデルが得意な処理（要約・情報抽出など）と、推論能力やコンテキストの大きさが要るときは Private Cloud Compute やサーバー側のモデルを使うという記述。 <a href="#user-content-fnref-17" data-footnote-backref="" aria-label="Back to reference 17" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-18">
+<p><a href="https://developer.apple.com/documentation/foundationmodels/prompting-an-on-device-foundation-model">Prompting an on-device foundation model</a> Apple Developer Documentation（Foundation Models）。“Because of their smaller size, on-device models have limited reasoning abilities.” という記述。 <a href="#user-content-fnref-18" data-footnote-backref="" aria-label="Back to reference 18" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

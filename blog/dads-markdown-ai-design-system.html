@@ -1,0 +1,203 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>デジタル庁デザインシステム（DADS）を Claude Code の設計図にする ── DESIGN.md をゼロから書かずに AI スライドのデザインを統一する | Meetsource</title><meta name="description" content="Claude Code などの AI で作るスライドや UI のデザインを統一するには、DESIGN.md をゼロから書くより、デジタル庁デザインシステム（DADS）が公式配布する Markdown から余白・文字・色の値を借りて要約するのが近道です。145 ファイルを丸ごと渡さずエッセンスに絞る理由と、ルールでは防げない描画崩れを実物で検収する手順も整理します。"><link rel="canonical" href="https://www.meetsource.work/blog/dads-markdown-ai-design-system"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="AI に「いい感じのスライドに」と頼むのをやめて、国のデザインシステムを渡した。それでも「検査は全部合格、実物は5箇所崩れ」の例がある"><meta property="og:description" content="虹色グラデーションと8種類の文字サイズに悩むなら、センスではなく値を渡す。デジタル庁デザインシステム（DADS）の Markdown から余白3段階・文字5段階・コントラスト比を借りる方法と、自動検査が合格でも PowerPoint で崩れた事例から、実物を見て検収する関所の置き方をまとめます。"><meta property="og:url" content="https://www.meetsource.work/blog/dads-markdown-ai-design-system"><meta property="og:image" content="https://www.meetsource.work/blog/dads-markdown-ai-design-system-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-07T15:50:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="AI に「いい感じのスライドに」と頼むのをやめて、国のデザインシステムを渡した。それでも「検査は全部合格、実物は5箇所崩れ」の例がある"><meta name="twitter:description" content="虹色グラデーションと8種類の文字サイズに悩むなら、センスではなく値を渡す。デジタル庁デザインシステム（DADS）の Markdown から余白3段階・文字5段階・コントラスト比を借りる方法と、自動検査が合格でも PowerPoint で崩れた事例から、実物を見て検収する関所の置き方をまとめます。"><meta name="twitter:image" content="https://www.meetsource.work/blog/dads-markdown-ai-design-system-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"デジタル庁デザインシステム（DADS）を Claude Code の設計図にする ── DESIGN.md をゼロから書かずに AI スライドのデザインを統一する","description":"Claude Code などの AI で作るスライドや UI のデザインを統一するには、DESIGN.md をゼロから書くより、デジタル庁デザインシステム（DADS）が公式配布する Markdown から余白・文字・色の値を借りて要約するのが近道です。145 ファイルを丸ごと渡さずエッセンスに絞る理由と、ルールでは防げない描画崩れを実物で検収する手順も整理します。","datePublished":"2026-10-07T15:50:00.000Z","image":"https://www.meetsource.work/blog/dads-markdown-ai-design-system-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/dads-markdown-ai-design-system"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"デジタル庁デザインシステム（DADS）を商用スライドや自社 UI に使っても規約上問題ありませんか？","acceptedAnswer":{"@type":"Answer","text":"結論として、出典の明記および加工した旨の明記を行うことで、商用・非商用を問わず自由に利用・翻案が可能です。 DADS は「公共データ利用規約（第1.0版）」（CC BY 4.0 互換）に基づいて配布されています。ドキュメント（Markdown）を加工・編集して自社の設計ルールやスライドに転用する場合は、利用上の注意事項に従い、出典の記載（例: 「出典：デジタル庁デザインシステムウェブサイト https://design.digital.go.jp/dads/」）と、加工した旨（例: 「デジタル庁デザインシステムウェブサイト https://design.digital.go.jp/dads/ のコンテンツを加工して作成」）の両方を記載してください。"}},{"@type":"Question","name":"DADS の Markdown ファイル（145 ファイル）をすべて Claude Code に読み込ませるべきですか？","acceptedAnswer":{"@type":"Answer","text":"結論として、すべてのファイルを読み込ませるべきではありません。 145 ファイル全体を無差別に読み込ませると、コンテキスト長の浪費や推論の指示競合を引き起こし、かえって出力の品質が低下します。スライドや UI モックの作成に必要な「余白 3 段階」「文字サイズ 5 段階」「カラー・コントラスト比」などの基本ルール・トークンのエッセンス（本記事で紹介した DESIGN.md のような要約ファイル）に絞って渡すのが最も効果的です。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-07T15:50:00.000Z" data-astro-cid-7jjqptxk> 2026.10.08 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#デザインシステム</span><span class="tag" data-astro-cid-7jjqptxk>#フロントエンド</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>デジタル庁デザインシステム（DADS）を Claude Code の設計図にする ── DESIGN.md をゼロから書かずに AI スライドのデザインを統一する</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/dads-markdown-ai-design-system-hero.webp" alt="デジタル庁デザインシステム（DADS）を Claude Code の設計図にする ── DESIGN.md をゼロから書かずに AI スライドのデザインを統一する" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>Claude Code や Cursor などの AI コーディングエージェントに「見栄えのいいスライドを作ってほしい」「管理画面の UI モックを組んでほしい」と指示を出したとき、返ってきた画面を見て頭を抱えた経験はないでしょうか。頼んでもいないサイバー空間のような虹色グラデーションが敷き詰められ、1 画面の中に 8 種類ものフォントサイズが乱立し、ボタンごとに角丸や余白のルールがバラバラになっている ── そんな「過剰に飾り立てられた生成物」を手作業で深夜に直す羽目になるケースは珍しくありません。</p>
+<p>AI に自然言語で「センスよく」「シンプルに」と指示しても、モデルにとっての「いい感じ」は統計的な平均や学習データの派手な装飾に引きずられがちです。こうしたデザインのブレを抑え、エージェントに一定の視覚秩序を守らせるための仕様として、近年 Google Labs が提唱する <code>DESIGN.md</code> <sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> <sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup> が注目を集めています。<strong>DESIGN.md</strong> とは、AI コーディングエージェントに対して色・タイポグラフィ・余白・コンポーネントなどの視覚設計ルールと設計意図を永続的かつ構造化して伝えるための仕様です。</p>
+<p>しかし、実務でいざ自前で <code>DESIGN.md</code> を書こうとすると、大きな壁に突き当たります。「ベースカラーとアクセントカラーのコントラスト比はどう設定すべきか」「見出しと本文のフォント階層は何段階が適切か」「余白の基準単位はどうするか」といった設計ルールを一から言語化し、保守し続ける作業は、デザイン専任ではないエンジニアやテックリードにとって過大な負担となります。</p>
+<p>そこで私が提案したいのが、「センスを AI に求めるのをやめ、すでに国が徹底的に引き算して完成させた公開デザインシステムの Markdown をそのまま AI の設計図として転用する」というアプローチです。自前でゼロから <code>DESIGN.md</code> を書く代わりに、デジタル庁デザインシステム（略称: DADS）が公式配布している Markdown ドキュメントを入力として活用することで、労力を最小限に抑えつつ、堅牢な視覚的ハーネスを AI に与えることができます <sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<h2 id="なぜ-dads-の-markdown-なのか実務での選択理由">なぜ DADS の Markdown なのか：実務での選択理由</h2>
+<p>世の中には多くのデザインシステムが存在しますが、なぜ AI エージェントの「設計図」としてデジタル庁デザインシステム（DADS）が極めて優れているのでしょうか。その理由は、配布形態、利用規約、そしてルールが持つ「引き算の客観性」の 3 点にあります。</p>
+<p>第一に、<strong>公式による Markdown ファイルの一括配布</strong> です。デジタル庁は 2026 年 7 月 8 日より、ウェブサイトを構成する全ドキュメントおよびアクセシビリティガイドラインの一式を Markdown 形式の ZIP アーカイブとして公式に配布しています <sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup> <sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。2026 年 9 月 9 日版のアーカイブには 145 ファイルが含まれており <sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>、サイトの更新に合わせて定期的に最新版が提供されています。Figma や Storybook などの人間向けツール、あるいはデザイントークンの JSON 定義だけでは、AI エージェントに「なぜそのルールを守るのか」という設計意図を伝えるのが困難です <sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。DADS のドキュメントは、背景の解説と具体的な数値定義が一体となった Markdown であるため、LLM がそのまま解釈するコンテキストとして極めて扱いやすい性質を持っています。</p>
+<p>第二に、<strong>公的機関ならではの利用許諾の明快さ</strong> です。DADS は「公共データ利用規約（第1.0版）」（略称: PDL1.0、クリエイティブ・コモンズ・ライセンス CC BY 4.0 互換）に基づいて提供されています <sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。商用・非商用を問わず、自由な複製、公衆送信、翻案が認められています。DADS の利用上の注意事項によると、コンテンツを編集・加工等して利用する場合は、出典の記載（例: 「出典：デジタル庁デザインシステムウェブサイト <a href="https://design.digital.go.jp/dads/%E3%80%8D%EF%BC%89%E3%81%AB%E5%8A%A0%E3%81%88%E3%81%A6%E3%80%81%E5%8A%A0%E5%B7%A5%E3%81%97%E3%81%9F%E6%97%A8%EF%BC%88%E4%BE%8B">https://design.digital.go.jp/dads/」）に加えて、加工した旨（例</a>: 「デジタル庁デザインシステムウェブサイト <a href="https://design.digital.go.jp/dads/">https://design.digital.go.jp/dads/</a> のコンテンツを加工して作成」）を明記することが求められています <sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。法的な利用条件がクリアであることは、業務利用において不可欠な前提条件です。</p>
+<p>第三に、スライドや UI に即座に効く <strong>「3 つの客観ルール」</strong> の存在です。DADS の最大の特徴は、華美な装飾を足すことではなく、アクセシビリティを確保するために要素を極限まで引き算している点にあります。この引き算の思想が、AI 特有の過剰な装飾癖を抑え込む強力なブレーキとして機能します。</p>
+<ol>
+<li><strong>余白 3 段階</strong>: DADS では余白の基準単位を <code>8 CSS px</code> と定義しており、スタイルガイドの実装例として <code>8 CSS px</code>（等倍）、<code>24 CSS px</code>（3 倍）、<code>64 CSS px</code>（8 倍）の 3 段階スケールが例示されています <sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。余白を「なんとなく空いたスペース」ではなく、要素同士の論理的な近接度（グルーピング）を表す 3 種類の道具として AI に固定させることで、画面全体の整列感を保ちやすくなります。</li>
+<li><strong>文字 5 段階</strong>: DADS のタイポグラフィ定義では、フォントに <code>Noto Sans JP</code> を採用し、フォントサイズを Display（48〜64px）、Standard（16〜45px）、そして 14px 未満は原則不許容という明確な基準を設けています <sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。DADS はこの範囲の中に多数のスタイルトークンを定義しており、スライドでどれを使うかは使う側が選びます。テツメモ氏はスライドへの転用にあたり、この範囲から表紙タイトル（48px）、大見出し（36px）、小見出し（24px）、本文（20px）、注釈（14px）の 5 段階を選んでいます <sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> <sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。段数を限定して AI に渡すことで、場当たり的な文字サイズ変更を抑えられます。</li>
+<li><strong>コントラスト比の客観判定</strong>: DADS では、テキストと背景色のコントラスト比を常に <code>4.5:1</code> 以上、図形や枠線などの非テキスト要素は <code>3.0:1</code> 以上を維持することが定められています <sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。たとえばスライドのアクセントに目立つ黄色（<code>#fbd212</code>）を使おうとしても、白背景に対するコントラスト比は <code>1.47:1</code> しかないため機械的に不合格となります。その結果、可読性を担保できる濃い青（<code>#155585</code>、コントラスト比 <code>7.87:1</code>）を選ばざるを得なくなります <sup><a href="#user-content-fn-3" id="user-content-fnref-3-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。個人の「好み」ではなく「客観的な数値基準」によって AI の配色を決定できるのが、この規約の強みです。</li>
+</ol>
+<p>自前でルールを一から作るアプローチと、既存の公開デザインシステムを転用するアプローチを比較すると、初期コストとアクセシビリティ担保の面で大きな差が出ます。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>比較軸</th><th>自前でゼロから DESIGN.md を書く</th><th>DADS の Markdown を設計図として転用する</th></tr></thead><tbody><tr><td><strong>初期作成コスト</strong></td><td>高い（色・余白・フォントの値を一から選定し言語化する）</td><td>低い（値をゼロから決める判断は不要。使う段の選択と要約ファイルの作成は残る）</td></tr><tr><td><strong>客観性・アクセシビリティ</strong></td><td>個人の主観に依存しがち（コントラスト比等の漏れが発生）</td><td>公的な基準として明文化済み（テキスト 4.5:1 / 非テキスト 3.0:1）</td></tr><tr><td><strong>メンテナンス性</strong></td><td>自前で更新・管理し続ける負担がある</td><td>公式が定期更新（サイト更新に同期して追従）</td></tr><tr><td><strong>AI エージェントへの適合</strong></td><td>書式や構造の試行錯誤が必要</td><td>公式が Markdown で配布しており、要約の素材としてそのまま使える</td></tr></tbody></table>
+<p>自前でのデザインルール策定にリソースを割けない現場ほど、公的機関が磨き上げた規約を借りることで、すぐに客観的な品質基準を手に入れることができます。</p>
+<p>筆者も DADS の値を要約した設計ルールを AI に渡して資料を作ってみました。仕上がりはすっきりとした読みやすい資料で、同じ内容を単純に要約した文章を読むよりも数段わかりやすいと感じました。</p>
+<p>実際に Claude Code などのツールで DADS を参照させる実践も始まっています。たとえば、Codex や Claude Code から DADS のドキュメントを直接参照して UI 生成やレビューを行う非公式 Agent Skill（<code>apply-digital-agency-design-system</code>）の実装事例 <sup><a href="#user-content-fn-12" id="user-content-fnref-12" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup> も報告されており、エージェントのハーネスとして外部デザインシステムを外付けする構成が現実的な選択肢となっています。</p>
+<h2 id="dads-の基本トークンを凝縮した最小の-designmd-設定例">DADS の基本トークンを凝縮した最小の DESIGN.md 設定例</h2>
+<p>DADS を渡すといっても、145 ファイルをそのまま読ませるわけではありません。省けるのは値をゼロから決めて言語化する設計判断であり、それを <code>DESIGN.md</code> の形に要約する作業は残ります。Google Labs が提唱する <code>DESIGN.md</code> のフォーマットに合わせて要約したファイルを用意するのが効果的です。以下は、スライドや UI モックの作成に必要なエッセンス（余白 3 段階、文字 5 段階、コントラスト比）を抽出し、Google Labs の Token Schema に準拠させた最小構成の例です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>---</span></span>
+<span class="line"><span>name: DADS-Minimal</span></span>
+<span class="line"><span>colors:</span></span>
+<span class="line"><span>  primary: "#155585"</span></span>
+<span class="line"><span>  background: "#FFFFFF"</span></span>
+<span class="line"><span>typography:</span></span>
+<span class="line"><span>  display:</span></span>
+<span class="line"><span>    fontFamily: Noto Sans JP, sans-serif</span></span>
+<span class="line"><span>    fontSize: 48px</span></span>
+<span class="line"><span>  heading-lg:</span></span>
+<span class="line"><span>    fontFamily: Noto Sans JP, sans-serif</span></span>
+<span class="line"><span>    fontSize: 36px</span></span>
+<span class="line"><span>  heading-sm:</span></span>
+<span class="line"><span>    fontFamily: Noto Sans JP, sans-serif</span></span>
+<span class="line"><span>    fontSize: 24px</span></span>
+<span class="line"><span>  body:</span></span>
+<span class="line"><span>    fontFamily: Noto Sans JP, sans-serif</span></span>
+<span class="line"><span>    fontSize: 20px</span></span>
+<span class="line"><span>  caption:</span></span>
+<span class="line"><span>    fontFamily: Noto Sans JP, sans-serif</span></span>
+<span class="line"><span>    fontSize: 14px</span></span>
+<span class="line"><span>spacing:</span></span>
+<span class="line"><span>  sm: 8px</span></span>
+<span class="line"><span>  md: 24px</span></span>
+<span class="line"><span>  lg: 64px</span></span>
+<span class="line"><span>---</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>## Overview</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>デジタル庁デザインシステム（DADS）の基本原則に基づく、スライドおよび UI 生成向けの最小構成ルール。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>## Colors</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>- **Primary (#155585):** コントラスト比 7.87:1 の濃い青。見出しと主要テキストに使用。</span></span>
+<span class="line"><span>- **Background (#FFFFFF):** 白背景。</span></span>
+<span class="line"><span>- テキストと背景色のコントラスト比は常に 4.5:1 以上、図形・枠線は 3.0:1 以上を維持する。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>## Typography</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>- フォントファミリーは原則として `Noto Sans JP` を使用。</span></span>
+<span class="line"><span>- 文字サイズは 48px, 36px, 24px, 20px, 14px の 5 段階に限定し、14px 未満は使用しない。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>## Spacing</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>- 基本単位は 8px。</span></span>
+<span class="line"><span>- 余白スケールは sm (8px), md (24px), lg (64px) の 3 段階のみを使用する。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>このファイルはプロジェクトルートに置いただけでエージェントに自動で読み込まれる保証はないため、生成を指示するときにこのファイルを参照するよう明示します。参照させれば、エージェントは YAML フロントマターから数値トークンを、Markdown 本文のセクションから「なぜその数値を使うべきなのか」という設計意図を受け取ってコードやマークアップを生成できます。</p>
+<h2 id="メリットの裏にあるトレードオフと適用限界">メリットの裏にあるトレードオフと適用限界</h2>
+<p>公開デザインシステムを AI の設計図として転用する手法は非常に強力ですが、銀の弾丸ではありません。実務で運用する上では、避けて通れない 3 つのトレードオフと適用限界が存在します。</p>
+<h3 id="1-145-ファイル丸ごと投入の罠エッセンスの抽出">1. 145 ファイル丸ごと投入の罠（エッセンスの抽出）</h3>
+<p>「公式が 145 ファイルの Markdown を配っているなら、リポジトリに丸ごと放り込んで AI に読ませれば完璧なのではないか」と考えるかもしれません。しかし、これは明確なアンチパターンです。</p>
+<p>145 ファイルもの膨大なドキュメント群をプロンプトやコンテキストに無差別に投入すると、コンテキスト長や実行コストを大きく浪費します。それ以上に深刻なのは、大量のコンテキストによってモデルの推論が圧迫され、指示同士が競合しやすくなる点です。ウェブサイト向けの細かなアクセシビリティチェック項目や個別コンポーネントの仕様が混ざることで、肝心のスライド全体のレイアウトや文字サイズといった大枠のルールが無視されやすくなります。</p>
+<p>プロンプトやコンテキストで与えるルールは、先述の例のように「文字・余白・色などの最小限のエッセンス」に絞って渡すべきです。詳細なドキュメントは必要になったタイミングで個別に参照させるか、基本的なデザイントークンのみを凝縮して渡すのが、モデルの性能を引き出すうえで現実的です。</p>
+<h3 id="2-予防と検収の分離楽譜と演奏の品質管理">2. 予防と検収の分離（楽譜と演奏の品質管理）</h3>
+<p>どれほど完璧な設計図を与え、プログラムによる静的チェックをパスしたとしても、最終的な描画崩れをプロンプトだけで 100% 防ぐことは不可能です。</p>
+<p>テツメモ氏の X 投稿 <sup><a href="#user-content-fn-3" id="user-content-fnref-3-4" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> では、DADS のルールに基づいてスライドを生成し、文字のはみ出しや色のコントラストを機械的に判定する自動検査プログラムで「ALL GREEN（全項目合格）」を出したスライドであっても、実際に PowerPoint（<code>.pptx</code>）形式に変換してアプリで開いた瞬間、5 箇所の重大な描画崩れ（文字あふれ、行の重なり、カード要素の重複など）が発生したと報告されています。</p>
+<p>同投稿によれば、これは、プログラムが検査していた「ファイルを生成した時点の静的な枠高」と、実際の PowerPoint アプリが文字を描画した際の「フォントや折り返しによる動的な枠の伸長」との間に乖離があったためです。さらに、文字列生成ロジックの重複バグなども重なっていました。</p>
+<p>ここから得られる極めて重要な教訓は、<strong>「楽譜（設計図）のテストと、演奏（実物）の品質管理は絶対に切り離して運用しなければならない」</strong> ということです <sup><a href="#user-content-fn-3" id="user-content-fnref-3-5" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。ルールによる予防（プロンプトや静的リント）だけですべてを守ろうとしてはいけません。生成されたスライドを画像化し、人間の目で最終的なレンダリング結果を確認する「検収ステップ」を、自動化パイプラインの中に独立した関所として組み込む必要があります。テツメモ氏が配布するスライド制作キットも、PowerPoint で実際に開いて画像へ出し、渡す前に実物を見る手順を残しています <sup><a href="#user-content-fn-10" id="user-content-fnref-10-2" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。</p>
+<h3 id="3-指示出しの摩擦解消座標指示視覚フィードバック">3. 指示出しの摩擦解消（座標指示・視覚フィードバック）</h3>
+<p>AI にスライドや UI を修正させる際、最もフラストレーションが溜まるのが「直したい箇所の指示出し」です。「3 枚目のスライドの、右上のカードの中にある数字をもう少し大きくして」と自然言語で作文するのは人間にとっても負担であり、AI が別の要素と取り違えて意図しない変更を加える原因になります。</p>
+<p>この摩擦を解消する実践的なアプローチが、テツメモ氏が提案した「赤枠レビュー盤」のように、画像上で直したい領域を座標 <code>[x: 620, y: 340, w: 200, h: 80]</code> としてバウンディングボックスで指定する手法です <sup><a href="#user-content-fn-3" id="user-content-fnref-3-6" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>言葉による曖昧な指示を排し、視覚的な要素・マークで直接指示を与えるというアプローチは、Microsoft Research が発表した <code>Set-of-Mark Prompting</code>（arXiv:2310.11441） <sup><a href="#user-content-fn-13" id="user-content-fnref-13" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup> <sup><a href="#user-content-fn-14" id="user-content-fnref-14" data-footnote-ref="" aria-describedby="footnote-label">14</a></sup> や、Web 要素の座標・セレクタを抽出してエージェントに渡す benjitaylor の <code>agentation</code> <sup><a href="#user-content-fn-15" id="user-content-fnref-15" data-footnote-ref="" aria-describedby="footnote-label">15</a></sup> など、近年のマルチモーダル AI に対する視覚的グラウンディング（Visual Grounding）の研究やツール群の発想とも通じるものがあります。人間と AI の協業においては、「言葉で説明し尽くそうとするのではなく、視覚的な記号や座標で指示を伝える」プロセスの設計が鍵を握ります。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>ここまで述べてきたアプローチは、現在の AI エージェントのコンテキスト処理能力やツールの発展状況に基づいたものです。今後の技術環境の変化によって、この結論はどのように変わり得るでしょうか。</p>
+<p>第一に、<strong><code>llms.txt</code> や AI 向けインデックスの標準化</strong> です。現在、DADS のサイトには <code>llms.txt</code> は存在せず、一括 ZIP アーカイブによる配布形態をとっています。しかし今後、ウェブサイトやデザインシステムにおいて AI 向けインデックス標準（<code>llms.txt</code> 等）の整備が進めば、145 ファイルを一括ダウンロードして手元で要約する手間は不要になります。エージェントが必要なコンポーネント仕様やトークン定義だけをオンデマンドで自律的に取得・参照する設計へとシフトしていくはずです。</p>
+<p>第二に、<strong>デザインシステムを「社内資産」から「AI が共通参照する公共資産」へ捉え直す動きの広がり</strong> です。SmartHR は「情報をオープンにすることは、私たちの間で無用な齟齬・苦労を避けるだけでなく、社会にも“車輪の再発明”を減らすなど、良い影響をもたらす」という運営理念のもとでデザインシステムを公開しています <sup><a href="#user-content-fn-16" id="user-content-fnref-16" data-footnote-ref="" aria-describedby="footnote-label">16</a></sup>。企業ごとにバラバラなデザイン規約をゼロから策定するのではなく、公開された優れたデザインシステムを共通の「型」として AI に参照させ、差分となるブランドカラーやロゴだけをオーバーライドするようなアーキテクチャが一般化していくと考えられます。</p>
+<p>第三に、<strong>メディア間のアダプテーション（翻案）の前提</strong> です。忘れてはならないのは、DADS の本来の射程はウェブサイトおよび Web アプリケーションであり、スライド専用に作られたものではないという事実です。スライドにはプロジェクター投影時の視認性や、16:9 の固定アスペクト比といった固有の制約が存在します。Web 向けの規約を別メディアへ転用しているという前提を常に意識し、媒体ごとの特性に応じた適切なチューニングを行う姿勢が求められます。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-デジタル庁デザインシステムdadsを商用スライドや自社-ui-に使っても規約上問題ありませんか">Q. デジタル庁デザインシステム（DADS）を商用スライドや自社 UI に使っても規約上問題ありませんか？</h3>
+<p><strong>A.</strong> 結論として、出典の明記および加工した旨の明記を行うことで、商用・非商用を問わず自由に利用・翻案が可能です。</p>
+<p>DADS は「公共データ利用規約（第1.0版）」（CC BY 4.0 互換）に基づいて配布されています。ドキュメント（Markdown）を加工・編集して自社の設計ルールやスライドに転用する場合は、利用上の注意事項に従い、出典の記載（例: 「出典：デジタル庁デザインシステムウェブサイト <a href="https://design.digital.go.jp/dads/%E3%80%8D%EF%BC%89%E3%81%A8%E3%80%81%E5%8A%A0%E5%B7%A5%E3%81%97%E3%81%9F%E6%97%A8%EF%BC%88%E4%BE%8B">https://design.digital.go.jp/dads/」）と、加工した旨（例</a>: 「デジタル庁デザインシステムウェブサイト <a href="https://design.digital.go.jp/dads/">https://design.digital.go.jp/dads/</a> のコンテンツを加工して作成」）の両方を記載してください。</p>
+<h3 id="q-dads-の-markdown-ファイル145-ファイルをすべて-claude-code-に読み込ませるべきですか">Q. DADS の Markdown ファイル（145 ファイル）をすべて Claude Code に読み込ませるべきですか？</h3>
+<p><strong>A.</strong> 結論として、すべてのファイルを読み込ませるべきではありません。</p>
+<p>145 ファイル全体を無差別に読み込ませると、コンテキスト長の浪費や推論の指示競合を引き起こし、かえって出力の品質が低下します。スライドや UI モックの作成に必要な「余白 3 段階」「文字サイズ 5 段階」「カラー・コントラスト比」などの基本ルール・トークンのエッセンス（本記事で紹介した <code>DESIGN.md</code> のような要約ファイル）に絞って渡すのが最も効果的です。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>公開デザインシステムを AI の設計図として転用する実践の要点は以下の通りです。</p>
+<ul>
+<li><strong>AI にデザインの「センス」を求めるな</strong>: 曖昧な自然言語プロンプトは装飾の過剰と出力のブレを招く。公的機関の規約を入力として与え、引き算のルールで統制する。</li>
+<li><strong>自前で DESIGN.md をゼロから書く必要はない</strong>: DADS などの公開 Markdown 資産から、余白・文字・色の基本トークンを借りて設計図を仕立てるのがいちばんの近道である。</li>
+<li><strong>全ファイルを投入せず、エッセンスに絞れ</strong>: 145 ファイルあるドキュメントを丸ごと投入すると推論を圧迫する。スライドや UI に必要な基本トークンに絞ってコンテキストを渡す。</li>
+<li><strong>予防と検収を分離せよ</strong>: ルール（楽譜）が ALL GREEN であっても、アプリ描画の実物（演奏）ではフォントや動的伸長による崩れが起こる。実物の画像目視検収を独立した関所として配置する。</li>
+<li><strong>指示は言葉ではなく座標や視覚マークで出せ</strong>: 位置の作文を排し、赤枠やバウンディングボックスによる指示でエージェントとの齟齬を無くす。</li>
+</ul>
+<p>開発プロセスの標準化、AI エージェントを活用したデザインシステム連携や AI Operations の導入設計について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://zenn.dev/yamitake/articles/designmd-ai-coding-agent">DESIGN.md - AIコーディングエージェントのためのデザインシステム仕様</a> yamitake、2026年4月28日公開。二層構成のアーキテクチャ解説、Figma/JSON トークンの課題と解決。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://github.com/google-labs-code/design.md">google-labs-code/design.md</a> Google Labs、2026年公開（v0.1.0 alpha）。AI コーディングエージェント向け二層仕様、npx lint CLI、WCAG AA 検査ルール。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://x.com/tetumemo/status/2101474776447656359">テツメモ｜AI図解×検証｜Newsletter on X (2026-09-20)</a> テツメモ、2026年9月20日公開。DADS のスライド転用、固定 5 段階文字、余白 3 段階、コントラスト比検証、赤枠レビュー盤。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-3-3" data-footnote-backref="" aria-label="Back to reference 3-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-3-4" data-footnote-backref="" aria-label="Back to reference 3-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-3-5" data-footnote-backref="" aria-label="Back to reference 3-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-3-6" data-footnote-backref="" aria-label="Back to reference 3-6" class="data-footnote-backref">↩<sup>6</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://design.digital.go.jp/dads/resources/">リソース｜デジタル庁デザインシステムβ版</a> デジタル庁、2025年2月28日更新。ドキュメント（Markdown）2026年9月9日版 ZIP 配布の事実、同梱アセット。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://design.digital.go.jp/dads/updates-misc/">お知らせ（その他）｜デジタル庁デザインシステムβ版</a> デジタル庁、2026年9月9日更新。2026年7月8日の Markdown 提供開始告知、その後の定期更新履歴。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://www.digital.go.jp/resources/open_data/public_data_license_v1.0">公共データ利用規約（第1.0版）｜デジタル庁</a> デジタル庁、令和6年7月5日制定。商用利用・翻案の許諾条文、CC BY 4.0 互換性。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://design.digital.go.jp/dads/introduction/notices/">利用上の注意事項｜デジタル庁デザインシステムβ版</a> デジタル庁、2026年1月20日更新。出典記載ルール、加工時の編集明記ルール（notices 1-1, 1-2）。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://design.digital.go.jp/dads/foundations/spacing/">余白（概要）｜デジタル庁デザインシステムβ版</a> デジタル庁、2024年12月20日更新。基準単位 8 CSS px、適用例（8px, 24px, 64px）の 3 段階スケール定義。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://design.digital.go.jp/dads/foundations/typography/">タイポグラフィ（概要）｜デジタル庁デザインシステムβ版</a> デジタル庁、2025年11月28日更新。Noto Sans JP の採用、Display 48〜64, Standard 16〜45, 14px 未満不許容の定義。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://tetumemo.m-newsletter.com/posts/gpt6-astra-digital-agency-skills-kit">GPT-6 Astraの実例から、仕事の資料づくりへ。デジタル庁のデザインシステムでスライドを作り、赤枠で修正を依頼→パワポ化までできるSkillsキットを配布</a> テツメモ、2026年9月10日公開。dads-slide-deck-v1 配布、スライド向け文字サイズ 5 段階の選定、PowerPoint で開いて画像化し実物を確認する手順。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-10-2" data-footnote-backref="" aria-label="Back to reference 10-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://design.digital.go.jp/dads/foundations/color/">カラー（概要）｜デジタル庁デザインシステムβ版</a> デジタル庁、2024年12月20日更新。テキスト 4.5:1 以上、非テキスト 3.0:1 以上、Yellow-300 / Black フォーカス定義。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-12">
+<p><a href="https://ai.itokoba.com/archives/945/">デジタル庁デザインシステムをCodexとClaude Codeから呼び出すSkillを作った</a> セカヤサAIブログ（itokoba）、2026年8月24日公開。非公式 Skill apply-digital-agency-design-system、Codex/Claude Code 連携。 <a href="#user-content-fnref-12" data-footnote-backref="" aria-label="Back to reference 12" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-13">
+<p><a href="https://arxiv.org/abs/2310.11441">Set-of-Mark Prompting Unleashes Extraordinary Visual Grounding in GPT-4V</a> Jianwei Yang et al. (Microsoft Research)、2023年10月23日公開。LMM の視覚的グラウンディング手法、マーク重畳による領域特定。 <a href="#user-content-fnref-13" data-footnote-backref="" aria-label="Back to reference 13" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-14">
+<p><a href="https://github.com/microsoft/SoM">microsoft/SoM</a> Microsoft Research、2023年公開。Set-of-Mark Prompting の公式実装リポジトリ。 <a href="#user-content-fnref-14" data-footnote-backref="" aria-label="Back to reference 14" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-15">
+<p><a href="https://github.com/benjitaylor/agentation">benjitaylor/agentation</a> Benji Taylor、2026年公開。ブラウザ上の要素選択と座標・Markdown 出力、AI エージェント連携仕様。 <a href="#user-content-fnref-15" data-footnote-backref="" aria-label="Back to reference 15" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-16">
+<p><a href="https://smarthr.design/introduction/operate-policy/">運営理念 | はじめに（SmartHR Design System）</a> SmartHR、2026年公開。デザインシステムのオープン公開理念、「車輪の再発明を減らす」社会的価値。 <a href="#user-content-fnref-16" data-footnote-backref="" aria-label="Back to reference 16" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

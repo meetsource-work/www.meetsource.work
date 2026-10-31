@@ -1,0 +1,32 @@
+# www.meetsource.work の gh-pages ブランチに置かれ、push されたビルド済み成果物をそのまま Pages へ公開する。
+# GitHub 管理の pages-build-deployment（legacy）は古い action を使っていて警告が出るため、自前で置き換える。
+# mise の deploy タスクが dist/.github/workflows/ にコピーする。
+name: Deploy Pages
+
+on:
+  push:
+    branches: [gh-pages]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v5

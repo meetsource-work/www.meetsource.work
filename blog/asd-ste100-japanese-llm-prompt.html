@@ -1,0 +1,177 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>「ASD-STE100 の規則に寄せて」は日本語でも効くか ── 8規則で完了条件が9本中4本に減り、2規則なら残った | Meetsource</title><meta name="description" content="日本語プロンプトで航空宇宙の制限言語 ASD-STE100 の規則に寄せて書かせると誤読は防げるのか。8規則を指定すると完了条件が半減した実測データと、完了条件が残った「2規則」への絞り込みを解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/asd-ste100-japanese-llm-prompt"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="「ASD-STE100 の規則に寄せて」は日本語でも効くか ── 8規則で完了条件が9本中4本に減り、2規則なら残った | Meetsource"><meta property="og:description" content="日本語プロンプトで航空宇宙の制限言語 ASD-STE100 の規則に寄せて書かせると誤読は防げるのか。8規則を指定すると完了条件が半減した実測データと、完了条件が残った「2規則」への絞り込みを解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/asd-ste100-japanese-llm-prompt"><meta property="og:image" content="https://www.meetsource.work/blog/asd-ste100-japanese-llm-prompt-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-07T00:37:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="「ASD-STE100 の規則に寄せて」は日本語でも効くか ── 8規則で完了条件が9本中4本に減り、2規則なら残った | Meetsource"><meta name="twitter:description" content="日本語プロンプトで航空宇宙の制限言語 ASD-STE100 の規則に寄せて書かせると誤読は防げるのか。8規則を指定すると完了条件が半減した実測データと、完了条件が残った「2規則」への絞り込みを解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/asd-ste100-japanese-llm-prompt-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"「ASD-STE100 の規則に寄せて」は日本語でも効くか ── 8規則で完了条件が9本中4本に減り、2規則なら残った","description":"日本語プロンプトで航空宇宙の制限言語 ASD-STE100 の規則に寄せて書かせると誤読は防げるのか。8規則を指定すると完了条件が半減した実測データと、完了条件が残った「2規則」への絞り込みを解説します。","datePublished":"2026-10-07T00:37:00.000Z","image":"https://www.meetsource.work/blog/asd-ste100-japanese-llm-prompt-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/asd-ste100-japanese-llm-prompt"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"ASD-STE100 を日本語の文章に当てはめる公式の枠組みはありますか？","acceptedAnswer":{"@type":"Answer","text":"ASD-STE100 自体は英語を対象とする規格で、仕様は ASD（欧州航空宇宙防衛工業会）が所有しています。 日本語に当てはめる方法としては、どの言語にも適用できるライティングルールである ISO 24620-4 を各言語に訳し、その言語に固有のルールを足して使う方法が紹介されています。国内では、産業日本語研究会の特許ライティングマニュアルや、テクニカルコミュニケーター協会（JTCA）の日本語スタイルガイドも参照できます。"}},{"@type":"Question","name":"プロンプトに文体ルールを多く指定した方が、AI の出力品質は上がりますか？","acceptedAnswer":{"@type":"Answer","text":"必ずしも上がりません。手元の実測検証では、8 つの文体ルールを指定したところ、モデルが頼まれなくても書いていた「タスクの完了条件」が 9 本中 4 本に減りました。 規則を細かく指定しすぎると、モデルの注意が規則を守ることに割かれ、文脈上必要な内容が抜けるおそれがあります（この機序は推測です）。手元の検証（モデル1種、メモの書き直し1種）では、主語の明示と条件の先置きの2規則に絞った条件で、完了条件は抜けませんでした。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-07T00:37:00.000Z" data-astro-cid-7jjqptxk> 2026.10.07 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#prompt-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#llm</span><span class="tag" data-astro-cid-7jjqptxk>#テクニカルライティング</span><span class="tag" data-astro-cid-7jjqptxk>#制限言語</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>「ASD-STE100 の規則に寄せて」は日本語でも効くか ── 8規則で完了条件が9本中4本に減り、2規則なら残った</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/asd-ste100-japanese-llm-prompt-hero.webp" alt="「ASD-STE100 の規則に寄せて」は日本語でも効くか ── 8規則で完了条件が9本中4本に減り、2規則なら残った" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>LLM に技術文書や作業指示、業務メモの書き直しを指示すると、丁寧ではあるものの過剰な修飾や前置きが続き、文章が回りくどくなったり解釈がブレたりすることがよくあります。LLM の出力を読みやすくする工夫として、Andrej Karpathy 氏が紹介したのが、航空宇宙分野の制限言語規格「ASD-STE100」を指定する方法です<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>日本語で「ASD-STE100 の規則に寄せて」と指示した1回の試行で、モデル自身は「主語を毎回書いたので文章が硬く、くどくなったが、誰が何をするかは誤読しにくくなった」と述べました。では、誤読を防ぐ規則をもっと足せばよいのか。手元の実験では、規則を8つ渡すと、モデルが頼まれなくても書いていた「完了条件」が9本中4本に減りました。2つに絞ると9本中9本で残りました（モデルは1種、課題はメモの書き直し1種での結果です）。</p>
+<p>以下、この試行1件と、規則を8つ渡した条件・2つに絞った条件で完了条件の出力本数を数えた手元の検証データをもとに、プロンプトに渡す規則を「主語」と「条件の位置」の2つに絞る方法を解説します。</p>
+<h2 id="航空宇宙の制限言語asd-ste100とプロンプト指定の背景">航空宇宙の制限言語「ASD-STE100」とプロンプト指定の背景</h2>
+<p>ASD-STE100（Simplified Technical English）とは、英語で書かれた整備文書の読み手が、読んだ内容を正しく理解できるようにするために開発された制限言語（Controlled Language）規格です。最初は民間航空向けで、のちに防衛分野のプロジェクトでも求められるようになりました<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>1980年代初頭に欧州航空宇宙工業会（AECMA、現 ASD）によって開発され、現在も改訂が続けられています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。規格を求めたのは顧客であるエアラインで、その約 80% は英語を母語としません。複雑な技術的指示は誤解されやすく、誤解は事故につながりえます。そこで規格は「1語につき1つの意味（one word – one meaning）」を原則とし、文法や構文を制限する「書き方の規則（Part 1）」と、使ってよい語彙を定めた「辞書（Part 2）」の2部構成をとっています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>この規格をプロンプトに使う方法を紹介したのが、Karpathy 氏の投稿です。同氏は、LLM に ASD-STE100 で説明させると、読みやすい文章になることが多いと書きました。LLM はこの規格をよく知っており、規格には文体への厳しい制約がある、という見立てです<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。規格が厳格なため、本人も「80% of the way to ASD-STE100」（ASD-STE100 の8割程度に寄せる）と緩めて頼むことがあると述べています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>英語圏では、この考え方をエージェントスキルに組み込む実装も現れています。例えば GitHub で公開されているエージェントスキル <code>AminBlg/SimpleEnglish</code> では、スキルの版 2.0.1 を使った検証で、スキルなしと比べて em-dash・太字・見出し・箇条書きといった書式の欠陥（visible defects）が 218 件から 11 件へ、95% 減ったと報告されています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。現行のスキル定義は約 1,700 トークンで、約 60 トークンの軽量版も用意されています<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。ここで数えているのは書式の欠陥で、後半で数える完了条件の有無とは別の指標です。</p>
+<h2 id="asd-ste100-の規則に寄せてと指示した日本語要約の記録">「ASD-STE100 の規則に寄せて」と指示した日本語要約の記録</h2>
+<p>では、英語向けの規格である ASD-STE100 の考え方は、日本語プロンプトでも通用するのでしょうか。</p>
+<p>手元で、前述の Karpathy 氏の投稿を題材に、LLM に「この記事を日本語で、ASD-STE100 の規則に寄せて要約して」と指示しました。同じ会話の中で ASD-STE100 について調べた後の試行で、回数は1回です。規則に寄せない要約との比較もしていません。</p>
+<p>モデルは、次の5つの規則に寄せて要約を書いたと説明しました。</p>
+<ol>
+<li>1文に1つのことだけを書く</li>
+<li>主語を省かない</li>
+<li>同じものは最後まで同じ語で呼ぶ</li>
+<li>手順は命令形で書く</li>
+<li>段落は6文までにする</li>
+</ol>
+<p>理由を尋ねると、モデルは、この5つは指示から自動的に出てきたものではなく、英語版 Wikipedia に載っている STE の規則一覧から日本語に当てはめやすいものを選んで訳した、と答えました。要約を書いた後の所見で、モデルは次のトレードオフを挙げました。普段なら省く主語（「Karpathy は」「LLM は」）を毎回書いたので、文章が硬く、くどくなった。そのぶん、誰が何をするかは誤読しにくくなった。</p>
+<p>モデル自身の所見では、規則に寄せたことで、読みやすさ（くどさ）と誤読のしにくさが逆向きに引っ張り合っています。では、規則を足していくと、モデルが頼まれなくても書いていた内容は残るのでしょうか。後半の実験はこの問いを扱います。</p>
+<h2 id="issue-953規則の精査と日本語への当てはまり">Issue 9（53規則）の精査と日本語への当てはまり</h2>
+<p>手元の規格本文によると、ASD-STE100 の現行規格である Issue 9 は、全 434 ページのうち 86 ページを「Part 1: Writing Rules」に充てており、合計 53 項目の文法・構文規則が定義されています。</p>
+<p>これらの規則を日本語の文章作成に持ち込めるかどうか、書き手側で1項目ずつ仕分けた結果、適合度は以下の 3 つに分かれました。</p>
+<ul>
+<li><strong>○ そのまま当てはまる（24 規則）</strong>: 能動態の維持（Rule 3.6）、サ変名詞の動詞化（Rule 3.7）、主語や語の省略防止（Rule 4.2）、1文1指示の原則（Rule 5.2）、指示文は命令形で書く（Rule 5.3）、指示の前に条件を置く（Rule 5.4）、1段落は6文まで（Rule 6.6）など</li>
+<li><strong>△ 置き換えれば当てはまる（15 規則）</strong>: 複合名詞の語数制限（単語数から名詞連続の制限へ置き換え）、1文の語数制限（単語数から文字数への置き換え）など</li>
+<li><strong>× 英語に固有（14 規則）</strong>: 時制の制限、米国英語綴りの強制、セミコロン禁止など</li>
+</ul>
+<p>書き手側の判定では、53 規則のうち 24 規則を、日本語にもそのまま当てはまる側に仕分けました。なお、Rule 6.6 の「段落は6文まで」について、なぜ6なのかの根拠は規格本文に書かれていません。</p>
+<p>こうした規則の考え方は、国内の技術文書標準や公的ガイドラインとも重なります。</p>
+<p>例えば、国際規格 ISO 24620-4 は、STEMG パートナーである中村哲三氏が研究発表で解説しているように、言語に依存しない共通のライティング規則として日本語にも適用可能な枠組みです<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。また、一般財団法人日本特許情報機構（Japio）の産業日本語研究会が策定した「特許ライティングマニュアル」は、特許明細書などの作成実務の指針を、7 つのカテゴリー・27 のルールにまとめています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>さらに、出入国在留管理庁と文化庁が策定した「在留支援のためのやさしい日本語ガイドライン」は、書き言葉ではすべての漢字にふりがなを振る方針を示しています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。テクニカルコミュニケーター協会（JTCA）も「日本語スタイルガイド」を発行しており、2024年7月の TC技術検定3級テクニカルライティング試験では参考書とされていました<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<h2 id="実測検証-規則を8つ足すと完了条件が-9本中4本に激減した">実測検証: 規則を8つ足すと完了条件が 9本中4本に激減した</h2>
+<p>「誤読を防ぐためにルールが有効であるなら、プロンプトにできるだけ多くの規則を詰め込めばよいのではないか」と考えるかもしれません。手元の実験では、その直感とは逆の結果が出ました。</p>
+<h3 id="検証環境と判定方法">検証環境と判定方法</h3>
+<ul>
+<li><strong>実施日と実行方法</strong>: 2026年10月4日。Claude Code の <code>claude -p</code>（モデルは <code>claude-sonnet-5-5</code>）で、<code>--disallowedTools 'Bash,Edit,Write,Read,WebFetch,WebSearch,Agent,Glob,Grep'</code> を付けてツールを無効にし、プロンプトは毎回その場で渡した</li>
+<li><strong>題材</strong>: 架空の業務メモ 3 種（チケット、タスク、依頼文）</li>
+<li><strong>指示</strong>: 「次のメモを、別の担当者が読んで、書き手に質問せずに作業できる文章に書き直してください。出力は書き直した本文だけにしてください。」</li>
+<li><strong>条件</strong>: 文体の規則を足さない「規則なし（base）」と、下記の「8規則」を足した条件。各題材で 3 回ずつ、各条件 9 本、計 18 本</li>
+<li><strong>完了条件の判定</strong>: 出力が正規表現 <code>完了条件|完了の条件|完了とする|完了の定義|終了条件</code> に1回でもマッチすれば1本と数えた。完了の判定を別の見出しの中に書いた出力は数え漏れる</li>
+</ul>
+<p>8規則は、Issue 9 の規則のうち書き手側で「そのまま当てはまる」と仕分けたものから、チケットなどの書き直しに効きそうなものを選び、日本語で書き直したものです（規格の規則の訳ではありません）。要旨は次のとおりです。</p>
+<ol>
+<li>主語を省かない。誰が行うのかを書く。</li>
+<li>指示は「〜する」と言い切る。</li>
+<li>必須の作業と任意の作業を分けて書く。</li>
+<li>条件があるときは、条件を指示より先に書く。</li>
+<li>1つの文には指示を1つだけ書く。</li>
+<li>補足や注記には情報だけを書き、指示を書かない。</li>
+<li>同じ対象は、最後まで同じ語で呼ぶ。</li>
+<li>動作は動詞で書く。「〜を実施する」「〜を行う」の形にしない。</li>
+</ol>
+<h3 id="結果">結果</h3>
+<p>文体規則を指定しなかった base 条件では、9 本中 9 本（100%）でモデルが頼まれなくても「完了条件（作業が完了したとみなす判定基準）」を書いていました。ところが、プロンプトに 8 つの規則を足すと、完了条件を書いた本数は <strong>9本中4本（44%）</strong> に減り、5 本では完了条件の表現が検出されませんでした。</p>
+<p>この現象は、生成時に「文体規則を守ること」へ注意が割かれた結果、文脈から補うはずの内容（完了条件）が押しのけられた（crowded out）ためと考えられます。この機序は推測で、実測したのは完了条件の出力本数が 9/9 から 4/9 に減ったことです。</p>
+<p>完了条件の提示が、普段の設定（ユーザー設定など）に由来するものかどうかも切り分けました。チケットの題材1つで、依頼文2種（上記の「質問せずに作業できる文章に」と、単に「チケットの本文に」書き直させるもの）とユーザー設定の有無を組み合わせ、各3回、計12本を書かせました。合計では 12 本中 11 本に完了条件が出て、ユーザー設定を読み込まない側では 6 本中 6 本でした。完了条件の提示は設定由来ではなく、モデルの既定の振る舞いだと読めます。</p>
+<p>以下の比較表は、規則数と出力の変化をまとめたものです。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>条件</th><th>完了条件の出力本数（9本中）</th><th>主語を明示した文（1本平均）</th><th>条件を先に書いた文（1本平均）</th><th>平均文字数</th></tr></thead><tbody><tr><td><strong>base（規則なし）</strong></td><td>9 本（100%）</td><td>0.3</td><td>2.3</td><td>846 字</td></tr><tr><td><strong>8規則指定</strong></td><td>4 本（44%）</td><td>9.6</td><td>3.6</td><td>633 字</td></tr><tr><td><strong>2規則指定（後述）</strong></td><td>9 本（100%）</td><td>4.3</td><td>4.1</td><td>749 字</td></tr></tbody></table>
+<p>※完了条件は表現が1回でもあれば1本。主語・条件の文数は正規表現にマッチした文数の平均（近似値）。主語は「担当者は」「依頼者が」のように役割を表す語が主語になった文、条件は文頭40字以内に「場合／なら／とき」と読点がある文を数えた。</p>
+<p>8規則の条件では主語を明示した文が増えて字数が減り、完了条件の検出が減りました。規則を後述の2つに絞った条件では、9本中9本で完了条件が抜けませんでした。</p>
+<h2 id="解決策-主語と条件の2規則に絞ると完了条件は維持された">解決策: 主語と条件の「2規則」に絞ると完了条件は維持された</h2>
+<p>モデルが頼まれなくても書いていた完了条件を残したまま、曖昧さだけを減らすにはどうすればよいでしょうか。</p>
+<p>手元の検証では、次の 2 つに絞ってテストしました。ASD-STE100 の Rule 4.2・3.6（語を省かない、能動態）と Rule 5.4（条件を先に書く）をもとに、書き手側が日本語向けに書いたものです。</p>
+<ol>
+<li>誰が行うのかが変わる箇所では、主語を書く。</li>
+<li>条件があるときは、条件を指示より先に書く。</li>
+</ol>
+<p>この 2 規則を指定して同じように 9 本の書き直しを採取したところ、完了条件は <strong>9本中9本（100%）</strong> に出ました。主語を明示した文は 1 本あたり平均 4.3 文で、8 規則の 9.6 文の半分以下でした。</p>
+<p>2規則に「完了条件を書く」を足して、完了条件を明示的に求めた条件も9本中9本でした。2規則だけで9本中9本なので、これ以上の差は出ようがありません。2規則の渡し方を変えた条件（「普段どおり書いたうえで2点を足す」「下書きしてから2点だけ直す」）は、どちらも9本中8本でした。9本中の1本の差で、この母数では差とは言えません。</p>
+<p>ただし、2規則の1番目は「誰が行うのかが変わる箇所では」と範囲を絞った文言で、8規則の1番目「主語を省かない」とは違います。8規則には「必須と任意を分ける」「注記に指示を書かない」のように書き方の構成に触れる規則も入っており、規則の数の違いと中身・文言の違いは切り分けていません。モデルは <code>claude-sonnet-5-5</code> の1種、課題はメモの書き直しの1種です。比較したのは2規則と8規則の2点で、どこから押しのけが起きるのか、2規則が最小・最適かまでは分かりません。読みやすさや誤読の減りも、数えた指標には含まれていません。手元の検証で言えるのは、この2規則なら完了条件が抜けなかった、というところまでです。</p>
+<p>以下は、業務文書や手順書の作成を依頼する際に使える、この2規則のプロンプト例です。</p>
+<h3 id="日本語向け最小ルールプロンプト実測した2規則">日本語向け最小ルールプロンプト（実測した2規則）</h3>
+<p>実験と同じく、書き直しの依頼文の後に続けて渡す設定例です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>次の規則に従って書いてください。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>1. 誰が行うのかが変わる箇所では、主語を書く。</span></span>
+<span class="line"><span>2. 条件があるときは、条件を指示より先に書く。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>このプロンプトの設計ポイントは 3 点あります。</p>
+<p>まず、「誰が行うのかが変わる箇所」という限定です。日本語ですべての文に主語を強制すると文章が硬くなります。作業の担当者が切り替わる箇所に限って主語を求めるのは、読みやすさを保ったまま、誰の作業かの混同を防ぐ狙いです（この効果は測っていません）。</p>
+<p>次に、「条件を指示より先に書く」という順序です。「〇〇をクリックしてください。ただし××の場合に限ります」のように条件が後に来ると、作業者が条件を読む前に操作してしまうおそれがあります。条件を先に置けば、手順の前提が先に伝わります。</p>
+<p>最後に、語彙リストや禁止事項を含めていない点です。手元の検証で完了条件が残ったのは、この2行だけを渡した条件です。</p>
+<h2 id="よくある質問">よくある質問</h2>
+<h3 id="q-asd-ste100-を日本語の文章に当てはめる公式の枠組みはありますか">Q. ASD-STE100 を日本語の文章に当てはめる公式の枠組みはありますか？</h3>
+<p>ASD-STE100 自体は英語を対象とする規格で、仕様は ASD（欧州航空宇宙防衛工業会）が所有しています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-4" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>日本語に当てはめる方法としては、どの言語にも適用できるライティングルールである ISO 24620-4 を各言語に訳し、その言語に固有のルールを足して使う方法が紹介されています<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。国内では、産業日本語研究会の特許ライティングマニュアルや、テクニカルコミュニケーター協会（JTCA）の日本語スタイルガイドも参照できます。</p>
+<h3 id="q-プロンプトに文体ルールを多く指定した方がai-の出力品質は上がりますか">Q. プロンプトに文体ルールを多く指定した方が、AI の出力品質は上がりますか？</h3>
+<p>必ずしも上がりません。手元の実測検証では、8 つの文体ルールを指定したところ、モデルが頼まれなくても書いていた「タスクの完了条件」が 9 本中 4 本に減りました。</p>
+<p>規則を細かく指定しすぎると、モデルの注意が規則を守ることに割かれ、文脈上必要な内容が抜けるおそれがあります（この機序は推測です）。手元の検証（モデル1種、メモの書き直し1種）では、主語の明示と条件の先置きの2規則に絞った条件で、完了条件は抜けませんでした。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li>ASD-STE100 は航空宇宙分野の整備文書における誤読防止のために開発された制限言語規格であり、プロンプトでの指定が注目されている。</li>
+<li>日本語で「規則に寄せて」書かせた1回の試行で、モデル自身は「主語を毎回書いたので硬く、くどくなったが、誤読しにくくなった」と述べた。規則はモデルが Wikipedia の一覧から選んで訳したものだった。</li>
+<li>Issue 9 の 53 規則中、能動態や主語明示、条件先置きなど 24 規則は日本語の文章作成にもそのまま当てはまると仕分けられた（判定は書き手側によるもの）。</li>
+<li>文体規則を 8 つ指定すると、モデルが頼まれなくても書いていた完了条件が 9 本中 4 本に減った。</li>
+<li>「主語の明示」と「条件の先置き」の 2 規則に絞ると、完了条件は 9 本中 9 本で残った。比較したのは 2 規則と 8 規則の 2 点で、読みやすさや誤読の減りは測っていない。</li>
+<li>規則を足すときは、モデルが頼まれなくても出していた要素（例: 完了条件）が残るかを、足す前後で本数を数えて確かめる。</li>
+</ul>
+<p>LLM や AI エージェントのプロンプト設計、業務ドキュメント生成の標準化・自動化に関するご相談は <a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://x.com/karpathy/status/2105819303471976479">Andrej Karpathy on X</a> Andrej Karpathy、2026年10月2日。LLM に ASD-STE100 で説明させると読みやすいこと、LLM がこの規格をよく知っていること、80% に緩めて頼むことがあることへの言及。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://www.asd-ste100.org/about.html">About ASD-STE100</a> ASD STEMG、2021年4月（Issue 8 版サイト）。1980年代 AECMA 開発、当初は民間航空向けで後に防衛にも適用、顧客であるエアラインの80%が非英語母語話者、Writing Rules と Dictionary の2部構成、one word – one meaning 原則、ASD による所有（History of ASD-STE100 の節）。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-2-4" data-footnote-backref="" aria-label="Back to reference 2-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://github.com/AminBlg/SimpleEnglish">AminBlg/SimpleEnglish</a> AminBlg、2026年（GitHub）。ASD-STE100 に基づくエージェントスキル、版 2.0.1 での書式欠陥（em-dash、太字、見出し、箇条書き）95%削減測定（218→11）、現行 SKILL.md 約1,700トークン、60トークン版の併記。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://www.asd-ste100.org/ASD_STEMG.html">STEMG</a> ASD STEMG。STEMG パートナー一覧に日本から Tetsuzo Nakamura 氏が参画。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://jtca.org/sessions/2023/13742/">23-TC34 国際規格ISO 24620-4を活用して、わかりやすい英文や日本文を書く</a> 一般財団法人テクニカルコミュニケーター協会、発表者: 中村哲三（エレクトロスイスジャパン）、2023年10月6日。ISO 24620-4 BSG が言語非依存の共通ルールであり、各言語に翻訳して固有のルールを足せば日本語ライティングにも使える旨の解説（発表の要旨）。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://tech-jpn.jp/tokkyo-writing-manual/">特許ライティングマニュアル</a> 一般財団法人日本特許情報機構（Japio）産業日本語研究会、2018年3月 第2版。「7つのカテゴリー、27のルール」に再構成された第2版の発行について。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://www.bunka.go.jp/seisaku/kokugo_nihongo/kyoiku/pdf/92484001_01.pdf">在留支援のためのやさしい日本語ガイドライン</a> 出入国在留管理庁・文化庁、2020年8月。書き言葉ですべての漢字にふりがなをつける方針（「表記に気を付ける」の項）。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://jtca.org/news/publication/240305/">日本語スタイルガイド（第3版）改訂を再延期します</a> 一般財団法人テクニカルコミュニケーター協会、2024年3月5日。2024年7月21日の TC技術検定3級 テクニカルライティング試験[TW]の参考書は第3版である旨。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

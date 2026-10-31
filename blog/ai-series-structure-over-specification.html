@@ -1,0 +1,238 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>構造案にセリフを書くと、3割が公開本文にそのまま残る ── AI 連載で構想段階に決めるものを絞った | Meetsource</title><meta name="description" content="AI エージェントに連載を段階生成させる自社パイプラインでは、構造案に書いたセリフの約3割が公開本文へ逐語で残っていました。36話の実測を起点に、構想では「制約と技術」だけを先に決め、セリフは執筆直前に決める境界設計を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/ai-series-structure-over-specification"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="構造案にセリフを書くと、3割が公開本文にそのまま残る ── AI 連載で構想段階に決めるものを絞った | Meetsource"><meta property="og:description" content="AI エージェントに連載を段階生成させる自社パイプラインでは、構造案に書いたセリフの約3割が公開本文へ逐語で残っていました。36話の実測を起点に、構想では「制約と技術」だけを先に決め、セリフは執筆直前に決める境界設計を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/ai-series-structure-over-specification"><meta property="og:image" content="https://www.meetsource.work/blog/ai-series-structure-over-specification-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-22T09:13:55.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="構造案にセリフを書くと、3割が公開本文にそのまま残る ── AI 連載で構想段階に決めるものを絞った | Meetsource"><meta name="twitter:description" content="AI エージェントに連載を段階生成させる自社パイプラインでは、構造案に書いたセリフの約3割が公開本文へ逐語で残っていました。36話の実測を起点に、構想では「制約と技術」だけを先に決め、セリフは執筆直前に決める境界設計を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/ai-series-structure-over-specification-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"構造案にセリフを書くと、3割が公開本文にそのまま残る ── AI 連載で構想段階に決めるものを絞った","description":"AI エージェントに連載を段階生成させる自社パイプラインでは、構造案に書いたセリフの約3割が公開本文へ逐語で残っていました。36話の実測を起点に、構想では「制約と技術」だけを先に決め、セリフは執筆直前に決める境界設計を解説します。","datePublished":"2026-10-22T09:13:55.000Z","image":"https://www.meetsource.work/blog/ai-series-structure-over-specification-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/ai-series-structure-over-specification"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"構造案からセリフを抜くと、AI が勝手な長話や脱線を始めませんか？","acceptedAnswer":{"@type":"Answer","text":"脱線を抑える役目は、セリフではなく各幕の「到達点（読者が何を知ったか）」と「発話の働き」に持たせる、というのが今回の設計です。そのシーンで読者に何を理解させるべきかという到達点と制約を固定し、そこに至る対話の経路はモデルに委ねます。"}},{"@type":"Question","name":"構造案は詳細なままで、プロンプトに「構造案の言葉をそのまま使うな」と指示する対症療法ではダメですか？","acceptedAnswer":{"@type":"Answer","text":"この方法は、指示の追加が同時制約の数を増やす方向に働く点で不利だと考えます。Vasileva (2026) は、同時制約が5〜6個を超えると全制約を同時に満たす率が急激に下がると報告しています。また「詳細な構造案を守れ」と「構造案の言葉をそのまま使うな」は互いに引っ張り合う指示になります。プロンプトに指示を足すより、入力する構造案からセリフ自体を外す方が筋がよい、と筆者は考えています。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-22T09:13:55.000Z" data-astro-cid-7jjqptxk> 2026.10.22 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#prompt-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#process-design</span><span class="tag" data-astro-cid-7jjqptxk>#システム設計</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>構造案にセリフを書くと、3割が公開本文にそのまま残る ── AI 連載で構想段階に決めるものを絞った</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/ai-series-structure-over-specification-hero.webp" alt="構造案にセリフを書くと、3割が公開本文にそのまま残る ── AI 連載で構想段階に決めるものを絞った" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>AI エージェントに長文記事や連載コンテンツを執筆させる際、「構想や構成案（アウトライン）を詳細に作り込むほど、生成される本文の品質が上がる」と考えがちです。しかし、構想段階で細部を決めすぎると、本文を書く段階で決められることが残らなくなります。</p>
+<p>ここでいう <strong>過剰拘束（Over-constraining）</strong> とは、構想段階でセリフやプロットの細かな段取りまで指定し、本文生成フェーズの大規模言語モデル（LLM）に残る判断の余地を狭めてしまうことを指します。</p>
+<p>自社ブログで運用している技術連載パイプラインにおいて、完結済みの3シリーズ全36話を実測したところ、構造案に書き込んだ8文字以上のセリフ計3,582本のうち、1,138本（31.8%）が一字一句違わず公開本文に残存していました。</p>
+<p><a href="/blog/content-archetype-ai-pipeline">以前の記事</a> では「詳細な構造案に忠実に本文を展開する」設計を推奨していましたが、この実測を見て、その設計を見直しました。構想段階で決めるべき要素を不可逆な「制約と技術」だけに絞り込み、セリフや筋の細部は書く直前まで決めない境界設計へと運用方針を改めました。本稿では、その実測の内訳と、過剰拘束を防ぐための具体的なアーキテクチャ設計について解説します。</p>
+<h2 id="構造案のセリフはどれだけ本文に残るのか実測と過剰拘束を疑う理由">構造案のセリフはどれだけ本文に残るのか：実測と、過剰拘束を疑う理由</h2>
+<h3 id="実測で判明したセリフ逐語残存率32の内訳">実測で判明した「セリフ逐語残存率32%」の内訳</h3>
+<p>連載パイプラインの運用を続ける中で、「本文執筆フェーズのエージェントが、構造案に書かれたセリフに過度に引きずられているのではないか」という懸念が生じました。そこで、完結した3つの連載シリーズを対象に、構造案に含まれるセリフが公開本文にどの程度そのまま流出しているかを検証スクリプトによって機械計測しました。</p>
+<p>対象としたのは以下の3シリーズ（全36話）です。構造案（Markdown）から抽出した、鉤括弧で囲まれた8文字以上のセリフ文字列（分母）に対し、公開記事の本文内に完全一致の部分文字列として存在する件数（分子）を集計しました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>シリーズ名</th><th>話数</th><th>構造案セリフ総数（分母）</th><th>本文逐語残存数（分子）</th><th>逐語残存率</th></tr></thead><tbody><tr><td><code>code-carpenter</code></td><td>12話</td><td>901本</td><td>318本</td><td>35.3%</td></tr><tr><td><code>code-dispatcher</code></td><td>12話</td><td>1,565本</td><td>474本</td><td>30.3%</td></tr><tr><td><code>code-gardener</code></td><td>12話</td><td>1,116本</td><td>346本</td><td>31.0%</td></tr><tr><td><strong>合計</strong></td><td><strong>36話</strong></td><td><strong>3,582本</strong></td><td><strong>1,138本</strong></td><td><strong>31.8%（約32%）</strong></td></tr></tbody></table>
+<p>どのシリーズにおいても一貫して3割前後のセリフが公開記事にそのまま残っていました。</p>
+<p>この数字が表すのは文面の一致率で、本文の品質は別の問題です。問題視したのは、本文の会話のうち少なくとも3割前後が、本文を書く前の構造案の時点で文面まで決まっていたという点です。なお、計測した構造案は方針変更前のもので、識別子やエラーメッセージのように本来残すべき逐語を区別する印がまだ無かったため、そうした文字列も分母・分子から除いていません。その分、残存率は高めに出ている可能性があります。</p>
+<p>この計測に用いたスクリプトです。連載リポジトリのルートで <code>python3</code> に渡して実行します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 構造案セリフの公開本文逐語残存率を計測するスクリプト</span></span>
+<span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> glob</span></span>
+<span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> os</span></span>
+<span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> re</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> article_for</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">slug</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> series</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> f </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> glob</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">glob</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">'content/post/2026/*/*/*.md'</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#4C4F69">        t </span><span style="color:#179299">=</span><span style="color:#FE640B;font-style:italic"> open</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">f</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">read</span><span style="color:#7C7F93">()</span></span>
+<span class="line"><span style="color:#8839EF">        if</span><span style="color:#4C4F69"> slug </span><span style="color:#8839EF">in</span><span style="color:#E64553;font-style:italic"> t</span><span style="color:#7C7F93">[:</span><span style="color:#FE640B;font-style:italic">4000</span><span style="color:#7C7F93">]</span><span style="color:#8839EF"> and</span><span style="color:#4C4F69"> series </span><span style="color:#8839EF">in</span><span style="color:#E64553;font-style:italic"> t</span><span style="color:#7C7F93">[:</span><span style="color:#FE640B;font-style:italic">4000</span><span style="color:#7C7F93">]:</span></span>
+<span class="line"><span style="color:#8839EF">            return</span><span style="color:#4C4F69"> t</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#8839EF"> None</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">tot </span><span style="color:#179299">=</span><span style="color:#4C4F69"> hit </span><span style="color:#179299">=</span><span style="color:#FE640B"> 0</span></span>
+<span class="line"><span style="color:#4C4F69">rows </span><span style="color:#179299">=</span><span style="color:#7C7F93"> []</span></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#4C4F69"> series </span><span style="color:#8839EF">in</span><span style="color:#7C7F93"> [</span><span style="color:#40A02B">'code-carpenter'</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> 'code-dispatcher'</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> 'code-gardener'</span><span style="color:#7C7F93">]:</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> s </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> glob</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">glob</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">'agents/</span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">series</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">/structure/*.md'</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#4C4F69">        slug </span><span style="color:#179299">=</span><span style="color:#4C4F69"> os</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">path</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">basename</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">s</span><span style="color:#7C7F93">)[:</span><span style="color:#179299">-</span><span style="color:#FE640B">3</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#4C4F69">        a </span><span style="color:#179299">=</span><span style="color:#1E66F5"> article_for</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">slug</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> series</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">        if</span><span style="color:#8839EF"> not</span><span style="color:#4C4F69"> a</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">            continue</span></span>
+<span class="line"><span style="color:#4C4F69">        q </span><span style="color:#179299">=</span><span style="color:#7C7F93"> [</span><span style="color:#4C4F69">x </span><span style="color:#8839EF">for</span><span style="color:#4C4F69"> x </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> re</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">findall</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">r</span><span style="color:#EA76CB">'</span><span style="color:#40A02B">「</span><span style="color:#7C7F93">([</span><span style="color:#179299">^</span><span style="color:#40A02B">「」</span><span style="color:#7C7F93">]</span><span style="color:#179299">{8,}</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">」</span><span style="color:#EA76CB">'</span><span style="color:#7C7F93">,</span><span style="color:#FE640B;font-style:italic"> open</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">s</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">read</span><span style="color:#7C7F93">())]</span></span>
+<span class="line"><span style="color:#4C4F69">        h </span><span style="color:#179299">=</span><span style="color:#FE640B;font-style:italic"> sum</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">1</span><span style="color:#8839EF"> for</span><span style="color:#4C4F69"> x </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> q </span><span style="color:#8839EF">if</span><span style="color:#4C4F69"> x </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> a</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">        tot </span><span style="color:#179299">+=</span><span style="color:#FE640B;font-style:italic"> len</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">q</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">        hit </span><span style="color:#179299">+=</span><span style="color:#4C4F69"> h</span></span>
+<span class="line"><span style="color:#4C4F69">        rows</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">append</span><span style="color:#7C7F93">((</span><span style="color:#4C4F69">series</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> slug</span><span style="color:#7C7F93">,</span><span style="color:#FE640B;font-style:italic"> len</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">q</span><span style="color:#7C7F93">),</span><span style="color:#4C4F69"> h</span><span style="color:#7C7F93">))</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">'total quotes'</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> tot</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> 'verbatim in article'</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> hit</span><span style="color:#7C7F93">,</span><span style="color:#40A02B;font-style:italic"> f</span><span style="color:#40A02B">'</span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">hit</span><span style="color:#179299">/</span><span style="color:#FE640B;font-style:italic">max</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">tot</span><span style="color:#7C7F93">,</span><span style="color:#FE640B">1</span><span style="color:#7C7F93">)</span><span style="color:#8839EF">:.0%</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">'</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">'total episodes:'</span><span style="color:#7C7F93">,</span><span style="color:#FE640B;font-style:italic"> len</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">rows</span><span style="color:#7C7F93">))</span></span>
+<span class="line"></span></code></pre>
+<p>このスクリプトを実行した記録は以下の通りです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>total quotes 3582 verbatim in article 1138 32%</span></span>
+<span class="line"><span>total episodes: 36</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この処理では、各話の構造案から <code>「...」</code> 形式で8文字以上記述されたセリフを抽出し、対応する公開記事本文に完全一致で含まれるかを判定しています。公開記事との対応付けは、記事の先頭4,000文字に話の識別子とシリーズ名の両方が含まれるかで行っています。前掲の表のシリーズ別の内訳は、同じ集計をシリーズごとに分けて数えたものです。</p>
+<p>この実測を受けて方針変更の理由に書いたのは、「先に決めた表現は後の工程で清書されるだけになり、会話がその場の問いと答えから生まれない」という判断です。構造案にセリフがあると、本文を書くモデルはそれを盛り込むべき素材として扱い、直前のやり取りから発言を組み立てる余地が狭まる、と筆者は考えています（実測は文面の一致までで、会話の質は数値にしていません）。</p>
+<h3 id="制約が増えると指示追従が崩れるという研究">制約が増えると指示追従が崩れるという研究</h3>
+<p>構造案に細部を書き込むほど本文の自由度が下がる理由として、筆者は次の研究結果が関係していると見ています。</p>
+<p>Vasileva (2026) は、同時に課す制約が <strong>5〜6個</strong> を超えると、信頼できる指示追従が崩れると報告しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。個々の制約の遵守率はゆるやかに下がる一方で、全制約を同時に満たす確率は急落します。論文が挙げる例では、8個の制約で個々の制約を約41%通すモデルが、8個すべてを同時に満たせたのは 5.7% でした。また、文章の構造に関わる制約は、語彙的な制約に比べて、制約を1つ足すごとに失う性能が2倍大きいとされています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>また、SignalWire (2026) も指摘しているように、プロンプトにエッジケースや細かな対話ルールを詰め込みすぎると、指示同士の衝突が発生し、モデルが硬直して不自然な応答を返すようになります<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。プロンプトは目的と最小限の重要ルールに絞り、詳細なロジックは外部機能へ分離すべきです。</p>
+<p>加えて、長い入力の中央にある情報を使わなければならないとき、言語モデルの性能が大きく下がることも報告されています（Lost in the Middle / Liu et al., 2023）<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。構造案が膨らみ、中盤に大量のセリフや指示が埋もれる状況もこれに近い、と筆者は見ています。</p>
+<p>段階的な文章生成において、計画（アウトライン）を立ててから実行するアプローチ自体は、Plan-and-Solve（Wang et al., 2023）<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup> や中間計画構造の統合（Liang et al., 2024）<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup> が実証しているように非常に有効です。また、詳細なアウトラインで生成を制御する DOC（Detailed Outline Control / Yang et al., 2022）は、長い物語の筋の一貫性を高めています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。ただし、この詳細化をセリフの文面にまで広げると、執筆工程が計画の清書に近づく、というのが今回の実測から筆者が得た見立てです。</p>
+<h2 id="構想段階で決めるものを絞る制約と技術だけを先に決める境界設計">構想段階で決めるものを絞る：制約と技術だけを先に決める境界設計</h2>
+<h3 id="不可逆な予防と可逆な生成の切り分け">「不可逆な予防」と「可逆な生成」の切り分け</h3>
+<p>過剰拘束を防ぐためには、構想段階（パイプライン上流）で確定させる要素と、執筆直前まで決めてはならない要素の境界を明確に分離する必要があります。</p>
+<p>社内の設計方針決定およびパイプラインの改訂コミットを通じ、以下の境界設計を導入しました。</p>
+<p>ここでの「不可逆」は、後から直そうとすると他の回や章に波及して直しきれないもの、「可逆」はその回の中だけで書き直せるものを指します。</p>
+<ol>
+<li><strong>事前に決めるもの（不可逆・予防）</strong>: 「制約と技術」
+<ul>
+<li>技術的正確性の同値範囲、使用する技法やアルゴリズムの配列</li>
+<li>登場人物のペルソナ・視点制約、禁止事項（アンチパターン）</li>
+<li>引用すべき公式出典、各章の文量配分目安、記事末の形式</li>
+<li>これらは連載全体の整合性を保ち、後工程での手戻りを防ぐために早期固定が必須の要素です。</li>
+</ul>
+</li>
+<li><strong>直前まで決めないもの（可逆・生成）</strong>: 「セリフ・筋・場面」
+<ul>
+<li>登場人物の具体的なセリフ文面</li>
+<li>幕内の細かなエピソード展開や場面転換</li>
+<li>これらは執筆フェーズの直前に、その場の文脈と会話のやり取りから生成させます。</li>
+</ul>
+</li>
+</ol>
+<p>事前に決める対象を「制約と技術」に絞り込み、表現の具体化を執筆直前まで遅らせる。そうすれば、本文を書くモデルがその場の文脈から表現を選ぶ余地が残る、という狙いです。</p>
+<h3 id="構造案にはセリフではなく発話の働きを書く">構造案にはセリフではなく「発話の働き」を書く</h3>
+<p>この方針変更に伴い、構造案の記述フォーマットをリファクタリングしました。セリフの文面を脚本のように書くことをやめ、その発話がシーン全体で果たす「働き（機能）」のみを指定する方式です。違いを説明用の例で示します。</p>
+<ul>
+<li><strong>旧方式（セリフの脚本化）</strong>:
+<code>A「おい、この設計だと循環参照が起きるんじゃないか？」</code></li>
+<li><strong>新方式（発話の働きを記述）</strong>:
+<code>A が設計上の循環参照の懸念を指摘し、B に解決策を問いかける</code></li>
+</ul>
+<p>新方式では、発話の意図と役割のみが固定され、どのような語彙や言い回しでそれを表現するかは、執筆モデルが前後の対話の流れを踏まえて決定します。</p>
+<p>ただし、一言一句の変更が許されない特定要素については例外を設けています。識別子、エラーメッセージ、出典の逐語定義、および連載全体を通じた特定の決め台詞（leitmotif）の4種に限り、明示的な逐語指定タグを付与して厳格に保護しています。</p>
+<p>また、各幕（Act）の定義についても、幕内の細かな段取りを指定するのをやめ、読者が「何を知ったか」という <strong>到達点（ゴール）</strong> のみで定義するように改めました。これは OpenAI が推論モデルのガイドラインで示している「思考プロセスの細部を指定するのではなく、達成すべき目標や成功条件を指定して推論をモデルに委ねる」という指針とも軌を一にしています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<h3 id="構想段階の設計比較">構想段階の設計比較</h3>
+<p>構想段階で詳細アウトラインを作り込む従来のアプローチと、境界を分離して制約と技術のみを先行決定する新アプローチの違いを以下に整理します。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>比較項目</th><th>詳細アウトライン方式（旧設計・DOC型）</th><th>境界分離方式（新設計・制約先行型）</th></tr></thead><tbody><tr><td><strong>構想段階で決めるもの</strong></td><td>プロット詳細、場面展開、セリフ文面、技術仕様</td><td>制約（ペルソナ、禁止事項）と技術仕様のみ</td></tr><tr><td><strong>構造案の記述</strong></td><td>セリフの脚本化、幕内の細かい段取り</td><td>発話の働き（機能）、各幕の到達点（ゴール）</td></tr><tr><td><strong>セリフの決定タイミング</strong></td><td>執筆の数週間前（構想・設計時）</td><td>執筆直前（本文執筆プロンプトの展開時）</td></tr><tr><td><strong>本文執筆時のモデルの役割</strong></td><td>構造案に書かれたセリフの清書（なぞり書き）</td><td>制約の範囲内で、その場の文脈から会話を組み立てる</td></tr><tr><td><strong>主な破綻リスク</strong></td><td>過剰拘束による硬直化、セリフの逐語残存（約32%）</td><td>登場人物のトーンのブレ（制約が弱い場合）</td></tr></tbody></table>
+<p>表の右列は改訂で狙った状態で、この記事の数字が示しているのは左列（改訂前）の残存率です。</p>
+<h2 id="メリットの裏にあるトレードオフと適用限界">メリットの裏にあるトレードオフと適用限界</h2>
+<h3 id="想定される反論セリフや筋を決めないとトーンがブレないか">想定される反論：「セリフや筋を決めないとトーンがブレないか？」</h3>
+<p>構想段階でセリフや筋を細かく決めないと、「登場人物のキャラクター性やトーンが崩れたり、話が想定外の方向へ脱線したりしないか」という懸念が生じます。</p>
+<p>しかし、セリフ文面を直接縛らなくても、上位の制約（ペルソナ設定、同値範囲、禁止事項、各幕の到達点）が十分に機能していれば、文脈の一貫性は保てると考えています。Anthropic (2026) のプロンプト設計の指針も、指示の背景や動機を伝えること、XML タグでプロンプトの要素を分けること、システムプロンプトで役割を与えることを勧めています<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。細かなルールを積み上げるより、上位の制約をしっかり敷く方に寄せる、というのが今回の判断です。</p>
+<h3 id="適用限界一言一句の指定が不可欠な領域">適用限界：一言一句の指定が不可欠な領域</h3>
+<p>一方で、この境界分離アプローチを適用すべきではない領域も存在します。</p>
+<p>法令・利用規約の引用、厳密なシステムエラーメッセージの提示、定型化された操作手順マニュアルなど、一言一句の機械的な遵守が求められるケースです。IFEval（Zhou et al., 2023）は「400語以上で書く」のような機械的に検証できる指示（verifiable instructions）で指示追従を評価するベンチマークです<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。こうした文言や形式そのものが要件になる場面では、一言一句を指定する方が向いています。</p>
+<p>そのため、実務においては「絶対に改変してはならない定型要素のみを明示的に指定し、それ以外の対話や解説は発話の働きに委ねる」というハイブリッドな運用が現実的な解となります。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>モデルのコンテキスト長が 100k〜1M+ トークン規模に拡大し、長時間の思考プロセス（Long CoT）を備えた推論モデルが一般化するにつれて、この境界設計の重要性はどう変化するでしょうか。</p>
+<p>言語モデルの推論能力が飛躍的に向上したとしても、自己回帰型モデルの基本構造が変わらない限り、プロンプト内に具体的な文字列（セリフ）が存在すれば、そのトークン確率に引きずられる引力は働き続けると考えられます。むしろモデルの推論力が高まるほど、事前に与えられたセリフを前後の文脈と辻褄が合うように器用に繋ぎ合わせてしまい、不要なセリフが公開本文へ生き残りやすくなる可能性もある、と筆者は見ています。</p>
+<p>逆に、構造案の文面を逐語で再現すること自体が目的の文書であれば、この結論は当てはまりません。そうでない段階的生成パイプラインでは、「構想段階で決めすぎず、後から変えると他の回に波及する制約と、その場で決めてよい表現を分ける」という境界設計は、モデルが変わっても見直す価値のある原則だと考えています。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q1-構造案からセリフを抜くとai-が勝手な長話や脱線を始めませんか">Q1: 構造案からセリフを抜くと、AI が勝手な長話や脱線を始めませんか？</h3>
+<p>脱線を抑える役目は、セリフではなく各幕の「到達点（読者が何を知ったか）」と「発話の働き」に持たせる、というのが今回の設計です。そのシーンで読者に何を理解させるべきかという到達点と制約を固定し、そこに至る対話の経路はモデルに委ねます。</p>
+<h3 id="q2-構造案は詳細なままでプロンプトに構造案の言葉をそのまま使うなと指示する対症療法ではダメですか">Q2: 構造案は詳細なままで、プロンプトに「構造案の言葉をそのまま使うな」と指示する対症療法ではダメですか？</h3>
+<p>この方法は、指示の追加が同時制約の数を増やす方向に働く点で不利だと考えます。Vasileva (2026) は、同時制約が5〜6個を超えると全制約を同時に満たす率が急激に下がると報告しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。また「詳細な構造案を守れ」と「構造案の言葉をそのまま使うな」は互いに引っ張り合う指示になります。プロンプトに指示を足すより、入力する構造案からセリフ自体を外す方が筋がよい、と筆者は考えています。</p>
+<h2 id="まとめ段階的コンテンツ生成の境界設計原則">まとめ：段階的コンテンツ生成の境界設計原則</h2>
+<p>AI を活用した長文生成や連載パイプラインにおいて、過剰拘束を防ぎ品質を高めるための判断基準は以下の通りです。</p>
+<ul>
+<li><strong>構造案にセリフを書くと、自社連載36話では約3割のセリフが本文に逐語で残った。会話の文面が本文を書く前に決まってしまう割合として、自分のパイプラインでも測る価値がある。</strong></li>
+<li><strong>構想段階で決めるべきは不可逆な「制約と技術」のみであり、可逆なセリフや場面展開は本文執筆の直前まで決定を遅らせる。</strong></li>
+<li><strong>構造案にはセリフ文面ではなく「発話の働き（機能）」を記述し、逐語指定は識別子やエラー等の特定要素のみに限定する。</strong></li>
+<li><strong>プロンプトに否定指示を足してエッジケースを塞ごうとせず、入力情報の粒度を落として関心事を分離する。</strong></li>
+</ul>
+<p>AI エージェントを活用した長文コンテンツ生成パイプラインの設計、過剰拘束を防ぐプロンプト・アーキテクチャの見直し、AI Operations の導入設計について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://arxiv.org/abs/2608.12426">Large Language Models Can Follow Instructions, But Not Many at Once: Phase Transitions in Compositional Constraint Satisfaction</a> Vasileva, M. I.、2026年8月。アブストラクトに、5〜6個を超える同時制約での指示追従の崩壊、8制約で全制約の同時充足が5.7%となる例、構造的制約の劣化が語彙的制約の2倍である点が書かれている。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://signalwire.com/blog/why-over-prompting-kills-ai">Less Is More: Why Over-Prompting Kills Your AI Agent</a> Kalsey, A.、SignalWire Blog、2026年。過剰プロンプト（500語・10箇条・IF/THEN）による対話麻痺と指示衝突、外部ツールへの責務分離。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://arxiv.org/abs/2307.03172">Lost in the Middle: How Language Models Use Long Contexts</a> Liu, N. F., et al.、Transactions of the ACL、2023年7月。multi-document question answering と key-value retrieval で、関連情報が長い入力の中央にあると性能が大きく下がる。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://arxiv.org/abs/2305.04091">Plan-and-Solve Prompting: Improving Zero-Shot Chain-of-Thought Reasoning by Large Language Models</a> Wang, L., et al.、2023年5月。段階的生成における計画立案と実行のタスク分解（PS / PS+）。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://arxiv.org/abs/2410.06203">Integrating Planning into Single-Turn Long-Form Text Generation</a> Liang, Y., et al.、2024年10月。長文テキスト生成におけるアウトライン等の中間計画構造の統合による構成力向上。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://arxiv.org/abs/2212.10077">DOC: Improving Long Story Coherence With Detailed Outline Control</a> Yang, K., Klein, D., Peng, N., &#x26; Tian, Y.、2022年12月。detailed outliner と detailed controller の2要素で、詳細なアウトラインに沿って長い物語を生成し、筋の一貫性を高める枠組み。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://platform.openai.com/docs/guides/reasoning-best-practices">Reasoning best practices</a> OpenAI API Documentation、2026年。推論モデルに対するプロセスの過剰指定回避、明確な到達点（ゴール）の指定による自律推論の活用。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/system-prompts">Prompting best practices: System prompts</a> Claude Platform Docs、Anthropic、2026年。指示の背景・動機を伝えること、XML タグ（<code>&#x3C;instructions></code>, <code>&#x3C;example></code> 等）でプロンプトの要素を分けること、システムプロンプトで役割を与えることの推奨。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://arxiv.org/abs/2311.07911">Instruction-Following Evaluation for Large Language Models</a> Zhou, J., et al.、2023年11月。「write in more than 400 words」のような機械的に検証可能な指示（verifiable instructions）による評価ベンチマーク IFEval。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 
