@@ -1,0 +1,195 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>command -v を通るのに起動できない ── mise の shim が「抽出失敗」の誤報を生んだ | Meetsource</title><meta name="description" content="command -v が成功するのにコマンドが実行できない原因は、command -v が POSIX 仕様上コマンドを呼び出さず、shim 等の存在だけで終了ステータス 0 を返すためです。自社運用の実例をもとに、形式的な存在確認から実態を伴う起動確認（ヘルスチェック）への転換と作法差の落とし穴を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/command-v-shim-startup-check"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="command -v を通るのに起動できない ── mise の shim が「抽出失敗」の誤報を生んだ | Meetsource"><meta property="og:description" content="command -v が成功するのにコマンドが実行できない原因は、command -v が POSIX 仕様上コマンドを呼び出さず、shim 等の存在だけで終了ステータス 0 を返すためです。自社運用の実例をもとに、形式的な存在確認から実態を伴う起動確認（ヘルスチェック）への転換と作法差の落とし穴を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/command-v-shim-startup-check"><meta property="og:image" content="https://www.meetsource.work/blog/command-v-shim-startup-check-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-04T10:12:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="command -v を通るのに起動できない ── mise の shim が「抽出失敗」の誤報を生んだ | Meetsource"><meta name="twitter:description" content="command -v が成功するのにコマンドが実行できない原因は、command -v が POSIX 仕様上コマンドを呼び出さず、shim 等の存在だけで終了ステータス 0 を返すためです。自社運用の実例をもとに、形式的な存在確認から実態を伴う起動確認（ヘルスチェック）への転換と作法差の落とし穴を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/command-v-shim-startup-check-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"command -v を通るのに起動できない ── mise の shim が「抽出失敗」の誤報を生んだ","description":"command -v が成功するのにコマンドが実行できない原因は、command -v が POSIX 仕様上コマンドを呼び出さず、shim 等の存在だけで終了ステータス 0 を返すためです。自社運用の実例をもとに、形式的な存在確認から実態を伴う起動確認（ヘルスチェック）への転換と作法差の落とし穴を解説します。","datePublished":"2026-10-04T10:12:00.000Z","image":"https://www.meetsource.work/blog/command-v-shim-startup-check-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/command-v-shim-startup-check"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-04T10:12:00.000Z" data-astro-cid-7jjqptxk> 2026.10.04 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#shell-script</span><span class="tag" data-astro-cid-7jjqptxk>#mise</span><span class="tag" data-astro-cid-7jjqptxk>#運用自動化</span><span class="tag" data-astro-cid-7jjqptxk>#エラーハンドリング</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>command -v を通るのに起動できない ── mise の shim が「抽出失敗」の誤報を生んだ</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/command-v-shim-startup-check-hero.webp" alt="command -v を通るのに起動できない ── mise の shim が「抽出失敗」の誤報を生んだ" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>シェルスクリプトや CI/CD、AI エージェントの実行パイプラインにおいて、使用する外部コマンドが環境に存在するかどうかを事前に確認する処理は広く行われています。その際、環境依存の強い <code>which</code> ではなく、POSIX 準拠で Bash 等でも最も安全かつポータブルな標準手段として <code>command -v</code> を用いる実装が推奨されてきました <sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>しかし、自社の実務パイプラインにおいて、Node.js のバージョン更新後に残存した mise の shim が <code>command -v</code> を正常ステータスで通過し、実行時の起動エラーが「ページの抽出失敗」として誤認・誤報される事態が発生しました。</p>
+<p>ツールの存在確認とは、PATH 上に実行可能ファイルが存在するかを判定する静的検査であり、プロセスの正常起動を保証する起動確認（動的ヘルスチェック）とは根本的に異なるものです。ファイルが PATH に「存在する」ことと、ツールが実際に「正常に動く」ことはまったく別物であり、形式的な存在確認から実態を伴う起動確認へ設計を切り替える必要があります。</p>
+<p><strong>Q: <code>command -v</code> が成功するのにコマンドが実行できないのはなぜですか？</strong>
+<strong>A: <code>command -v</code> は POSIX 規格上「コマンドを呼び出さずにパスを出力する」仕様であり、PATH 上にラッパーファイル（shim）が存在するだけで成功（終了ステータス 0）を返します。実体バイナリの未インストールやバージョン設定の不備があっても、実際に起動する瞬間までエラーを検知できません。</strong></p>
+<h2 id="なぜ存在確認をすり抜けたのかposix-仕様と-shim-のメカニズム">なぜ存在確認をすり抜けたのか：POSIX 仕様と shim のメカニズム</h2>
+<p>なぜ静的な存在確認は、壊れたツールの検出に失敗したのでしょうか。その理由は、POSIX 規格が定める <code>command -v</code> の基本仕様と、現代のバージョン管理ツールが採用する shim アーキテクチャの組み合わせにあります。</p>
+<h3 id="posix-規格における-command--v-の呼び出さない仕様">POSIX 規格における command -v の「呼び出さない」仕様</h3>
+<p>POSIX（IEEE Std 1003.1）規格において、<code>command</code> ユーティリティの <code>-v</code> オプションは「コマンドの呼び出しを行わずに、指定された名前を呼び出すためのパス名またはコマンド名を出力する（“do not invoke command_name”）」と明確に規定されています <sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>終了ステータスについても、ユーティリティが見つからなかった場合（エラー時）のみ非ゼロとなり、指定された名前のファイルが PATH 上に実行可能ファイルとして存在する限り、そのファイルを実行した際に何が起きるかに関わらず <code>0</code> を返します。つまり、<code>command -v</code> は「実行可能ファイルの有無」を確認する静的な探索コマンドであり、実行可能ファイルが正常にプロセスとして起動できるかという動的検証は仕様上完全にスコープ外です。</p>
+<h3 id="mise-の-shim-が残存して誤報を生んだ実例">mise の shim が残存して誤報を生んだ実例</h3>
+<p>mise は、<code>~/.local/share/mise/shims</code> ディレクトリに薄い実行ラッパー（shim）を配置し、そのディレクトリを PATH に加えることで、コマンドの呼び出しをインターセプトします <sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。shim 経由のコマンド呼び出しはまずこの shim を通り、現在有効なバージョン設定を参照して実体バイナリを呼び出します。</p>
+<p>この構造が、ツールの存在確認において深刻な偽陽性を生み出しました。自社の運用環境において、実際に起きた事象は以下の通りです。</p>
+<ol>
+<li>グローバル設定（<code>~/.config/mise/config.toml</code>）で <code>node = "lts"</code> を指定していた環境で、<code>lts</code> の解決先が <code>24.15.0</code> から <code>24.21.0</code> へ上がった。</li>
+<li>Web ページ抽出ツールである <code>defuddle</code> は、旧バージョン（<code>24.15.0</code>）の global npm パッケージとしてインストールされていたため、新バージョン（<code>24.21.0</code>）の環境下では実体バイナリが参照できなくなった。</li>
+<li>しかし、mise が配置した <code>~/.local/share/mise/shims/defuddle</code> というファイル自体は PATH 上に実行可能ファイルのまま残り続けた。</li>
+<li>その結果、パイプラインの事前チェックである <code>command -v defuddle</code> は正常終了（ステータス 0）を返し、処理を続行させてしまった。</li>
+</ol>
+<p>この環境は対話シェルで <code>eval "$(mise activate zsh)"</code>（PATH を直接書き換える方式）を使っており、shim 方式ではありませんでした。それでも shim に当たったのは、mise の <code>activate_shims</code> 設定が <code>true</code> で、PATH の後方に <code>~/.local/share/mise/shims</code> も並んでいたためです。スクリプトはこの PATH をそのまま継承するので、有効な Node の実体パスに <code>defuddle</code> が見つからないと、探索は後方の shim に行き着きます。</p>
+<p>実際にこの状態でツールを実行すると、mise の shim が起動した直後にアクティブなバージョンが存在しないことを検知し、標準エラー出力にエラーを出力し、終了ステータス 1 で異常終了します。</p>
+<p>mise ではバージョンが設定されていないツールを shim から呼び出すと <code>mise ERROR No version is set for shim</code> が出力されることが報告されています <sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>（終了ステータス 1 は社内実測ログで確認）。また、同様の shim アーキテクチャを採用する asdf でも、指定バージョンの未インストールなどバージョン不整合時に <code>No version is set for command</code> となり起動不能に陥る共通の挙動が存在します <sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>以下は、問題発生時にスクラッチパッドで手動切り分けを行った際のログです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># ツール単体を手動実行した際のエラー</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">defuddle</span><span style="color:#40A02B"> parse</span><span style="color:#40A02B"> uber.html</span><span style="color:#40A02B"> -j</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 出力: rc=1, mise ERROR No version is set for shim: defuddle</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 旧 Node バージョンを指定した実行（実体の呼び出し）</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">mise</span><span style="color:#40A02B"> exec</span><span style="color:#40A02B"> node@24.15.0</span><span style="color:#40A02B"> --</span><span style="color:#40A02B"> defuddle</span><span style="color:#40A02B"> parse</span><span style="color:#40A02B"> uber.html</span><span style="color:#40A02B"> -j</span></span>
+<span class="line"></span></code></pre>
+<p>手動実行時の出力ログは以下の通りです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>rc=1</span></span>
+<span class="line"><span>mise ERROR No version is set for shim: defuddle</span></span>
+<span class="line"><span>Set a global default version with one of the following:</span></span>
+<span class="line"><span>mise use -g node@24.15.0</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>一方で、実体が存在する旧バージョンを明示指定して <code>mise exec node@24.15.0 -- defuddle parse uber.html -j</code> を実行したところ、正常にタイトル（Running a Software Factory Efficiently at Uber Scale）と本文（wordCount: 3293）が抽出されました。</p>
+<p>パイプライン側では <code>command -v</code> が成功していたため、「ツールは正常に存在している」という前提で後続のエラーハンドリングを行っていました。その結果、ツールの起動失敗によって空出力となった事象が、上位処理において「対象 Web ページの HTML 構造による抽出失敗」と誤認され、誤った原因調査に時間を費やすことになったのです。</p>
+<h2 id="存在確認から起動確認への切り替え実務での選択理由">「存在確認」から「起動確認」への切り替え：実務での選択理由</h2>
+<p>このインシデントを通じて、私たちはツールの検査方針を「静的な存在確認」から「動的な起動確認（ヘルスチェック）」へと切り替えました。その設計判断の背景には、不具合を捉える思考モデルの転換があります。</p>
+<h3 id="予防原因の空間から検収結果の空間への転換">予防（原因の空間）から検収（結果の空間）への転換</h3>
+<p>コマンドが動くかどうかを確かめようとするとき、私たちは無意識に「動かない原因を事前に排除しよう」と考えがちです。ファイルの存在を確かめ（<code>command -v</code>）、パーミッションを確認し、シンボリックリンクのリンク先を追跡する、といったアプローチです。</p>
+<p>しかし、私はこれを「原因の空間に対する予防」に過ぎないと考えています。「原因の空間」は事実上、無限です。今回のように環境管理ツールの shim だけが残骸として残るケースもあれば、ランタイムのマイナーバージョン更新によるバイナリの非互換、共有ライブラリの欠落、実行パーミッションの不備、環境変数の不足など、コマンドが起動に失敗する原因を事前にすべて予見して個別に検査することは不可能です。</p>
+<p>一方で、私の見方では「結果の空間」は有限です。コマンドが健全に動作可能であるならば、「安全な非破壊引数を与えて起動したとき、プロセスの終了ステータスとして 0 が返ってくる」という結果の性質は 1 つしかありません。原因をいくら列挙して検査しても想定外の壊れ方を防ぐことはできませんが、「実際に安全に起動してステータス 0 で返るか」という結果の空間を 1 点検収すれば、あらゆる原因による起動不能を確実に検出できます。</p>
+<h3 id="verify-urlssh-の改修と実行不可の分離">verify-urls.sh の改修と「実行不可」の分離</h3>
+<p>この思想に基づき、自社の URL 検証パイプラインスクリプト（<code>scripts/verify-urls.sh</code>）において、<code>command -v</code> による判定を実際の起動確認へと書き換えました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="diff"><code><span class="line"><span style="color:#4C4F69"> write_cache() {</span></span>
+<span class="line"><span style="color:#4C4F69">   local body="$1" url="$2" f rc</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">-</span></span><span style="color:#D20F39">  command -v defuddle >/dev/null 2>&#x26;1 || { printf 'キャッシュ: defuddle 不在'; return; }</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">  # command -v では足りない。mise の shim は node 切り替え後も残り、存在確認は通るのに</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">  # 起動で落ちる。それが「抽出失敗」と誤報されていた（2026-09-24 実測）。実際に起動して確かめる</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">  defuddle --help >/dev/null 2>&#x26;1 || { printf 'キャッシュ: defuddle 実行不可（mise の node 切り替え等）'; return; }</span></span>
+<span class="line"></span></code></pre>
+<p>この改修における要点は、単に起動確認を行うだけでなく、エラーメッセージを「defuddle 不在」から「defuddle 実行不可（mise の node 切り替え等）」へと分離したことです。これにより、ツール自体のランタイム破損と、対象 Web ページの取得・抽出失敗が明確に区別され、障害発生時にメッセージだけでツール側とページ側のどちらの失敗かを区別できるようになりました。</p>
+<p>なお、根本的な環境設定としても <code>~/.config/mise/config.toml</code> に <code>"npm:defuddle" = "latest"</code> を追加し、Node.js のグローバルバージョン更新から独立してツールが管理されるよう是正を行いました。</p>
+<h3 id="自己診断doctorスクリプトの同一穴と-grep-による根絶">自己診断（doctor）スクリプトの同一穴と grep による根絶</h3>
+<p>単一のスクリプトを改修して安心することはできませんでした。開発環境の健全性をチェックする自己診断スクリプト（<code>scripts/doctor.sh</code>）を点検したところ、66 行目にまったく同一の判定 <code>command -v defuddle</code> が取り残されていたのです。</p>
+<p>この判定式は shim が残っているだけで通るため、Node.js の更新によって有効な Node から <code>defuddle</code> の実体が参照できなくなり、起動不能になった環境でも、doctor スクリプトは「OK defuddle」と表示する構造になっていました。壊れた環境を「正常」と誤診する誤判定が、診断ツール自身の中に存在していたのです。</p>
+<p>局所的な不具合が発生した際、その箇所だけにパッチを当てて済ませてはなりません。判定式そのものに設計上の欠陥がある場合、リポジトリ全体を横断的に grep して同一パターンの判定漏れを完全に根絶することが不可欠です。doctor スクリプトも同様に <code>defuddle --help</code> による起動確認へと修正し、壊れた環境で確実に異常（NG）を報告することをテストスクリプトで実証しました。</p>
+<h2 id="起動確認におけるトレードオフと落とし穴">起動確認におけるトレードオフと落とし穴</h2>
+<p>「存在確認から起動確認への切り替え」という方針は明快ですが、いざ実装する段になると固有の落とし穴が存在します。すべてのコマンドが同じ作法で動いているわけではないからです。</p>
+<h3 id="-vや-hの存在を前提としない作法差の罠">「-v」や「-h」の存在を前提としない作法差の罠</h3>
+<p>起動確認を行う際、最も陥りやすい誤解は「どのコマンドにも <code>-v</code>（バージョン）や <code>-h</code>（ヘルプ）オプションがあるだろう」という思い込みです。</p>
+<p>伝統的な Unix ツールと現代的な CLI ツールでは、オプションの設計思想に大きな隔たりがあります。主要な CLI ツールにおいて、バージョン表示やヘルプ表示のオプション・サブコマンドの挙動は一貫しておらず、安易なフラグ指定は誤検知の原因となります。</p>
+<p>たとえば <code>curl</code> において <code>-v</code> は <code>--verbose</code>（詳細ログ表示）を意味し、URL を指定せずに単独で実行すると rc=2 で終了します。バージョンを表示するためには大文字の <code>-V</code> または <code>--version</code> を指定しなければなりません <sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。GNU Coding Standards ではすべてのプログラムが <code>--version</code> と <code>--help</code> を標準オプションとしてサポートすべきと規定していますが <sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>、すべての CLI が GNU 標準に従っているわけではありません。近年のツールではサブコマンド方式の採用も増えており、フラグの扱いはツールごとに大きく異なります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>コマンド</th><th><code>-v</code> の結果</th><th><code>-V</code> の結果</th><th><code>--version</code> の結果</th><th><code>version</code> サブコマンド</th></tr></thead><tbody><tr><td><code>curl</code></td><td>❌ (rc=2, URL 必須)</td><td>⭕ (rc=0, バージョン)</td><td>⭕ (rc=0, バージョン)</td><td>❌ (rc=6, ホスト解決失敗)</td></tr><tr><td><code>go</code></td><td>❌ (rc=2, 不正フラグ)</td><td>❌ (rc=2, 不正フラグ)</td><td>❌ (rc=2, 不正フラグ)</td><td>⭕ (rc=0, バージョン)</td></tr><tr><td><code>gh</code></td><td>❌ (rc=1, 不明フラグ)</td><td>❌ (rc=1, 不明フラグ)</td><td>⭕ (rc=0, バージョン)</td><td>⭕ (rc=0, バージョン)</td></tr><tr><td><code>git</code></td><td>⭕ (rc=0, バージョン)</td><td>❌ (rc=129, 不正フラグ)</td><td>⭕ (rc=0, バージョン)</td><td>⭕ (rc=0, バージョン)</td></tr><tr><td><code>python3</code></td><td>⭕ (rc=0, 対話突入注意)</td><td>⭕ (rc=0, バージョン)</td><td>⭕ (rc=0, バージョン)</td><td>❌ (rc=2, ファイル不在)</td></tr></tbody></table>
+<p><code>go</code> では <code>-v</code>、<code>-V</code>、<code>--version</code> がすべてエラー（rc=2）となり、<code>go version</code> というサブコマンドのみを受け付けます。</p>
+<p>さらに注意が必要なのが <code>python3</code> です。<code>python3 -v</code> は終了ステータス 0 を返しますが、これは詳細トレースモードを有効にして対話 REPL を起動する挙動です。もしシェルスクリプト内で標準入力を開いたまま <code>python3 -v</code> を実行すると、プロセスがユーザー入力を待ち続けてスクリプト全体がハングアップしてしまいます（※各ツールの挙動や終了ステータスは OS やバージョンにより異なる場合があります）。</p>
+<p>また、起動確認が保証するのは「起動できる」ところまでです。<code>--help</code> が終了ステータス 0 を返しても、本処理（今回なら <code>defuddle parse</code>）が成功することまでは保証しません。起動確認が捕まえるのは、今回の shim 残存のように「そもそも起動できない」状態です。</p>
+<h3 id="起動確認のコストと安全な実装パターン">起動確認のコストと安全な実装パターン</h3>
+<p>もうひとつのトレードオフは、起動に伴うプロセス生成コストです。メモリ内のハッシュテーブルや PATH を走査するだけの <code>command -v</code> と比べ、プロセスを実際にフォークしてランタイムを立ち上げる起動確認には、そのぶんのオーバーヘッドがかかります。頻繁に呼び出されるループの中で毎回起動確認を行うのは現実的ではありません。起動確認はスクリプトの初期化時やバッチ処理の開始時に 1 回だけ行い、結果はその実行の中でだけ使い回すのが現実的です（実行をまたいで持ち越すと、今回のような環境の変化を見逃します）。</p>
+<p><strong>Q: シェルスクリプトで安全にコマンドの起動確認を行うにはどう書けばよいですか？</strong>
+<strong>A: 対象コマンドがサポートする非破壊的なオプション（<code>--version</code>、<code>--help</code>、または <code>version</code> サブコマンド）を明示的に指定し、標準入出力をリダイレクトした上で終了ステータス（<code>$?</code>）が 0 であることを検証します。</strong></p>
+<p>以下に、作法差に対応しつつ対話モードへの突入を防ぐ、安全な起動確認関数の実装パターンを示します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># コマンドごとの適切な起動確認コマンドを定義して実行する</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">check_executable</span><span style="color:#7C7F93">()</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#8839EF">  local</span><span style="color:#4C4F69"> cmd</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#E64553;font-style:italic">$1</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  shift</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  # 標準入力を遮断し、出力を破棄して実行ステータスのみを判定</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">  "</span><span style="color:#4C4F69">$</span><span style="color:#4C4F69;font-style:italic">cmd</span><span style="color:#1E66F5;font-style:italic">"</span><span style="color:#40A02B"> "</span><span style="color:#E64553;font-style:italic">$@</span><span style="color:#40A02B">"</span><span style="color:#179299"> &#x3C;</span><span style="color:#40A02B"> /dev/null</span><span style="color:#179299"> ></span><span style="color:#40A02B"> /dev/null</span><span style="color:#179299"> 2>&#x26;1</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># ツールごとの作法に応じた起動確認</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">check_executable</span><span style="color:#40A02B"> curl</span><span style="color:#40A02B"> -V</span><span style="color:#179299"> ||</span><span style="color:#D20F39;font-style:italic"> echo</span><span style="color:#40A02B"> "curl 起動不能"</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">check_executable</span><span style="color:#40A02B"> go</span><span style="color:#40A02B"> version</span><span style="color:#179299"> ||</span><span style="color:#D20F39;font-style:italic"> echo</span><span style="color:#40A02B"> "go 起動不能"</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">check_executable</span><span style="color:#40A02B"> git</span><span style="color:#40A02B"> --version</span><span style="color:#179299"> ||</span><span style="color:#D20F39;font-style:italic"> echo</span><span style="color:#40A02B"> "git 起動不能"</span></span>
+<span class="line"></span></code></pre>
+<p>ポイントは <code>&#x3C; /dev/null</code> によって標準入力を確実に遮断している点です。これにより、ツールが対話モードや REPL に突入しようとしても入力終端（EOF）を受け取って終了するため、標準入力待ちによるハングアップを防げます。ネットワーク待ちなど標準入力以外の理由で止まり得るツールには、<code>timeout</code> で包むなどの別の手当てが要ります。</p>
+<h2 id="バージョン管理とシェル運用の将来展望">バージョン管理とシェル運用の将来展望</h2>
+<p>ツール環境の管理手法は日々進化していますが、「存在確認」と「起動確認」のギャップは今後も形を変えて残り続けます。</p>
+<h3 id="path-フック方式と-shim-方式の棲み分け">PATH フック方式と shim 方式の棲み分け</h3>
+<p>mise などの最新ツールでは、対話シェル向けに <code>eval "$(mise activate bash)"</code> のようにシェルの環境変数（PATH）を動的に直接書き換える「PATH activation 方式」が推奨されています。ただし前述のとおり、<code>activate_shims</code> が <code>true</code> のままでは PATH activation 方式でも shim が PATH の後方に残るため、今回の事象は対話環境でも起きます。<code>activate_shims</code> を <code>false</code> にして shim を PATH に入れない構成であれば、実体の無いツールは <code>command -v</code> の時点で見つからなくなるはずで、その場合は存在確認でも今回の壊れ方を捕まえられます。</p>
+<p>しかし、エディタ等の環境で安定した実行パスを確保するために、shim 方式も広く利用されています <sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。また、社内の自動化スクリプトやパイプラインにおいても、既存資産の互換性や過渡期の実務において shim が使われ続ける限り、静的な存在確認の罠は常に潜んでいます。</p>
+<h3 id="コンテナ環境や-ci-への展開">コンテナ環境や CI への展開</h3>
+<p>近年では Dev Containers や Docker による開発環境のコンテナ化が普及し、ホスト環境のランタイム不整合は減少しているように見えます。しかし、コンテナ内部でマルチツール環境を構築したり、複数の言語バージョンを使い分けたりする構成では、同じ「薄いラッパーと実体バイナリの乖離」が起こり得ます。</p>
+<p>環境の抽象化レイヤーがどれほど上がろうとも、「ファイルの配置という静的な前提（原因の空間）」を信じるのではなく、「プロセスの実起動という動的な結果（結果の空間）」を検証して品質を保証するアプローチは、自動化運用の基本原則として有効であり続けます。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>ツールの存在確認と起動確認をめぐる今回の実務トラブルから、持ち帰るべき教訓を 4 つの命題としてまとめます。</p>
+<ol>
+<li><strong>存在確認と起動確認を明確に分ける</strong>: <code>command -v</code> は PATH 上の静的ファイルの存在確認に過ぎず、shim の残骸や依存不整合による起動不能は構造的に検出できません。</li>
+<li><strong>原因の空間ではなく結果の空間を検収する</strong>: ツールが起動できるかを確かめる確実な方法は、安全な非破壊引数でプロセスを実際に起動し、終了ステータス 0 を確認することです。</li>
+<li><strong>コマンド固有の作法差を前提に設計する</strong>: <code>-v</code> や <code>-h</code> の普遍性を過信せず、<code>curl -V</code> や <code>go version</code> のようにツールごとの正規の確認方法を選択し、<code>&#x3C; /dev/null</code> で標準入力を遮断します。</li>
+<li><strong>判定式の不具合はリポジトリ全体を横断 grep する</strong>: 障害箇所のパッチ当てで満足せず、自己診断スクリプト（doctor）などに同一の判定漏れが取り残されていないかを確認し、必ず根絶します。</li>
+</ol>
+<p>自動化パイプラインの堅牢化や AI エージェントの実行環境設計に関するご相談は、<a href="/#contact">コンタクトフォーム</a> までお気軽にお寄せください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://hynek.me/til/which-not-posix/">which is not POSIX</a> Hynek Schlawack, 2021年10月31日。<code>which</code> の非標準性と Debian 削除議論、<code>command -v</code> への移行推奨の背景。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://emmer.dev/blog/reliably-detecting-command-existence-in-bash/">Reliably Detecting Command Existence in Bash</a> Christian Emmer, 2024年12月7日。Bash における <code>command -v</code> 推奨構文の解説。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://pubs.opengroup.org/onlinepubs/9699919799/utilities/command.html">IEEE Std 1003.1 (POSIX) - command</a> The Open Group, 2018 edition / IEEE Std 1003.1-2017。<code>-v</code> オプションの「do not invoke command_name」仕様および終了ステータス定義。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://mise.jdx.dev/dev-tools/shims.html">mise-en-place Documentation: Shims</a> jdx, 2026年9月更新。shim の配置ディレクトリ（<code>~/.local/share/mise/shims</code>）とインターセプト仕様、PATH activation との比較。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://github.com/jdx/mise/issues/5601">jdx/mise Issue #5601</a> jfmontanaro / jdx, 2025年7月。shim 実行時の <code>No version is set for shim</code> エラーメッセージ出力仕様。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://github.com/asdf-vm/asdf/issues/2232">asdf-vm/asdf Issue #2232</a> hannah-computer / asdf-vm, 2026年1月。asdf における <code>.tool-versions</code> 不整合時の <code>No version is set for command</code> 事例。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://curl.se/docs/manpage.html">curl man page</a> Daniel Stenberg / curl project, 2026年。<code>-v</code>（—verbose）の仕様および <code>-V, --version</code> によるバージョン表示仕様。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://github.com/coreutils/gnulib/blob/master/doc/standards.texi">GNU Coding Standards (standards.texi)</a> Free Software Foundation, 2026年。<code>--version</code> と <code>--help</code> の標準化仕様、引数無視と通常機能停止の規定。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

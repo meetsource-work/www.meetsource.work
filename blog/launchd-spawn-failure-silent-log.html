@@ -1,0 +1,206 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>launchd の自動 deploy が起動前に失敗し、ログには何も残らなかった ── 死活は成果物の更新日時で見るのが向いている | Meetsource</title><meta name="description" content="launchd のジョブが起動前に失敗すると、ジョブ自身のログには新しい行が増えません。plist の旧パスで spawn failed（exit 78）になった実例と、launchctl print の見方、gh-pages の更新日時で死活を見る理由と限界をまとめます。"><link rel="canonical" href="https://www.meetsource.work/blog/launchd-spawn-failure-silent-log"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="毎朝の自動 deploy が4日止まっていたのに、ログには新しい行が1行も増えなかった"><meta property="og:description" content="launchd のジョブは、起動前に失敗するとログに何も残しません。旧パスの plist で spawn failed（exit 78）になり、4回分の deploy が静かに消えた実例と、死活を成果物の更新日時で見る理由をまとめます。"><meta property="og:url" content="https://www.meetsource.work/blog/launchd-spawn-failure-silent-log"><meta property="og:image" content="https://www.meetsource.work/blog/launchd-spawn-failure-silent-log-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-02T01:35:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="毎朝の自動 deploy が4日止まっていたのに、ログには新しい行が1行も増えなかった"><meta name="twitter:description" content="launchd のジョブは、起動前に失敗するとログに何も残しません。旧パスの plist で spawn failed（exit 78）になり、4回分の deploy が静かに消えた実例と、死活を成果物の更新日時で見る理由をまとめます。"><meta name="twitter:image" content="https://www.meetsource.work/blog/launchd-spawn-failure-silent-log-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"launchd の自動 deploy が起動前に失敗し、ログには何も残らなかった ── 死活は成果物の更新日時で見るのが向いている","description":"launchd のジョブが起動前に失敗すると、ジョブ自身のログには新しい行が増えません。plist の旧パスで spawn failed（exit 78）になった実例と、launchctl print の見方、gh-pages の更新日時で死活を見る理由と限界をまとめます。","datePublished":"2026-10-02T01:35:00.000Z","image":"https://www.meetsource.work/blog/launchd-spawn-failure-silent-log-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/launchd-spawn-failure-silent-log"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"launchd のジョブが失敗しているのに、ログにエラーが残らないのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"ジョブが起動前に失敗すると、ジョブ自身がログを書く前に終わるためです。ここでの「ログが増えない」は、ジョブ自身のログファイルに新しい行が追記されない状態を指します。今回の例では、launchctl print に job state = spawn failed と出ていて、plist が指す旧パスの実行ファイルは調査時点で存在しませんでした。ログファイルは空ではなく、9/25 までの内容が残っていて、新しい行が増えない状態でした。"}},{"@type":"Question","name":"launchd のジョブが起動前に失敗したかどうかは、どう確かめますか？","acceptedAnswer":{"@type":"Answer","text":"launchctl print gui/$(id -u)/<label> で job state と last exit code を見ます。ただし出力は API ではなく、リリースごとに変わり得ると man ページが注記しています。手がかりとして使い、仕様として頼らないでください。"}},{"@type":"Question","name":"launchd のジョブの exit code 78 とは何ですか？","acceptedAnswer":{"@type":"Answer","text":"sysexits では EX_CONFIG、「設定の誤り」を表す慣習値です。launchd がこの値を返す理由は分からず、今回は spawn failed と同時に出ていました。今回は、launchctl print の program が指すパスに実行ファイルがありませんでした。原因に着いたのは、そのパスが実在するかを確かめたときでした。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-02T01:35:00.000Z" data-astro-cid-7jjqptxk> 2026.10.02 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#launchd</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span><span class="tag" data-astro-cid-7jjqptxk>#monitoring</span><span class="tag" data-astro-cid-7jjqptxk>#Mac</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>launchd の自動 deploy が起動前に失敗し、ログには何も残らなかった ── 死活は成果物の更新日時で見るのが向いている</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/launchd-spawn-failure-silent-log-hero.webp" alt="launchd の自動 deploy が起動前に失敗し、ログには何も残らなかった ── 死活は成果物の更新日時で見るのが向いている" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>定期ジョブが止まっていないかを、ジョブ自身のログで確かめる方法があります。ただ、起動前に失敗するジョブでは、そのログが当てになりませんでした。</p>
+<p>本記事で「起動前の失敗」と呼ぶのは、launchd のジョブが始まらず、ジョブ自身がログを書く前に終わってしまう状態のことです。ジョブの中身が失敗したのではなく、ジョブが始まっていません。今回の例では、<code>launchctl print</code> に <code>job state = spawn failed</code>、<code>last exit code = 78: EX_CONFIG</code> と出ていました。</p>
+<p>私の個人サイトの自動 deploy は、plist が指す旧パスの実行ファイルが無い状態で起動前に失敗しました。調査と plist の差し替えは Claude が実行し、私は「ログを確認して」「直して」と頼んだだけです。ここから、この構成の deploy では、死活を成果物（gh-pages の最新コミット日時）で見るのが向いていると考えています。</p>
+<h2 id="何が起きたか旧パスを指す-plist-と926-以降ログに残らなかった-run">何が起きたか：旧パスを指す plist と、9/26 以降ログに残らなかった run</h2>
+<p>個人サイトの deploy は、launchd のジョブが毎朝 07:10 に走らせています。ビルド結果は gh-pages ブランチへ force push します。plist の <code>ProgramArguments</code> は、mise の実行ファイルと <code>run deploy</code> という引数の並びです。<code>ProgramArguments</code> の先頭は、<code>Program</code> キーが無いときに実行ファイルとして使われます<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。ジョブの出力は、plist の <code>StandardOutPath</code> と <code>StandardErrorPath</code> に指定したログファイルへ書かれます。本記事で「ジョブ自身のログ」と呼ぶのは、このファイルです。</p>
+<p>起きたことを時系列にすると、次のとおりです（時刻は JST）。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>日時</th><th>起きたこと</th></tr></thead><tbody><tr><td>9/25 07:11</td><td>自動 deploy でビルドは成功したが、<code>git push</code> の途中で <code>Connection reset by peer</code>。ログには ERROR として残った（別原因の失敗）</td></tr><tr><td>9/26 03:38</td><td><code>~/.local/bin/mise</code> の更新日時（plist が指す <code>/opt/homebrew/bin/mise</code> は、調査時点で存在しない）</td></tr><tr><td>9/26〜9/29 の 07:10 の4回の枠</td><td>ジョブ自身のログに run が残っていない</td></tr><tr><td>9/27 09:44</td><td>gh-pages 側の Pages ビルドが走った（私が手で deploy した）</td></tr><tr><td>9/29 09:49</td><td>Claude にログの確認を頼んだ。続く調査で <code>spawn failed</code> を確認</td></tr><tr><td>9/29 09:52</td><td>Claude が plist のパス2点を差し替えて読み直した</td></tr><tr><td>9/30 07:19</td><td>修理後、launchd 経由の最初の deploy が通った（<code>Finished in 60.29s</code>）</td></tr></tbody></table>
+<p>9/26 03:38 は新しいパスの実行ファイルの更新日時です。旧パスの実行ファイルがいつ、どう無くなったのかは分かりません。</p>
+<p>調べたのは Claude です。plist の中身を読んだあと、<code>launchctl list</code> で終了コード <code>78</code> を見つけ、<code>launchctl print</code> でジョブの状態を確認し、ログファイルの最終更新を調べ、plist が指すパスが実在するかを確かめました。</p>
+<p><code>launchctl print</code> の確認は、次のコマンドです。ジョブのラベルは <code>&#x3C;label></code> に置き換えています。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">launchctl</span><span style="color:#40A02B"> print</span><span style="color:#40A02B"> gui/</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">id</span><span style="color:#40A02B"> -u</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">/</span><span style="color:#179299">&#x3C;</span><span style="color:#40A02B">labe</span><span style="color:#4C4F69">l</span><span style="color:#179299">></span></span>
+<span class="line"></span></code></pre>
+<p>出力のうち、関係する行だけを抜粋します（<code>&#x3C;label></code> 以外は逐語です）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>	state = spawn scheduled</span></span>
+<span class="line"><span>	program = /opt/homebrew/bin/mise</span></span>
+<span class="line"><span>	runs = 4</span></span>
+<span class="line"><span>	last exit code = 78: EX_CONFIG</span></span>
+<span class="line"><span>	job state = spawn failed</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><code>program</code> が旧パスの <code>/opt/homebrew/bin/mise</code> を指しています。そして <code>job state = spawn failed</code>、<code>last exit code = 78: EX_CONFIG</code> と出ています。見るのは <code>job state</code> と <code>last exit code</code> の2行です。<code>runs = 4</code> は 9/26〜9/29 の4回の枠と数が一致します。ただし、一致するのは数だけです。ここで書くのは、今回の環境で観測した状態です（<code>launchctl print</code> は Claude に実行させました）。<code>spawn failed</code> や 78 が launchd の仕様として保証された挙動なのかどうかは、分かりません。<code>launchctl print</code> の出力について、man ページ自身が、API ではなくリリースごとに予告なく変わり得るものだと注記しています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>exit 78 は、sysexits では <code>EX_CONFIG</code>、つまり設定の誤りを表す慣習値です<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。launchd がこの値を返す理由は分かりません。今回は <code>spawn failed</code> と同時に観測した、という範囲にとどめます。</p>
+<p>修理は、plist の2点の差し替えでした。差し替えた行だけを抜粋します（<code>&#x3C;user></code> は置き換えています）。</p>
+<p>ファイル: <code>~/Library/LaunchAgents/&#x3C;label>.plist</code>（Before）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>    &#x3C;key>PATH&#x3C;/key></span></span>
+<span class="line"><span>    &#x3C;string>/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin&#x3C;/string></span></span>
+<span class="line"><span>    ...</span></span>
+<span class="line"><span>    &#x3C;string>/opt/homebrew/bin/mise&#x3C;/string></span></span>
+<span class="line"><span></span></span></code></pre>
+<p>ファイル: <code>~/Library/LaunchAgents/&#x3C;label>.plist</code>（After）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>    &#x3C;key>PATH&#x3C;/key></span></span>
+<span class="line"><span>    &#x3C;string>/Users/&#x3C;user>/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin&#x3C;/string></span></span>
+<span class="line"><span>    ...</span></span>
+<span class="line"><span>    &#x3C;string>/Users/&#x3C;user>/.local/bin/mise&#x3C;/string></span></span>
+<span class="line"><span></span></span></code></pre>
+<p><code>EnvironmentVariables</code> の <code>PATH</code> の先頭に <code>~/.local/bin</code> を足し、<code>ProgramArguments</code> の先頭を新しいパスに変えています。Claude は <code>plutil -lint</code> で plist を検証し、<code>launchctl bootout</code> と <code>bootstrap</code> で読み直しました。読み直した直後は <code>last exit code = (never exited)</code> で、<code>spawn failed</code> は消えていました。そのあと、9/30 07:19 の launchd 経由の run が通っています。修理のあとに run が通った、という事実を並べるところまでが、今回確認できた範囲です。</p>
+<p>launchd が <code>PATH</code> をほぼ空で渡す問題は、<a href="/blog/launchd-ssg-negative-test">事前に PATH の挙動を確かめる記事</a>で扱いました。今回はそれとは別に、稼働後に止まったときの話です。</p>
+<h2 id="なぜ死活はジョブのログではなく成果物の更新日時で見るのか">なぜ死活はジョブのログではなく成果物の更新日時で見るのか</h2>
+<p>ジョブ自身のログは、ジョブが起動できて初めて書かれます。起動前に失敗すると、「エラーが出る」のではなく「新しい行が増えない」状態になります。9/25 の失敗は ERROR としてログに残っていました。ログから見えなくなったのは、9/26 以降の run です。調査した時点で、ログに残る最後の run は 9/25 の失敗でした。</p>
+<p>ここでいう「ログが空」は、起動前に失敗したジョブについて新しい行が増えないことです。今回のログファイルは、9/25 までの内容がそのまま残っていました。</p>
+<p>ログに新しい行が増えないことは、何も起きていないことの証拠になりません。ログに出るのは、起動できたジョブが書いた分だけだからです。</p>
+<p>そこで私は、原因側の痕跡ではなく、結果側で死活を見るほうがよいと考えています。原因は多様で、今回だけでも、push の切断と旧パスという別原因が続きました。結果は「次の deploy の成果物ができたか」の1つにまとまります。どちらの原因でも、自動 deploy の成果物は更新されませんでした。deploy が止まる失敗は、後から直せる失敗です。予防を積み上げるより、結果を自動で見る検収で拾うほうが合っていると考えます。これは、この構成での判断です。ただし、私の構成ではこの検収をまだ自動化していません（後述）。成果物で完了を確かめる考え方は、<a href="/blog/ai-agent-completion-evidence">AI エージェントの完了報告を扱った記事</a>でも書いています。</p>
+<p>この構成で成果物の更新日時が使えるのは、deploy のスクリプトが毎回 <code>git init</code> → <code>git commit</code> → <code>git push --force origin HEAD:gh-pages</code> を実行し、root-commit を force push するからです。gh-pages の履歴は最新の1コミットだけになり、最新コミットの日時がそのまま最後の deploy の時刻になります。</p>
+<p>gh-pages の最新コミットの日時は、GitHub の API で取れます。<code>sha</code> パラメータにはブランチ名を渡せます<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">gh</span><span style="color:#40A02B"> api</span><span style="color:#40A02B"> 'repos/&#x3C;owner>/&#x3C;repo>/commits?sha=gh-pages&#x26;per_page=12'</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  --jq</span><span style="color:#40A02B"> '.[]|.commit.committer.date+" "+.sha[0:8]+" "+(.commit.message|split("\n")[0])'</span></span>
+<span class="line"></span></code></pre>
+<p>結果は、<code>&#x3C;UTC日時> &#x3C;sha8> Deploy: &#x3C;UTC日時></code> の形の1行だけです。<code>per_page=12</code> を指定しても、返るのは1行でした。履歴が1コミットしか無いからです。</p>
+<p>停止は、コミット履歴ではなく Pages のビルド履歴に、穴として見えました。自動 deploy が走るたびに、Pages のビルドも走ります。次のコマンドで一覧を出すと、通常は 07:10〜07:24 ごろ（UTC の 22:10〜22:24）に並ぶ run が、9/23 22:22 UTC（JST 9/24 07:22）の次は 9/27 00:44 UTC（JST 09:44）でした。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">gh</span><span style="color:#40A02B"> run</span><span style="color:#40A02B"> list</span><span style="color:#40A02B"> -R</span><span style="color:#179299"> &#x3C;</span><span style="color:#40A02B">owne</span><span style="color:#4C4F69">r</span><span style="color:#179299">></span><span style="color:#40A02B">/</span><span style="color:#179299">&#x3C;</span><span style="color:#40A02B">rep</span><span style="color:#4C4F69">o</span><span style="color:#179299">></span><span style="color:#40A02B"> --limit</span><span style="color:#FE640B"> 10</span></span>
+<span class="line"></span></code></pre>
+<p>出力の抜粋です（リポジトリ名は置き換えています）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>completed	success	pages build and deployment	pages-build-deployment	gh-pages	dynamic	36283412822	1m5s	2026-09-27T00:44:34Z</span></span>
+<span class="line"><span>completed	success	pages build and deployment	pages-build-deployment	gh-pages	dynamic	35927959392	1m42s	2026-09-23T22:22:17Z</span></span>
+<span class="line"><span>completed	success	pages build and deployment	pages-build-deployment	gh-pages	dynamic	35791390288	1m2s	2026-09-22T22:15:38Z</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>9/23 までは 07:10〜07:24 ごろの並びで、その次が 9/27 の 09:44 です。この穴には、9/25 の push の切断と、9/26 以降の起動前の失敗の両方が入っています。原因は別でも、結果側では同じ1つの穴として見えます。履歴が1コミットだけなので、<code>gh api …/commits</code> では、この穴を再現できません。Pages のビルド履歴に穴があった、というところまでが、書ける事実です。</p>
+<p>成果物が古いとき、次に見るのは <code>launchctl print</code> の <code>last exit code</code> です。今回の特定も、plist → <code>launchctl list</code> → <code>launchctl print</code> → パスの実在確認の順でした。これは運用していた手順ではなく、今回 Claude が辿った順序です。</p>
+<p>起動前の失敗で何が見えるかを、見る場所ごとに整理します。起動前に失敗したジョブを見つける手段として、今回の構成では成果物の更新日時が向いていました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>見る場所</th><th>起動前の失敗で何が見えるか</th><th>前提</th></tr></thead><tbody><tr><td>ジョブ自身のログ</td><td>新しい行が増えない（見えるのは「無いこと」だけ）</td><td>ジョブが起動できて初めて書かれる</td></tr><tr><td><code>launchctl print</code></td><td><code>job state = spawn failed</code>、<code>last exit code = 78</code> が出る（今回の観測）</td><td>ジョブのラベルを知っている必要がある。出力は API ではない</td></tr><tr><td>成果物の更新日時（gh-pages の最新コミット）</td><td>最後の deploy の時刻が止まって見える（この構成の場合）</td><td>リポジトリ名があればよい。毎回成果物が変わる構成であること。手動 deploy でも更新される</td></tr></tbody></table>
+<p>「前提」の列は私の整理です。次節で、この見方が成り立たない場面を書きます。</p>
+<h2 id="この見方の限界と想定される反論">この見方の限界と、想定される反論</h2>
+<ul>
+<li>
+<p><strong>成果物が毎回変わる構成でしか成り立ちません。</strong> この deploy は毎回 root-commit を force push するので、成果物の日時が必ず動きます。変更が無い日は更新されないジョブには、この見方は使えません。</p>
+</li>
+<li>
+<p><strong>手動 deploy が挟まると、成果物は更新されます。</strong> 見ているのは「自動 deploy の成果物が最新か」であって、「launchd のジョブが動いたか」ではありません。実際、停止中の 9/27 に私が手で deploy しています。成果物の更新日時だけでは、launchd が動いたのか手動だったのかは区別できません。launchd の状態は <code>launchctl print</code> の <code>job state</code> で別に見ます。</p>
+</li>
+<li>
+<p><strong>反論1：ジョブの末尾から成功を通知する方式（ハートビート）で足りないか。</strong> 足りるかどうかは構成によります。私の見立てでは、両者は「成功の信号が来ないことを異常とみなす」点で同じ型で、違うのは信号をどこに置くかだけです。ジョブの内側（ジョブが最後に出す通知）か、外側（成果物そのもの）か。私が成果物を選ぶのは、ジョブに手を入れず、結果の側で見られるからです。</p>
+</li>
+<li>
+<p><strong>反論2：絶対パスで書くのが公式の推奨ではないか。</strong> mise の公式ドキュメントも、launchd のエージェントには明示的な実行ファイルのパスを使い、必要な環境変数を宣言するよう述べています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。今回の失敗は、plist が指す旧パスの実行ファイルが調査時点で存在しなかったことで起きました。絶対パスにはこの弱点があり、インストール方法が変わると壊れ得ます。これとは別に、mise は、2つのインストール方法が PATH にあると古いバイナリが使われ続けることがある、と注意しています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。予防の一案として、ツールの導入方法を変えたら plist の絶対パスを洗います。たとえば次のコマンドです（出力は載せません）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">grep</span><span style="color:#40A02B"> -n</span><span style="color:#40A02B"> -E</span><span style="color:#40A02B"> '/opt/homebrew|/usr/local|\.local/bin'</span><span style="color:#40A02B"> ~/Library/LaunchAgents/</span><span style="color:#4C4F69">*</span><span style="color:#40A02B">.plist</span></span>
+<span class="line"></span></code></pre>
+<p>洗い出しは、導入方法を変えたときに1回の手作業で済む補助です。見つけ方の主役は、結果側の検収（成果物の更新日時）に置きます。可逆な失敗は検収で拾い、予防は補助、という整理です。</p>
+</li>
+<li>
+<p><strong>今回の停止は、この見方を運用して見つけたものではありません。</strong> 成果物の更新日時を自動で確かめる仕組みは、まだ作っていません。通知もありません。停止に気づいたきっかけは、公開されているはずの記事がサイトに出ていなかったことでした。記事が下書きのままなのかと最初は疑い、そうではなかったので、GitHub Actions の Pages のビルド履歴で deploy されたかを確かめました。気づいたのも結果の側からでしたが、手で見て気づいたものです。その後の調査の中で、Claude が gh-pages の履歴と Pages のビルド履歴を確認し、Pages のビルド履歴に穴があったことが分かりました。</p>
+</li>
+<li>
+<p><strong>Mac のスリープと起動時刻の幅を見込む必要があります。</strong> launchd の <code>StartCalendarInterval</code> は、スリープ中に過ぎた枠を起床後に1回にまとめて実行します<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。修理後の最初の run が 07:10 ではなく 07:19 だったのは、このためかもしれませんが、原因は断定できません。日次の死活判断では、更新日時が少し遅れる幅を許容する必要があります。</p>
+</li>
+</ul>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<ul>
+<li>成果物が毎回は変わらない運用なら、更新日時では区別できません。その場合は別の信号が要ります。ハートビート方式や、<code>launchctl print</code> の <code>last exit code</code> の定期確認が候補になりますが、私が試した構成ではありません。</li>
+<li>インストール方法は変わり得ます。mise 公式は macOS では <code>mise.run</code> のインストーラを推奨し、Homebrew 版は代替と位置づけています<sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。導入方法が変われば、plist の絶対パスは古くなる可能性があります。</li>
+<li>複数のジョブや複数台になれば、個別の成果物の日時を見る方式は手間が増えます。その規模では、外部の監視の仕組みを検討する価値が出る、というのが私の見立てです。事例は1件なので、一般化はしません。</li>
+</ul>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-launchd-のジョブが失敗しているのにログにエラーが残らないのはなぜですか">Q. launchd のジョブが失敗しているのに、ログにエラーが残らないのはなぜですか？</h3>
+<p><strong>A.</strong> ジョブが起動前に失敗すると、ジョブ自身がログを書く前に終わるためです。ここでの「ログが増えない」は、ジョブ自身のログファイルに新しい行が追記されない状態を指します。今回の例では、<code>launchctl print</code> に <code>job state = spawn failed</code> と出ていて、plist が指す旧パスの実行ファイルは調査時点で存在しませんでした。ログファイルは空ではなく、9/25 までの内容が残っていて、新しい行が増えない状態でした。</p>
+<h3 id="q-launchd-のジョブが起動前に失敗したかどうかはどう確かめますか">Q. launchd のジョブが起動前に失敗したかどうかは、どう確かめますか？</h3>
+<p><strong>A.</strong> <code>launchctl print gui/$(id -u)/&#x3C;label></code> で <code>job state</code> と <code>last exit code</code> を見ます。ただし出力は API ではなく、リリースごとに変わり得ると man ページが注記しています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。手がかりとして使い、仕様として頼らないでください。</p>
+<h3 id="q-launchd-のジョブの-exit-code-78-とは何ですか">Q. launchd のジョブの exit code 78 とは何ですか？</h3>
+<p><strong>A.</strong> sysexits では <code>EX_CONFIG</code>、「設定の誤り」を表す慣習値です<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。launchd がこの値を返す理由は分からず、今回は <code>spawn failed</code> と同時に出ていました。今回は、<code>launchctl print</code> の <code>program</code> が指すパスに実行ファイルがありませんでした。原因に着いたのは、そのパスが実在するかを確かめたときでした。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li>起動前に失敗する launchd のジョブは、自前のログを書けません。今回の例では、ログに残る最後の run は 9/25 の失敗（別原因）で、9/26 から 9/29 までの 07:10 の4回の枠は run がログに残りませんでした。</li>
+<li>「ログに新しい行が増えない」は、「何も起きていない」ことの証拠になりません。ログに出るのは、起動できたジョブが書いた分だけです。</li>
+<li>毎回 root-commit を force push する deploy では、gh-pages の最新コミット日時が最後の deploy の時刻と一致します。この構成では、死活を成果物の更新日時で見るのが向いています。ただし手動 deploy でも更新されるので、launchd が動いたかどうかは別に見ます。</li>
+<li>成果物が古いときは、次に <code>launchctl print</code> の <code>job state</code> と <code>last exit code</code> を見ます。今回はこの順で原因に辿り着きました。</li>
+<li>ツールの導入方法を変えたら、plist の絶対パスを洗います。これは補助で、主役は結果側の検収です。</li>
+<li>この見方が成り立つのは、成果物が毎回変わる構成に限ります。</li>
+</ul>
+<p>定期ジョブの運用設計や、AI エージェントを含む自動化の見直しについて、ぜひ <a href="/#contact">コンタクトフォーム</a> からご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://keith.github.io/xcode-man-pages/launchd.plist.5.html">launchd.plist(5)</a> Apple の man ページ（keith.github.io のミラー）、ページ末尾の日付 30 July, 2019。<code>ProgramArguments</code> の先頭が <code>Program</code> キーの無いときに実行ファイルとして使われることは <code>Program</code> キーの項、<code>StartCalendarInterval</code> がスリープ中に過ぎた枠を起床後に1回にまとめて実行することは同キーの項。アクセス日 2026-10-02。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://keith.github.io/xcode-man-pages/launchctl.1.html">launchctl(1)</a> Apple の man ページ（keith.github.io のミラー）、ページ末尾の日付 1 October, 2014。<code>print</code> の出力に last exit status が含まれること、およびその出力が API ではなくリリースごとに予告なく変わり得るという注記（IMPORTANT）は、いずれも <code>print</code> サブコマンドの項。アクセス日 2026-10-02。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://keith.github.io/xcode-man-pages/sysexits.3.html">sysexits(3)</a> Apple 版の man ページ（keith.github.io のミラー）、ページ末尾の日付 March 31, 1996、Mac OS X 12。<code>EX_CONFIG (78)</code> は “Something was found in an unconfigured or misconfigured state.”（未設定または設定不備の状態が見つかった）。launchd がこの値を使う理由は述べていない。アクセス日 2026-10-02。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://docs.github.com/en/rest/commits/commits">REST API endpoints for commits</a> GitHub Docs、ページに日付なし。List commits の節で、<code>sha</code> パラメータが “SHA or branch to start listing commits from”（ブランチ名を渡せる）であることと、レスポンスに <code>commit.committer.date</code> があること。アクセス日 2026-10-02。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://mise.jdx.dev/bootstrap/launchd.html">macOS LaunchAgents</a> mise 公式ドキュメント、ページに日付なし。launchd のエージェントは launchd の環境を受け取り、対話シェルの activation は受けないこと、そのため明示的な実行ファイルのパスを使い必要な環境変数を宣言することを述べている。アクセス日 2026-10-02。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://mise.jdx.dev/installing-mise.html">Installing mise</a> mise 公式ドキュメント、ページに日付なし。本体の既定インストール先が <code>~/.local/bin/mise</code>（<code>MISE_INSTALL_PATH</code> の既定）であること、macOS では <code>mise.run</code> のインストーラが推奨で Homebrew 版は代替であること、2つのインストール方法が PATH にあると古いバイナリが使われ続けることがあること。アクセス日 2026-10-02。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

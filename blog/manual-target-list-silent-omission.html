@@ -1,0 +1,203 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>目次リンク42本が、全部「同じ日の別の回」を指していた ── 対象一覧を手作業で作ると、漏れは一覧の外に出る | Meetsource</title><meta name="description" content="ブログの連載目次リンク42本が同日の別記事を指し、通常のリンクチェッカーを素通りした障害事例。手作業やheadによる作業一覧作成の罠を解剖し、設定の正本（SSoT）からの機械的導出と、結果の空間に対するタイトル一致検査による決定論的な検証手法を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/manual-target-list-silent-omission"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="目次リンク42本が、全部「同じ日の別の回」を指していた ── 対象一覧を手作業で作ると、漏れは一覧の外に出る | Meetsource"><meta property="og:description" content="ブログの連載目次リンク42本が同日の別記事を指し、通常のリンクチェッカーを素通りした障害事例。手作業やheadによる作業一覧作成の罠を解剖し、設定の正本（SSoT）からの機械的導出と、結果の空間に対するタイトル一致検査による決定論的な検証手法を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/manual-target-list-silent-omission"><meta property="og:image" content="https://www.meetsource.work/blog/manual-target-list-silent-omission-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-18T17:12:06.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="目次リンク42本が、全部「同じ日の別の回」を指していた ── 対象一覧を手作業で作ると、漏れは一覧の外に出る | Meetsource"><meta name="twitter:description" content="ブログの連載目次リンク42本が同日の別記事を指し、通常のリンクチェッカーを素通りした障害事例。手作業やheadによる作業一覧作成の罠を解剖し、設定の正本（SSoT）からの機械的導出と、結果の空間に対するタイトル一致検査による決定論的な検証手法を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/manual-target-list-silent-omission-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"目次リンク42本が、全部「同じ日の別の回」を指していた ── 対象一覧を手作業で作ると、漏れは一覧の外に出る","description":"ブログの連載目次リンク42本が同日の別記事を指し、通常のリンクチェッカーを素通りした障害事例。手作業やheadによる作業一覧作成の罠を解剖し、設定の正本（SSoT）からの機械的導出と、結果の空間に対するタイトル一致検査による決定論的な検証手法を解説します。","datePublished":"2026-10-18T17:12:06.000Z","image":"https://www.meetsource.work/blog/manual-target-list-silent-omission-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/manual-target-list-silent-omission"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"なぜ通常のリンクチェッカー（lychee 等）ではこの誤リンクを見つけられなかったのですか？","acceptedAnswer":{"@type":"Answer","text":"従来のリンクチェッカーは HTTP ステータスコード（404 や 500 等）の検査に特化しており、リンク先が存在する別記事（200 OK）である場合は正常と判定するためです。リンクテキストと遷移先コンテンツの意味的整合性は、ステータスコード検査のスコープ外となっています。"}},{"@type":"Question","name":"リンク文字列とタイトルの完全一致検査で、誤検知（偽陽性）は起きないのですか？","acceptedAnswer":{"@type":"Answer","text":"一般語との偶然の一致を防ぐため、「10 文字以上」という制約を設けることで偽陽性を防いでいます。実際、1532 記事に適用した検証では誤検知は 0 件で、42 件の真の誤リンクのみを正確に検出しました。"}},{"@type":"Question","name":"一括置換やリファクタリングで「一覧の漏れ」を防ぐ最も確実な方法は何ですか？","acceptedAnswer":{"@type":"Answer","text":"設定ファイルや Git 管理下の追跡ファイル（SSoT）からスクリプトで機械的に対象を抽出し、「正本の総件数 = 処理対象件数 + 除外件数（理由付き）」を突き合わせる運用を徹底することです。手作業での列挙や head による切り捨てを排除することが根本対策になります。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-18T17:12:06.000Z" data-astro-cid-7jjqptxk> 2026.10.19 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#ドキュメント</span><span class="tag" data-astro-cid-7jjqptxk>#リンクチェック</span><span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span><span class="tag" data-astro-cid-7jjqptxk>#ci-cd</span><span class="tag" data-astro-cid-7jjqptxk>#automation</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>目次リンク42本が、全部「同じ日の別の回」を指していた ── 対象一覧を手作業で作ると、漏れは一覧の外に出る</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/manual-target-list-silent-omission-hero.webp" alt="目次リンク42本が、全部「同じ日の別の回」を指していた ── 対象一覧を手作業で作ると、漏れは一覧の外に出る" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>ドキュメントや技術ブログの内部リンク切れ（HTTP 404）を防ぐため、CI パイプラインで高速なリンクチェッカー（<code>lychee</code> 等）を動かして検査を回す運用が実践されています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。URL の誤字やファイル移動に伴うリンク切れは、ビルド時や PR のチェック時に機械的に検出できるため、リンク切れが本番環境へ流出するリスクは大幅に低減されました。</p>
+<p>しかし、「リンク先は実在するが、本来指すべきではない別の記事へ飛んでいる」という <strong>生きている誤リンク</strong> は、HTTP 200 OK を返すためリンクチェッカーを完全に素通りします。リンク先が存在している以上、ステータスコードを監視するツールからは正常なアクセスに見えるからです。</p>
+<p>私の運用するブログでも、まさにこの盲点による障害が発生していました。4 つの連載目次において、同日に複数話が公開された回へのリンク計 42 本が、すべてその日の午前7時7分5秒の記事（<code>070705</code>）のパーマリンクを指していたのです。</p>
+<p>さらに深刻だったのは、連載目次の一括改善をタスク化する作業において、もうひとつの罠を踏んだことでした。作業対象となる連載の一覧を手作業の列挙と <code>head -12</code> で切り出して作成したため、13 番目に定義されていた連載（16 件の誤リンクを抱えていた <code>code-archaeologist</code>）が改善対象の一覧からサイレントに漏脱したのです。作業一覧の内側ではテストも完了報告も 100% 成功していたため、漏れは一覧の外に隠れ、別セッションで見直されるまで気づかれませんでした。</p>
+<p>定義文として整理すると、<strong>生きている誤リンク（宛先不整合リンク）とは、HTTP ステータスコードとしては 200 OK を返してリンク切れチェッカーをすり抜けるものの、リンク文字列が指す本来の意図とは異なる実在記事やページ先頭へ読者を誘導してしまうリンクのこと</strong> です。</p>
+<p>ここからは、「一覧を手作業で作ると漏れは一覧の外に隠れる」という作業構造の失敗を解剖し、設定の正本（Single Source of Truth / SSoT）からの機械的導出と、結果の空間に対する「リンク文字列とタイトルの完全一致検査」による決定論的な検証手法について、実務での失敗と一次計測ログに基づいて解説します。</p>
+<h2 id="200-ok-で素通りする生きている誤リンクの盲点">200 OK で素通りする「生きている誤リンク」の盲点</h2>
+<p>従来のリンク検証ツール（<code>markdown-link-check</code> のようなステータスコード検査ツールや、<code>lychee</code> のようにフラグメント <code>#見出し</code> の存在確認まで行える高機能ツール）であっても、検査対象はあくまで URL の到達性やページ内要素の実在確認に留まります。</p>
+<p>たとえば、<code>lychee</code> のステータスコード許容範囲（デフォルト: <code>100..=103,200..=299</code>）<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup> や、<code>markdown-link-check</code> の生存判定基準（<code>200 OK</code>、または <code>aliveStatusCodes</code> の設定例 <code>[200, 206]</code>）<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> を見ても明らかなように、HTTP リクエストが成功ステータスを返している限り、チェッカーはそれを正常と判定します。リンク先が実在する記事である限り、アンカーテキストがどれほど別の記事の内容を名指ししていても、ツールが警告を発することはありません。</p>
+<p>実際に私のブログのリポジトリで発見された誤リンクは、以下の 4 つの連載目次ファイルにおいて、計 42 件に達していました。</p>
+<ul>
+<li>コード考古学者 (<code>code-archaeologist</code>): 16 件</li>
+<li>コードシェフ (<code>code-chef</code>): 10 件</li>
+<li>コードメカニック (<code>code-mechanic</code>): 8 件</li>
+<li>コードテイマー (<code>code-tamer</code>): 8 件</li>
+<li><strong>合計: 4 ファイル・42 件</strong></li>
+</ul>
+<p>これらの連載では、同じ日に複数話が連続して公開された回が存在していました。しかし、目次ページのリンクを生成・編集する過程で、URL の時刻部分がすべてその日の <code>070705</code>（午前7時7分5秒に公開された最初の回）に固定されてしまっていました。目次上のリンク文字列は「第2話」「第3話」と正しく表記されているにもかかわらず、クリックするとすべて「第1話」へ飛ばされる状態が続いていたのです。</p>
+<p>リンク検証における失敗モードは、HTTP 応答の有無だけでなく、文脈と宛先の整合性によって性質が根本から分かれます。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>観点</th><th>通常のリンク切れ (Broken Link)</th><th>生きている誤リンク (Wrong Target Link)</th></tr></thead><tbody><tr><td><strong>HTTP ステータス</strong></td><td>404 Not Found / 500 系エラー</td><td>200 OK（実在するページ）</td></tr><tr><td><strong>CI ツールの検知</strong></td><td><code>lychee</code> 等で容易に自動検知可能</td><td>ステータスコード検査では 100% 素通りする</td></tr><tr><td><strong>読者への影響</strong></td><td>閲覧不能（エラー画面が表示される）</td><td>別の回や別記事へ飛ばされ、混乱・離脱を招く</td></tr><tr><td><strong>検知に必要な情報</strong></td><td>URL の到達性（ファイルやルートの存在）</td><td>リンク文字列と遷移先コンテンツの意味的整合性</td></tr></tbody></table>
+<p>このように、HTTP 200 を返す誤リンクは従来の CI ゲートの射程外にあり、到達性とは別の検証軸を用意しなければ、人間が偶然気づくまで永続化してしまいます。</p>
+<h2 id="一覧を手作業や-head-で切ると漏れは一覧の外に隠れる">一覧を手作業や head で切ると、漏れは一覧の外に隠れる</h2>
+<p>この誤リンクの問題と並行して進めていた「連載目次の一括改善作業」において、私たちはもうひとつの構造的な作業ミスを起こしました。</p>
+<p>各連載の目次構成を改善するタスクを連載ごとに起票するにあたり、作業担当のエージェントは対象となる連載の一覧を作成しました。その際、エージェントは連載の名前を手作業で 12 個列挙し、さらに設定ファイルの先頭 12 行（<code>head -12</code>）を参照して対象リストを組み立ててしまいました。</p>
+<p>その結果、設定ファイルの 13 番目に定義されていた連載 <code>code-archaeologist</code>（コード考古学者）が、作業対象の一覧からサイレントに漏脱しました。前章で挙げた 42 件の誤リンクのうち最多の 16 件を抱えていたにもかかわらず、手作業で作った一覧からは丸ごと抜け落ちていたのです。</p>
+<p>ここに、作業リスト作成における <strong>構造的な罠</strong> があります。</p>
+<p>作業対象の一覧を手動や <code>head</code> で不完全に作ってしまうと、その一覧の内側で作業している限り、テストも進捗報告も 100% 成功して見えます。「リストアップされた 12 個の連載目次について改善タスクの起票と点検を完了しました」という報告が上がれば、レビューする側も作業が完了したと誤認してしまいます。漏れは作成された一覧の外側にあるため、一覧の内側をどれだけ精査しても、決して見つけることはできません。</p>
+<p>この現象は、AI エージェントに「一括修正して」「全ファイルをリファクタリングして」と指示した場合にも頻繁に発生します。エージェントが出力の肥大化を抑えようとしたり、目についた範囲だけでリストを組み立てたりする過程で、暗黙のうちに <code>head</code> や手書き列挙によって範囲を絞り込み、末尾の要素や例外的な配置のファイルを一覧から除外してしまう事象がしばしば観測されます。</p>
+<p>誤リンク自体はリポジトリ全記事への一括検査（次章で詳述）によって検出・修正できましたが、改善タスクの一覧から漏れた 13 番目の連載 <code>code-archaeologist</code> の目次改善は手付かずのまま取り残され、後続の別セッションで連載全体の動線を見直していた際にようやく発見・回収されました。</p>
+<p>当時の作業振り返りログには、以下の教訓が記録されています。</p>
+<blockquote><p>「全部が対象の作業で、一覧を正本から導出せずに作ると、検査も報告も一覧の内側では全件成功に見える。漏れは一覧の外にあるので、一覧を見直しても見つからない」</p></blockquote>
+<h2 id="対策1-作業対象は設定の正本ssotから機械的に導出する">対策1: 作業対象は設定の正本（SSoT）から機械的に導出する</h2>
+<p>作業対象の一覧を、人間やエージェントの手作業で作ってはなりません。各データ要素を唯一の場所で管理・編集することで複製の更新忘れ等による不整合を防ぎやすくする「単一情報源（Single Source of Truth / SSoT）」の設計プラクティス<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup> に従い、システム内の正本からスクリプトで機械的に導出する規律を徹底します。</p>
+<p>これは、ソフトウェア工学における DRY（Don’t Repeat Yourself）原則の本質でもあります。Andy Hunt と Dave Thomas は『達人プログラマー』において、DRY 原則を「システム内のすべての知識は、単一の、曖昧さのない、権威ある表現を持たなければならない」と定義しました<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。Kent Beck が提唱したシンプルデザインの原則でも、重複の排除（Beck の表現では <code>Once and only Once</code>、他所で <code>DRY</code> や <code>Single Point Of Truth</code> とも呼ばれる概念）が掲げられています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>私たちのブログ運用では、サイト全体の設定を司る設定ファイル <code>config/_default/params.toml</code> の <code>[series_nav]</code> セクションが、連載定義の唯一の正本でした。</p>
+<p>作業対象を抽出する際は、手作業のメモや不完全なスニペットを介在させるのではなく、この正本ファイルからシェルスクリプトやワンライナーを用いて直接キー一覧を抽出します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># config/_default/params.toml の [series_nav] セクションからキーを機械的に抽出</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">awk</span><span style="color:#40A02B"> '/^\[series_nav\]/{flag=1; next} /^\[/{flag=0} flag &#x26;&#x26; /^[^# \t]/ {split($1, a, "="); gsub(/[ \t]/, "", a[1]); print a[1]}'</span><span style="color:#40A02B"> config/_default/params.toml</span></span>
+<span class="line"></span></code></pre>
+<p>このコマンドを実際に実行すると、一次検証ログに記録されているとおり、以下の 14 件（13 連載＋企画 1 件）が完全に出力されます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>code-doctor</span></span>
+<span class="line"><span>code-detective</span></span>
+<span class="line"><span>code-carpenter</span></span>
+<span class="line"><span>code-dispatcher</span></span>
+<span class="line"><span>code-gardener</span></span>
+<span class="line"><span>code-mechanic</span></span>
+<span class="line"><span>code-navigator</span></span>
+<span class="line"><span>code-puppeteer</span></span>
+<span class="line"><span>code-tamer</span></span>
+<span class="line"><span>code-wizard</span></span>
+<span class="line"><span>code-chef</span></span>
+<span class="line"><span>code-bartender</span></span>
+<span class="line"><span>code-archaeologist</span></span>
+<span class="line"><span>perl-advent-calendar-2025</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>12 番目の <code>code-bartender</code> の後ろに、手作業リストから抜け落ちていた 13 番目の <code>code-archaeologist</code> が確実に現れます。</p>
+<p>設定ファイルを唯一の正本として直接パースすることで、後から追加された連載や末尾の要素が確実に抽出対象に入ります。そして、照合における最も重要な原則は、<strong>「正本の件数 = 処理対象件数 + 除外件数（正当な理由付き）」</strong> を機械的に突合することです。件数の一致を確認するステップを挟むことで、一覧の外に抜け落ちるサイレントな漏れを構造的に排除できます。</p>
+<h2 id="対策2-リンク文字列と遷移先タイトルの一致検査">対策2: リンク文字列と遷移先タイトルの一致検査</h2>
+<p>対象一覧を漏れなく抽出して修正を行っても、将来にわたって生きている誤リンクの混入を恒久的に防ぐには、CI での自動検査が不可欠です。</p>
+<p>予防策（注意深い手作業や、プロンプトでの「間違えないで」という指示）は「原因の空間」に働きかけるアプローチであるため、どれだけ注意を重ねてもヒューマンエラーやエージェントの気まぐれによる漏れが生じます。これに対し、出力側の検査は成果物そのものが持つプロパティ、すなわち「結果の空間」の性質を検査するため、決定論的に不整合を遮断できます。</p>
+<p>Web アクセシビリティや主要なドキュメントスタイルガイドにおいても、リンク文字列とリンク先タイトルを整合させることは推奨されています。</p>
+<p>たとえば、W3C の WCAG 2.1 達成基準 2.4.4 の解説文書では、「リンク文字列とページのタイトルを一致させるか、非常に似たものにすることは、読者の認知的連続性を保つための優れたプラクティスである」と記載されています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。また、Google Developer Documentation Style Guide の相互参照ガイドラインにおいても、「リンクテキストには、遷移先ページの正確なタイトルか、それを表す具体的なフレーズを使用すること」と案内されています<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<p>この設計思想に基づき、ブログのリンク検査スクリプト（<code>tools/checks/linkcheck.pl</code>）に「内部リンク文字列と別記事タイトルの一致検査」を追加しました。</p>
+<p>検査ロジックの骨子は、内部リンクのアンカーテキストを抽出し、リポジトリ内の全記事（<code>$POSTS_DIR</code> 配下）のフロントマターを走査して構築したタイトル索引 <code>title_index()</code>（タイトルから記事パスを引く <code>by_title</code> と、記事パスからタイトルを引く <code>by_rel</code> のハッシュリファレンス）と突き合わせるというシンプルなものです。もしリンク文字列が「リンク先とは異なる別の記事のタイトル」と完全一致していた場合は、宛先不整合のエラーを出力して <code>exit 2</code> で終了します。</p>
+<p>また、「リファレンス」「目次」「はじめに」のような短い一般単語が、たまたま過去の記事タイトルと重複して誤検知（偽陽性）を引き起こすのを防ぐため、<strong>10 文字未満のリンク文字列は検査対象から除外する</strong> という制約を設けました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="perl"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># lang:perl:tools/checks/linkcheck.pl</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># (4) 内部リンク文言が別記事の title と完全一致していないか検査</span></span>
+<span class="line"><span style="color:#8839EF">while</span><span style="color:#4C4F69"> ($line =~ </span><span style="color:#1E66F5;font-style:italic">m</span><span style="color:#40A02B">{(?:</span><span style="color:#EA76CB">\[</span><span style="color:#40A02B">([^</span><span style="color:#EA76CB">\[\]</span><span style="color:#40A02B">]*))?</span><span style="color:#EA76CB">\]\(\s</span><span style="color:#40A02B">*(/</span><span style="color:#EA76CB">\d</span><span style="color:#40A02B">{4}/</span><span style="color:#EA76CB">\d</span><span style="color:#40A02B">{2}/</span><span style="color:#EA76CB">\d</span><span style="color:#40A02B">{2}/[^)</span><span style="color:#EA76CB">\s</span><span style="color:#40A02B">"#]+)}</span><span style="color:#8839EF">g</span><span style="color:#4C4F69">) {</span></span>
+<span class="line"><span style="color:#8839EF">    my</span><span style="color:#4C4F69"> ($label, $link) = ($1, $2);</span></span>
+<span class="line"><span style="color:#4C4F69">    (</span><span style="color:#8839EF">my</span><span style="color:#4C4F69"> $rel = $link) =~ </span><span style="color:#1E66F5;font-style:italic">s</span><span style="color:#40A02B">{^/}{}</span><span style="color:#4C4F69">;</span></span>
+<span class="line"><span style="color:#4C4F69">    $rel =~ </span><span style="color:#1E66F5;font-style:italic">s</span><span style="color:#40A02B">{/$}{}</span><span style="color:#4C4F69">;</span></span>
+<span class="line"><span style="color:#8839EF">    unless</span><span style="color:#4C4F69"> (</span><span style="color:#179299">-f</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$POSTS_DIR</span><span style="color:#40A02B">/</span><span style="color:#4C4F69">$rel</span><span style="color:#40A02B">.md"</span><span style="color:#4C4F69">) {</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">        push</span><span style="color:#4C4F69"> @e, </span><span style="color:#40A02B">"</span><span style="color:#4C4F69">$path</span><span style="color:#40A02B">:</span><span style="color:#4C4F69">$ln</span><span style="color:#40A02B">: 内部リンク先が見つかりません: </span><span style="color:#4C4F69">$link</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">;</span></span>
+<span class="line"><span style="color:#8839EF">        next</span><span style="color:#4C4F69">;</span></span>
+<span class="line"><span style="color:#4C4F69">    }</span></span>
+<span class="line"><span style="color:#8839EF">    next</span><span style="color:#8839EF"> unless</span><span style="color:#1E66F5;font-style:italic"> defined</span><span style="color:#4C4F69"> $label &#x26;&#x26; </span><span style="color:#1E66F5;font-style:italic">length</span><span style="color:#4C4F69">($label) >= 10;</span></span>
+<span class="line"><span style="color:#8839EF">    my</span><span style="color:#4C4F69"> $titles = title_index</span><span style="color:#7C7F93">()</span><span style="color:#4C4F69">;</span></span>
+<span class="line"><span style="color:#8839EF">    my</span><span style="color:#4C4F69"> $owner  = $titles</span><span style="color:#179299">-></span><span style="color:#4C4F69">{by_title}{$label};</span></span>
+<span class="line"><span style="color:#8839EF">    next</span><span style="color:#8839EF"> unless</span><span style="color:#1E66F5;font-style:italic"> defined</span><span style="color:#4C4F69"> $owner &#x26;&#x26; $owner </span><span style="color:#1E66F5;font-style:italic">ne</span><span style="color:#4C4F69"> $rel;</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">    push</span><span style="color:#4C4F69"> @e, </span><span style="color:#40A02B">"</span><span style="color:#4C4F69">$path</span><span style="color:#40A02B">:</span><span style="color:#4C4F69">$ln</span><span style="color:#40A02B">: リンク文言は別の記事のタイトルです: </span><span style="color:#4C4F69">$link</span><span style="color:#40A02B"> → /</span><span style="color:#4C4F69">$owner</span><span style="color:#40A02B">/ (</span><span style="color:#4C4F69">$label</span><span style="color:#40A02B">)"</span></span>
+<span class="line"><span style="color:#8839EF">        unless</span><span style="color:#4C4F69"> ($titles</span><span style="color:#179299">-></span><span style="color:#4C4F69">{by_rel}{$rel} // </span><span style="color:#40A02B">''</span><span style="color:#4C4F69">) </span><span style="color:#1E66F5;font-style:italic">eq</span><span style="color:#4C4F69"> $label;</span></span>
+<span class="line"><span style="color:#4C4F69">}</span></span>
+<span class="line"></span></code></pre>
+<p>この検査スクリプトを、修正前のブログ記事（全 1532 記事）に対して実行し、出力されたエラー行をファイル別に集計した結果は以下のとおりです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>     10 content/post/2026/06/03/060705.md</span></span>
+<span class="line"><span>     16 content/post/2026/06/20/060705.md</span></span>
+<span class="line"><span>      8 content/post/2026/06/28/060705.md</span></span>
+<span class="line"><span>      8 content/post/2026/07/02/060705.md</span></span>
+<span class="line"><span>perl tools/checks/linkcheck.pl $(git ls-files 'content/post/*.md') 2>&#x26;1  0.18s user 0.12s system 92% cpu 0.327 total</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>実行結果は、4 つの連載目次に潜んでいた 42 件の誤リンク（シェフ 10 件、考古学者 16 件、メカニック 8 件、テイマー 8 件）のみを正確に検出し、それ以外の誤検知（偽陽性）は <strong>0 件</strong> でした。</p>
+<p>さらに特筆すべきは、全 1532 記事を全件走査するのに要した時間が、わずか <strong>0.327 秒</strong> だった点です。この圧倒的な軽さにより、CI パイプラインでの実行はもちろん、エディタの保存時フックやエージェントのツール実行後フック（<code>PostToolUse</code>）に組み込んでも、開発の快適性を一切損ないません。現在では、記事編集のたびに自動的にこの検査が走り、生きている誤リンクの混入を即座にブロックしています。</p>
+<h2 id="メリットの裏にあるトレードオフと適用限界">メリットの裏にあるトレードオフと適用限界</h2>
+<p>タイトル一致検査による結果空間の検査は非常に強力ですが、万能の銀の弾丸ではなく、いくつかの明確なトレードオフと適用限界が存在します。</p>
+<p>第 1 に、<strong>10 文字未満の短い文言に対する取りこぼし</strong> です。「第1話」「前回の記事」といった短いアンカーテキストは、一般語との衝突による誤検知を避けるために検査対象外としているため、この検査では宛先誤りを検知できません。</p>
+<p>第 2 に、<strong>自由文によるアンカーテキストの限界</strong> です。リンクテキストが記事タイトルそのものではなく、「こちらの解説を参照してください」のような文脈依存のフレーズである場合、タイトルとの照合自体が成立しません。markdownlint のルール <code>MD059</code>（<code>descriptive-link-text</code>）<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup> などでも非記述的なリンクテキストが静的解析の対象とされているように、文脈依存のアンカーテキストにおける宛先誤りはタイトル一致検査のスコープ外となります。</p>
+<p>第 3 に、<strong>パーマリンク構造への依存</strong> です。上記の Perl 実装における正規表現は、日付ベースの URL 体系（<code>/\d{4}/\d{2}/\d{2}/...</code>）を前提としています。スラッグ直下の階層や別体系の URL を採用しているドキュメントサイトに導入する場合は、パス抽出ロジックを環境に合わせて調整する必要があります。</p>
+<p>第 4 に、<strong>記事タイトルの一意性（ユニーク性）という前提</strong> です。タイトルをキーとするハッシュマップ（<code>$titles->{by_title}{$label}</code>）で逆引きを行っているため、システム内に「全く同名のタイトルを持つ別記事」が存在しない命名運用が前提となります。同名記事が許容されるシステムでは、タイトルだけでなくカテゴリや日付を組み合わせた複合キーによる管理が必要です。</p>
+<p>ドキュメントツールの歴史を振り返ると、こうしたリンクとタイトルの不整合を防ぐための別のアプローチも存在してきました。たとえば Sphinx の <code>:doc:</code> ロールは、明示的なリンク文言を指定しない限り、リンク先ドキュメントのタイトルを自動抽出して展開する仕組みを持っています<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。また、Obsidian のコミュニティプラグインである <code>Title As Link Text</code> も、ノートのフロントマターの <code>title</code> や見出しを検出してリンクテキストを自動設定します<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。</p>
+<p>しかし、一般的な静的サイトジェネレーターやプレーンな Markdown を用いた運用では、記法レベルでの自動同期機構が備わっていないケースが大半です。そのような環境において、今回実装したような「結果の空間に対するタイトル一致リント」は、最も導入コストが低く、かつ決定論的な安全をもたらす現実的な防波堤となります。</p>
+<p>「そこまで厳密に検査する必要があるのか？ 目視レビューで気づかないか？」という反論もあるかもしれません。しかし、現実に 42 本の誤リンクは何重もの目視レビューをすり抜けて公開され、手作業一覧の 12 件の内側では全員が「全件完了」と信じ込んでいました。人間の目視や AI の自己点検は、本質的に「自分が見ている一覧の内側」しか捉えられません。だからこそ、機械的な正本導出と結果空間での検査が必要なのです。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>もし将来、ドキュメント管理システムが完全にスキーマ駆動・AST（抽象構文木）ベースに移行し、リンクがすべて記事のメタデータから自動生成される構造になれば、今回のような文字列一致リントの役割は小さくなるでしょう。</p>
+<p>しかし、人間が自由に Markdown を記述し、あるいは AI エージェントが自律的にファイルを読み書きしてドキュメントを保守する現代の運用においては、「手作業による一覧作成の禁止（SSoT 導出）」と「結果の空間での機械検査」という 2 つの柱は、極めて費用対効果の高い品質保証であり続けます。</p>
+<p>特に、AI エージェントが開発現場に深く入り込むほど、エージェントが「自己都合で切り取ったスコープ」の外側で何が起きているかを監視する外部ハーネスの価値は増大します。エージェントが「完了しました」と報告したとき、その作業対象が本当に正本と一致しているかを外部から検証する仕組みこそが、自律型開発パイプラインの安全を担保する鍵となります。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-なぜ通常のリンクチェッカーlychee-等ではこの誤リンクを見つけられなかったのですか">Q. なぜ通常のリンクチェッカー（lychee 等）ではこの誤リンクを見つけられなかったのですか？</h3>
+<p><strong>A.</strong> 従来のリンクチェッカーは HTTP ステータスコード（404 や 500 等）の検査に特化しており、リンク先が存在する別記事（200 OK）である場合は正常と判定するためです。リンクテキストと遷移先コンテンツの意味的整合性は、ステータスコード検査のスコープ外となっています。</p>
+<h3 id="q-リンク文字列とタイトルの完全一致検査で誤検知偽陽性は起きないのですか">Q. リンク文字列とタイトルの完全一致検査で、誤検知（偽陽性）は起きないのですか？</h3>
+<p><strong>A.</strong> 一般語との偶然の一致を防ぐため、「10 文字以上」という制約を設けることで偽陽性を防いでいます。実際、1532 記事に適用した検証では誤検知は 0 件で、42 件の真の誤リンクのみを正確に検出しました。</p>
+<h3 id="q-一括置換やリファクタリングで一覧の漏れを防ぐ最も確実な方法は何ですか">Q. 一括置換やリファクタリングで「一覧の漏れ」を防ぐ最も確実な方法は何ですか？</h3>
+<p><strong>A.</strong> 設定ファイルや Git 管理下の追跡ファイル（SSoT）からスクリプトで機械的に対象を抽出し、「正本の総件数 = 処理対象件数 + 除外件数（理由付き）」を突き合わせる運用を徹底することです。手作業での列挙や <code>head</code> による切り捨てを排除することが根本対策になります。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>ここまでに解説した知見と実践のポイントは、以下の 4 点に集約されます。</p>
+<ul>
+<li><strong>200 OK は宛先の正しさを保証しない</strong>: リンクチェッカーが成功を返しても、実在する別記事へ誘導する「生きている誤リンク」は完全に素通りする。</li>
+<li><strong>手作業の一覧作成は漏れを一覧の外に隠す</strong>: 対象一覧を手作業や <code>head</code> で切り出すと、一覧の内側ではテストも進捗も 100% 成功に見えるため、サイレントな作業漏れを誘発する。</li>
+<li><strong>対象一覧は設定の正本（SSoT）から機械的に導出する</strong>: 設定ファイルや追跡ファイルから直接対象を抽出し、「正本の総件数 = 処理対象件数 + 除外件数（理由付き）」を必ず機械照合する。</li>
+<li><strong>結果の空間に対するタイトル一致検査で決定論的に閉じる</strong>: 予防の注意深さに頼るのではなく、成果物に対して「リンク文字列とタイトルの完全一致検査（10 文字以上）」を実施することで、生きている誤リンクを確実に検知・ブロックする。</li>
+</ul>
+<p>ドキュメント保守の自動化、AI エージェントを用いたリファクタリングパイプラインの品質ゲート設計、CI/CD による決定論的検証の実装について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://zenn.dev/edash_tech_blog/articles/4da3eaf86583b9">増え続けるドキュメントのリンク切れを lychee で CI チェックするようにした話</a> e-dash tech blog (2026/10/01)。<code>lychee</code> による内部リンク・見出しアンカー（#）CI運用の実例とステータス検査の限界。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://lychee.cli.rs/guides/cli/">lychee CLI Options</a> lychee documentation。<code>--accept</code> のデフォルト範囲（<code>100..=103,200..=299</code>）およびステータスコード検査の仕様。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://github.com/tcort/markdown-link-check">markdown-link-check</a> tcort, README。<code>aliveStatusCodes</code>（<code>[200, 206]</code>）による生存判定仕様。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://en.wikipedia.org/wiki/Single_source_of_truth">Single source of truth</a> Wikipedia (SSOT / SPOT)。単一情報源（SSOT）のアーキテクチャ定義および不整合を防ぎやすくする利点の解説。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://en.wikipedia.org/wiki/Don%27t_repeat_yourself">Don’t repeat yourself</a> Wikipedia (DRY), Andy Hunt &#x26; Dave Thomas <em>The Pragmatic Programmer</em> (1999) 引用。DRY原則の原典定義（<code>Every piece of knowledge must have a single, unambiguous, authoritative representation within a system</code>）。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://martinfowler.com/bliki/BeckDesignRules.html">bliki: Beck Design Rules</a> Martin Fowler, Bliki。Kent Beck のシンプルデザイン原則における重複排除（<code>Has no duplicated logic</code> / <code>Once and only Once</code>）と関連概念（<code>Single Point Of Truth</code>）。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://www.w3.org/WAI/WCAG21/Understanding/link-purpose-in-context.html">Understanding WCAG 2.1: Link Purpose (In Context)</a> W3C, Success Criterion 2.4.4 (Level A)。<code>Having the link and the title agree, or be very similar, is good practice...</code>（リンク文言とタイトルの整合性推奨）。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://developers.google.com/style/cross-references">Google developer documentation style guide: Cross-references</a> Google LLC。<code>match the link text to the page title</code>（リンクテキストをページタイトルと一致させるガイドライン）。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://github.com/DavidAnson/markdownlint/blob/main/doc/md059.md">markdownlint MD059</a> David Anson, doc/md059.md。<code>MD059</code>（<code>descriptive-link-text</code>）による非記述的リンクテキストの静的解析仕様。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://www.sphinx-doc.org/en/master/usage/referencing.html">Cross-references — Sphinx documentation</a> Sphinx team。<code>:doc:</code> ロールによるリンク先ドキュメントタイトルの自動導出機能。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://github.com/lextoumbourou/obsidian-title-as-link-text">obsidian-title-as-link-text</a> Lex Toumbourou, README。ノートタイトルをリンク文言へ自動同期するプラグイン実装例。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

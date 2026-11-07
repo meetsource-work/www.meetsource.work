@@ -1,0 +1,219 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>記事に載せた CI ログに、実際の tsc は出さない「Found 30 errors」が書いてあった ── もっともらしいツール出力を実機の形と照らす | Meetsource</title><meta name="description" content="TypeScript の tsc は CI 環境などの非TTY実行時に、集計行を出力せずエラー各行をファイル座標付きで表示します。自社連載制作でAIがエラー定義ひな形から捏造した架空のCIログの発覚と実機検証の実例をもとに、ドキュメントに載せるツール出力を推測で作文させず実機で決定論的に取得・検収する品質管理と運用の設計思想を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/tsc-ci-log-tty-verification"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="記事に載せた CI ログに、実際の tsc は出さない「Found 30 errors」が書いてあった ── もっともらしいツール出力を実機の形と照らす | Meetsource"><meta property="og:description" content="TypeScript の tsc は CI 環境などの非TTY実行時に、集計行を出力せずエラー各行をファイル座標付きで表示します。自社連載制作でAIがエラー定義ひな形から捏造した架空のCIログの発覚と実機検証の実例をもとに、ドキュメントに載せるツール出力を推測で作文させず実機で決定論的に取得・検収する品質管理と運用の設計思想を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/tsc-ci-log-tty-verification"><meta property="og:image" content="https://www.meetsource.work/blog/tsc-ci-log-tty-verification-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-31T11:00:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="記事に載せた CI ログに、実際の tsc は出さない「Found 30 errors」が書いてあった ── もっともらしいツール出力を実機の形と照らす | Meetsource"><meta name="twitter:description" content="TypeScript の tsc は CI 環境などの非TTY実行時に、集計行を出力せずエラー各行をファイル座標付きで表示します。自社連載制作でAIがエラー定義ひな形から捏造した架空のCIログの発覚と実機検証の実例をもとに、ドキュメントに載せるツール出力を推測で作文させず実機で決定論的に取得・検収する品質管理と運用の設計思想を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/tsc-ci-log-tty-verification-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"記事に載せた CI ログに、実際の tsc は出さない「Found 30 errors」が書いてあった ── もっともらしいツール出力を実機の形と照らす","description":"TypeScript の tsc は CI 環境などの非TTY実行時に、集計行を出力せずエラー各行をファイル座標付きで表示します。自社連載制作でAIがエラー定義ひな形から捏造した架空のCIログの発覚と実機検証の実例をもとに、ドキュメントに載せるツール出力を推測で作文させず実機で決定論的に取得・検収する品質管理と運用の設計思想を解説します。","datePublished":"2026-10-31T11:00:00.000Z","image":"https://www.meetsource.work/blog/tsc-ci-log-tty-verification-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/tsc-ci-log-tty-verification"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"tscのCI実行ログで集計行が出ない理由とは何か？","acceptedAnswer":{"@type":"Answer","text":"tsc は標準出力が対話端末（TTY）に接続されている場合（または --pretty true 指定時）にのみ集計行 Found N errors in M files. を出力する実装になっているためです 。CI 環境などの非TTY環境では --pretty が既定で無効化され、集計処理そのものがスキップされます。"}},{"@type":"Question","name":"tscのエラー出力におけるTTY（pretty）と非TTYの違いは？","acceptedAnswer":{"@type":"Answer","text":"非TTY環境（CI等）では色装飾や集計行が出力されず、エラー各行が ファイル名(行,列): error TSxxxx: の形式で始まります 。一方、TTY環境（端末）では色装飾とともに ファイル名:行:列 - error TSxxxx: とハイフン区切りで表示され、複数ファイルエラー時には集計行の直後にファイル別の内訳表（Errors Files）が出力されます 。"}},{"@type":"Question","name":"生成AIに技術記事のCIエラーログを書かせるときの注意点は？","acceptedAnswer":{"@type":"Answer","text":"生成 AI にプロンプト指示だけで CI ログを作文させず、必ずスクラッチパッド等の実機環境で同一条件（非TTY）のコマンドを実行させ、その出力を直接取り込むことです。AI はエラー定義ひな形や対話端末の記憶から整った集計行をもっともらしく捏造しやすいため、プロンプトでの予防ではなく実機実行による決定論的検収が不可欠です。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-31T11:00:00.000Z" data-astro-cid-7jjqptxk> 2026.10.31 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span><span class="tag" data-astro-cid-7jjqptxk>#typescript</span><span class="tag" data-astro-cid-7jjqptxk>#testing</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>記事に載せた CI ログに、実際の tsc は出さない「Found 30 errors」が書いてあった ── もっともらしいツール出力を実機の形と照らす</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/tsc-ci-log-tty-verification-hero.webp" alt="記事に載せた CI ログに、実際の tsc は出さない「Found 30 errors」が書いてあった ── もっともらしいツール出力を実機の形と照らす" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>技術記事、チュートリアル、開発ドキュメント、CI/CD パイプラインの運用手順書において、ビルドログやエラー出力のサンプルを掲載する場面は数多くあります。近年、ドキュメント執筆やスニペットの作成に生成 AI を活用するエンジニアが増えていますが、AI にコマンドの出力例を書かせると、文法的に整った「いかにもそれらしい出力」が一瞬で生成されます。</p>
+<p>しかし、その出力が <strong>実機のランタイムや実行環境の条件（対話端末か CI か、バージョン差など）と一致しているか</strong> まで確かめているケースは決して多くありません。もっともらしさは、正しさの証拠にはなりません。AI は手元の対話端末での記憶やエラー定義ひな形から「人間が期待しそうな出力」を確率的に合成し、実機では決して出力されない形式を平然と提示してしまうことがあります。</p>
+<p>CI 実行ログにおける実機検証とは、生成 AI の推測や作文に頼らず、手元の対話端末（TTY）と CI 環境（非TTY）の出力差異を踏まえた同一条件でコマンドを実行し、実際の挙動と出力を決定論的に照合することです。</p>
+<p>AI に対するプロンプト指示には常に「守られないかもしれない」リスクが存在します。「CI ログらしく書いて」「集計行を出さないで」といったプロンプトの工夫だけで正確性を保とうとするのは、無限に広がる原因の空間に対処しようとするアプローチであり、漏れを防ぎ切ることはできません。さらに、大規模言語モデル（LLM）の出力トークンは入力トークンの約 5 倍高価です。正確なログを丸暗記・作文させるのは、コスト面でも精度面でも得策ではありません。以前に <a href="/blog/ai-hallucinated-version-numbers-quality-gate">前作の記事</a> で架空のスペックや条文番号の捏造を取り上げましたが、ツールの出力形式においても全く同様の構造的な罠が潜んでいます。</p>
+<p>ドキュメントに載せるツール出力は、AI に作文させず、実機で同一条件のコマンドを実行して得た出力から取り込むべきです。そして、人間の認知的限界を前提に、検証自体を自動テストやプログラムに委ねて人間の判断負荷を許容水準まで減らす設計が必要になります。自社の技術連載制作で実際に発生した事例をもとに、この課題の構造と対策を掘り下げていきます。</p>
+<h2 id="実務での失敗自社連載のciログに紛れ込んだ存在しない集計行">実務での失敗：自社連載のCIログに紛れ込んだ「存在しない集計行」</h2>
+<h3 id="エラー定義ひな形からの推測作文が生んだ虚偽">エラー定義ひな形からの推測作文が生んだ虚偽</h3>
+<p>自社で公開している技術連載記事（非公開リポジトリの制作環境、以下連載記事A、2026-10-23）の執筆セッションにおいて、AI（Claude Code）が連載第 9 話のサンプルとして CI エラー出力を執筆しました <sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>記事本文の草案には、次のような描写が含まれていました。</p>
+<blockquote><p>本文のリンクからログを開いて、いちばん下までスクロールする。最後の行に、集計が出ていた。Found 30 errors in 9 files.</p></blockquote>
+<p>一見すると、CI のビルドログとして何ら不自然さのない、極めて自然な描写に見えます。ところが、セッションの振り返りにおいて、アシスタント自身が環境の改善候補として次のような事実誤認を報告しました <sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>本文に書かれていた <code>error TS2305: ...</code> や <code>Found 30 errors in 9 files.</code> というエラー出力は、TypeScript 公式の <code>diagnosticMessages.json</code> で確認したエラー定義ひな形をもとに推測して作文したものであり、実機のコマンドを実行して確かめた出力ではありませんでした <sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> <sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。モジュール名を囲む引用符の出方（二重引用符 <code>Module '"hakobi-sdk"'</code>）も実機では確かめられておらず、公式のエラー定義メッセージ（TS2305 のひな形や TS6261: <code>Found {0} errors in {1} files.</code>）から推測して組み立てられた作文だったのです <sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> <sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>執筆段階において、AI が「それらしいエラー定義」を参照したことで安心し、実際のコマンド実行を省略したままもっともらしいログを捏造してしまったのです。</p>
+<h3 id="スクラッチパッド検証で判明した-tsc-の-tty--非tty-出力仕様">スクラッチパッド検証で判明した tsc の TTY / 非TTY 出力仕様</h3>
+<p>事実を確認するため、スクラッチパッド（使い捨ての一時検証ディレクトリ、後述の <code>mktemp -d</code> による最小環境）を用意し、実際に <code>typescript@5.9.3</code> を実行して検証しました <sup><a href="#user-content-fn-1" id="user-content-fnref-1-5" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>まず、CI 環境に相当する非TTY（<code>--pretty false</code>、<code>--noEmit</code> <sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>）で実行しました。すると、集計行 <code>Found N errors in M files.</code> は <strong>1行も出力されませんでした</strong> <sup><a href="#user-content-fn-1" id="user-content-fnref-1-6" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。さらに、エラー行は <code>error TS2305:</code> ではなく <code>a.ts(1,10): error TS2305:</code> とファイル名・行・列で始まったのです <sup><a href="#user-content-fn-1" id="user-content-fnref-1-7" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>続いて、対話端末に相当する <code>--pretty true</code>（<code>pretty</code> の既定動作 <sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>）で実行しました。すると、集計行 <code>Found 2 errors in 2 files.</code> は出力されたものの、<strong>ログの最後の行ではありませんでした</strong> <sup><a href="#user-content-fn-1" id="user-content-fnref-1-8" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。集計行の直後には、ファイルごとのエラー件数内訳表（<code>Errors  Files</code>）が続いていたのです <sup><a href="#user-content-fn-1" id="user-content-fnref-1-9" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>つまり、「CI ログの最後の行に集計が出ていた」という記事描写は、CI の出力（非TTY）としても、仮に CI が対話端末（TTY）と同じ装飾出力を行っていたとしても、実機の仕様と二重に食い違っていました。</p>
+<p>この挙動を再現するコードと、実際の出力ログは次のとおりです。</p>
+<h4 id="コードブロック1-非ttyci相当での実機再現検証">コードブロック1: 非TTY（CI相当）での実機再現検証</h4>
+<p>TypeScript 5.9.3 を非TTY（<code>--pretty false</code>、CI ビルド相当）で実行し、集計行が出力されないこと、およびエラー行がファイル位置から始まることを確認します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#4C4F69">TMPDIR</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">mktemp</span><span style="color:#40A02B"> -d</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">mkdir</span><span style="color:#40A02B"> -p</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$TMPDIR</span><span style="color:#40A02B">/node_modules/hakobi-sdk"</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#179299"> &#x3C;&#x3C;</span><span style="color:#40A02B"> 'EOF'</span><span style="color:#179299"> ></span><span style="color:#1E66F5;font-style:italic"> "</span><span style="color:#4C4F69">$</span><span style="color:#4C4F69;font-style:italic">TMPDIR</span><span style="color:#1E66F5;font-style:italic">/node_modules/hakobi-sdk/package.json"</span></span>
+<span class="line"><span style="color:#40A02B">{"name":"hakobi-sdk","version":"5.3.0","types":"index.d.ts","main":"index.js"}</span></span>
+<span class="line"><span style="color:#40A02B">EOF</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#179299"> &#x3C;&#x3C;</span><span style="color:#40A02B"> 'EOF'</span><span style="color:#179299"> ></span><span style="color:#1E66F5;font-style:italic"> "</span><span style="color:#4C4F69">$</span><span style="color:#4C4F69;font-style:italic">TMPDIR</span><span style="color:#1E66F5;font-style:italic">/node_modules/hakobi-sdk/index.d.ts"</span></span>
+<span class="line"><span style="color:#40A02B">export function createLabel(o: {to: string}): string;</span></span>
+<span class="line"><span style="color:#40A02B">EOF</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#179299"> &#x3C;&#x3C;</span><span style="color:#40A02B"> 'EOF'</span><span style="color:#179299"> ></span><span style="color:#1E66F5;font-style:italic"> "</span><span style="color:#4C4F69">$</span><span style="color:#4C4F69;font-style:italic">TMPDIR</span><span style="color:#1E66F5;font-style:italic">/a.ts"</span></span>
+<span class="line"><span style="color:#40A02B">import { createShipment } from 'hakobi-sdk';</span></span>
+<span class="line"><span style="color:#40A02B">createShipment();</span></span>
+<span class="line"><span style="color:#40A02B">EOF</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#179299"> &#x3C;&#x3C;</span><span style="color:#40A02B"> 'EOF'</span><span style="color:#179299"> ></span><span style="color:#1E66F5;font-style:italic"> "</span><span style="color:#4C4F69">$</span><span style="color:#4C4F69;font-style:italic">TMPDIR</span><span style="color:#1E66F5;font-style:italic">/b.ts"</span></span>
+<span class="line"><span style="color:#40A02B">import { quoteRates } from 'hakobi-sdk';</span></span>
+<span class="line"><span style="color:#40A02B">quoteRates();</span></span>
+<span class="line"><span style="color:#40A02B">EOF</span></span>
+<span class="line"><span style="color:#7C7F93">(</span><span style="color:#D20F39;font-style:italic">cd</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$TMPDIR</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#1E66F5;font-style:italic"> npx</span><span style="color:#40A02B"> -y</span><span style="color:#40A02B"> -p</span><span style="color:#40A02B"> typescript@5.9.3</span><span style="color:#40A02B"> tsc</span><span style="color:#40A02B"> --noEmit</span><span style="color:#40A02B"> --pretty</span><span style="color:#FE640B"> false</span><span style="color:#40A02B"> a.ts</span><span style="color:#40A02B"> b.ts</span><span style="color:#7C7F93">)</span><span style="color:#179299"> ||</span><span style="color:#D20F39;font-style:italic"> true</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">rm</span><span style="color:#40A02B"> -rf</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$TMPDIR</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span></code></pre>
+<p>実行結果ログ:</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>a.ts(1,10): error TS2305: Module '"hakobi-sdk"' has no exported member 'createShipment'.</span></span>
+<span class="line"><span>b.ts(1,10): error TS2305: Module '"hakobi-sdk"' has no exported member 'quoteRates'.</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>出力行頭に <code>a.ts(1,10):</code> というファイルパスと座標が付与され、末尾に <code>Found N errors...</code> のような集計行は1行も出力されません。</p>
+<h4 id="コードブロック2-tty端末pretty相当での実機再現検証">コードブロック2: TTY（端末・pretty相当）での実機再現検証</h4>
+<p>TypeScript 5.9.3 を <code>--pretty true</code>（対話端末相当）で実行し、集計行の直後にファイル別エラー件数表が続くことを確認します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#4C4F69">TMPDIR</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">mktemp</span><span style="color:#40A02B"> -d</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">mkdir</span><span style="color:#40A02B"> -p</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$TMPDIR</span><span style="color:#40A02B">/node_modules/hakobi-sdk"</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#179299"> &#x3C;&#x3C;</span><span style="color:#40A02B"> 'EOF'</span><span style="color:#179299"> ></span><span style="color:#1E66F5;font-style:italic"> "</span><span style="color:#4C4F69">$</span><span style="color:#4C4F69;font-style:italic">TMPDIR</span><span style="color:#1E66F5;font-style:italic">/node_modules/hakobi-sdk/package.json"</span></span>
+<span class="line"><span style="color:#40A02B">{"name":"hakobi-sdk","version":"5.3.0","types":"index.d.ts","main":"index.js"}</span></span>
+<span class="line"><span style="color:#40A02B">EOF</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#179299"> &#x3C;&#x3C;</span><span style="color:#40A02B"> 'EOF'</span><span style="color:#179299"> ></span><span style="color:#1E66F5;font-style:italic"> "</span><span style="color:#4C4F69">$</span><span style="color:#4C4F69;font-style:italic">TMPDIR</span><span style="color:#1E66F5;font-style:italic">/node_modules/hakobi-sdk/index.d.ts"</span></span>
+<span class="line"><span style="color:#40A02B">export function createLabel(o: {to: string}): string;</span></span>
+<span class="line"><span style="color:#40A02B">EOF</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#179299"> &#x3C;&#x3C;</span><span style="color:#40A02B"> 'EOF'</span><span style="color:#179299"> ></span><span style="color:#1E66F5;font-style:italic"> "</span><span style="color:#4C4F69">$</span><span style="color:#4C4F69;font-style:italic">TMPDIR</span><span style="color:#1E66F5;font-style:italic">/a.ts"</span></span>
+<span class="line"><span style="color:#40A02B">import { createShipment } from 'hakobi-sdk';</span></span>
+<span class="line"><span style="color:#40A02B">createShipment();</span></span>
+<span class="line"><span style="color:#40A02B">EOF</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#179299"> &#x3C;&#x3C;</span><span style="color:#40A02B"> 'EOF'</span><span style="color:#179299"> ></span><span style="color:#1E66F5;font-style:italic"> "</span><span style="color:#4C4F69">$</span><span style="color:#4C4F69;font-style:italic">TMPDIR</span><span style="color:#1E66F5;font-style:italic">/b.ts"</span></span>
+<span class="line"><span style="color:#40A02B">import { quoteRates } from 'hakobi-sdk';</span></span>
+<span class="line"><span style="color:#40A02B">quoteRates();</span></span>
+<span class="line"><span style="color:#40A02B">EOF</span></span>
+<span class="line"><span style="color:#7C7F93">(</span><span style="color:#D20F39;font-style:italic">cd</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$TMPDIR</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#1E66F5;font-style:italic"> npx</span><span style="color:#40A02B"> -y</span><span style="color:#40A02B"> -p</span><span style="color:#40A02B"> typescript@5.9.3</span><span style="color:#40A02B"> tsc</span><span style="color:#40A02B"> --noEmit</span><span style="color:#40A02B"> --pretty</span><span style="color:#FE640B"> true</span><span style="color:#40A02B"> a.ts</span><span style="color:#40A02B"> b.ts</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> sed</span><span style="color:#40A02B"> 's/\x1b\[[0-9;]*m//g'</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> tail</span><span style="color:#40A02B"> -n</span><span style="color:#FE640B"> 8</span><span style="color:#7C7F93">)</span><span style="color:#179299"> ||</span><span style="color:#D20F39;font-style:italic"> true</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">rm</span><span style="color:#40A02B"> -rf</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$TMPDIR</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span></code></pre>
+<p>実行結果ログ:</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>           ~~~~~~~~~~</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Found 2 errors in 2 files.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Errors  Files</span></span>
+<span class="line"><span>     1  a.ts:1</span></span>
+<span class="line"><span>     1  b.ts:1</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>集計行 <code>Found 2 errors in 2 files.</code> は出力されますが、直後に <code>Errors  Files</code> 表が続くため、ログの末尾行にはなりません。なお、これは TypeScript 5.9.3 での実測結果であり、他のすべてのバージョンで全く同一の挙動を示すと断定するものではありません。しかし、実機を動かして初めて、直感やひな形と実態の差が浮き彫りになります。</p>
+<h3 id="公式ソースコードが語る-tty-判定と集計行制御のからくり">公式ソースコードが語る TTY 判定と集計行制御のからくり</h3>
+<p>なぜこのような挙動になるのか。TypeScript コンパイラのソースコードを確認すると、Node.js のランタイム TTY 状態に完全に連動していることがわかります。</p>
+<p>Node.js において、標準出力が端末に接続されている場合、<code>process.stdout.isTTY</code> は <code>true</code> となり、パイプやファイルリダイレクト（CI パイプライン等）では <code>undefined</code> となります <sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>TypeScript の <code>sys.ts</code>（L1533-L1535）では、この <code>process.stdout.isTTY</code> をそのまま <code>sys.writeOutputIsTTY()</code> として参照しています <sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。そして <code>executeCommandLine.ts</code>（L159-L168）において、<code>defaultIsPretty</code> は <code>sys.writeOutputIsTTY()</code> が真であり、かつ環境変数 <code>NO_COLOR</code> が未設定のときのみ真を返します <sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>決定打となるのは <code>executeCommandLine.ts</code>（L888-L892）の集計行生成ロジックです。<code>createReportErrorSummary</code> は <code>shouldBePretty</code> が真のときのみ集計関数 <code>getErrorSummaryText</code> を呼び出すコールバックを返し、偽（非TTY）の場合は <code>undefined</code> を返します <sup><a href="#user-content-fn-7" id="user-content-fnref-7-2" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。これにより、CI 環境などの非TTY環境では、集計処理そのものがスキップされます。</p>
+<p>さらに <code>watch.ts</code>（L124-L140, L275-L330）の実装では、集計メッセージを出力した直後に <code>createTabularErrorsDisplay</code> によってファイル別エラー件数表を連結しているため、対話端末でも集計行がログの末尾行になることはありません <sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。また、エラー行のフォーマットも <code>program.ts</code>（L666-L674, L779-L820）で分岐しており、非TTYでは単行形式（<code>file(line,col):</code>）、TTYでは色・コンテキスト付き形式（<code>file:line:col -</code>）となります <sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<h2 id="なぜもっともらしさに頼ると破綻するのかプロンプト予防の限界とトレードオフ">なぜ「もっともらしさ」に頼ると破綻するのか：プロンプト予防の限界とトレードオフ</h2>
+<h3 id="人間とaiが無意識に抱く対話端末バイアス">人間とAIが無意識に抱く「対話端末バイアス」</h3>
+<p>なぜ AI は存在しない集計行をもっともらしく作文し、人間もレビュー時にそれに気づけないのでしょうか。</p>
+<p>エンジニアが普段手元のターミナルで <code>tsc</code> を叩くとき、出力は既定でカラー装飾され、集計行が表示されます（対話端末、TTY 環境、<code>pretty: true</code> <sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>）。そのため、人間も AI も「ツールのエラー出力といえば、手元の端末で見ているあの形」という強い認知バイアス（対話端末バイアス）にとらわれています。</p>
+<p>AI に「CI ログのサンプルを出力して」と依頼しても、AI は学習データやひな形定義（<code>diagnosticMessages.json</code> <sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>）から「最もありそうな要素（エラー行と集計行）」を統合して作文してしまいます。出力されたログは文法的に正しく整っているため、人間が目視でレビューしても違和感を覚えず、そのまま通過してしまうのです。</p>
+<h3 id="プロンプト指示原因の空間での予防の構造的限界">プロンプト指示（原因の空間での予防）の構造的限界</h3>
+<p>「プロンプトに『CI ログだから集計行は出さないで』『非TTYの形式で出力して』と細かく指示すれば防げるのではないか」という疑問を持つかもしれません。</p>
+<p>しかし、予防は「原因の空間」に対して設計し、検収は「結果の空間」に対して設計するものです。AI が犯す誤りのパターンや、見落とす文脈（原因）は無数に存在します。プロンプト指示をいくら積み増しても、すべての例外やエッジケースを網羅することはできません。AI に対するプロンプト指示には常に「守られないかもしれない」リスクが存在します。「もっともらしさ」に頼ったプロンプト指示による予防は、本質的に確率的な振る舞いから抜け出せません。</p>
+<p>一方で検収は、「得られた出力が、非TTY 実機環境の出力と一致しているか」という結果の性質だけを見れば閉じます。原因を一つひとつ塞ぐのではなく、結果の空間で客観的に判定する方がはるかに堅牢です。</p>
+<h3 id="aiに正確なコピーをやらせるアンチパターンとコスト構造">AIに「正確なコピー」をやらせるアンチパターンとコスト構造</h3>
+<p>AI にログやコードの「正確なコピー・再現」を丸暗記・作文でやらせるべきではありません。</p>
+<p>LLM の価格体系において、出力トークンは入力トークンの約 5 倍高価です。出力トークンという最も高価なリソースを大量に消費してログを丸ごと生成させた結果、確率的な揺らぎによって虚偽の集計行が混入してしまっては、コスト面でも品質面でも二重の損失となります。</p>
+<p>ファイルコピーやデータ取得のような決定論的タスクには、LLM を使わせずスクリプトやツールなど決定論的なプログラムを実行して取得させるべきです。</p>
+<h3 id="ツール出力をドキュメントに載せるアプローチの比較">ツール出力をドキュメントに載せるアプローチの比較</h3>
+<p>ドキュメントに掲載するツール出力の作成手法には、「AI によるプロンプト作文」「プロンプト指示＋人間目視」「実機実行による決定論的取得」の 3 つが存在しますが、正確性と運用コストの両立には実機実行による取得が最も適しています。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>手法</th><th>取得・検証方法</th><th>出力の正確性・再現性</th><th>トークン消費・コスト</th><th>人間の確認負荷</th></tr></thead><tbody><tr><td><strong>AIによるプロンプト作文</strong></td><td>AI が記憶・ひな形から推測してログを作文</td><td>❌ 確率的（対話端末バイアスによる集計行捏造のリスク）</td><td>❌ 高価な出力トークンを大量消費（入力の約 5 倍）</td><td>△ 見落としやすい（もっともらしさに騙される）</td></tr><tr><td><strong>プロンプト指示＋人間目視</strong></td><td>詳細な制約プロンプトを与え、人間が目視レビュー</td><td>△ 漏れやすい（プロンプト無視や人間の見落としが不可避）</td><td>❌ 長大なプロンプトと出力トークンを消費</td><td>❌ 極めて高い（仕様を隅々まで確認する認知的限界）</td></tr><tr><td><strong>実機実行による決定論的取得</strong></td><td>スクラッチパッドで実機コマンドを実行し直接取得</td><td>⭕ 同一環境条件において確実（実機の挙動そのものを反映）</td><td>⭕ 最小限（コマンド実行とファイル転記のみ）</td><td>⭕ 極めて低い（実行ログを機械的に検収可能）</td></tr></tbody></table>
+<p>AI の作文やプロンプトの工夫に頼るアプローチは、高価な出力トークンを浪費しながら誤った出力を生成するリスクを排除できません。スクラッチパッド等で実機コマンドを走らせて得た出力をそのまま取り込む手法こそが、トークンを節約しつつ確実な品質を担保します。</p>
+<h3 id="実機実行アプローチのトレードオフと適用限界">実機実行アプローチのトレードオフと適用限界</h3>
+<p>もっとも、実機実行による取得アプローチにも当然ながらトレードオフや適用限界が存在します。読者の中には「AI にコマンドを実行させるのはセキュリティ上危ういのではないか」「すべてのツール出力を毎回実機で走らせると、執筆の手軽さが失われるのではないか」という懸念を持つ方もいるでしょう。</p>
+<p>第一に、環境の分離（サンドボックス）が前提となります。AI エージェントに任意のコマンドを実行させる権限を与えると、意図しないファイル破壊や機密情報の漏洩リスクが生じます。そのため、本番環境や既存のリポジトリ上で直接コマンドを打たせるのではなく、使い捨ての一時ディレクトリ（スクラッチパッド）やコンテナ環境などの隔離された空間に限定し、最小限の再現コードに絞って実行させることが運用の防壁として不可欠です。</p>
+<p>第二に、外部認証や長大なビルド時間を要するツールに対する割り切りです。数十分かかる大規模プロジェクトのフルビルドや、外部の有償 API へのアクセスが必要なツール出力を都度実機で再現させるのは現実的ではありません。そうしたケースでは、AI に出力全体を推測させるのではなく、最小限の入力で再現できるモック環境を作るか、あるいは人間が手元で過去に取得した確定ログを静的なスニペットとして渡し、AI にはその転記のみを許可する（作文を禁止する）といった境界の設計が重要になります。</p>
+<h2 id="解決策aiに作文させず決定論的ツールで取得検収させる">解決策：AIに作文させず、決定論的ツールで取得・検収させる</h2>
+<h3 id="執筆スキルへの実機実行ルールの導入">執筆スキルへの実機実行ルールの導入</h3>
+<p>事実誤認の発覚後、自社パイプラインでは直ちに 3 つの修正を行いました <sup><a href="#user-content-fn-1" id="user-content-fnref-1-10" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<ol>
+<li>連載記事本文の修正: 「最後の行に集計が出ていた」描写を削除し、実際の非TTYエラー行の並びに修正。</li>
+<li>テスト用スニペット（<code>ci-error.txt</code>）の修正: 「TypeScript 5.9.3 を npx で走らせて形を確かめた」注記とともに実機出力へ差し替え。</li>
+<li>管理台帳の修正: 集計行の記述を実機仕様に合わせて修正。</li>
+</ol>
+<p>そして再発を防ぐため、エージェントの執筆スキル（SKILL.md）に明確なルールを追加しました <sup><a href="#user-content-fn-1" id="user-content-fnref-1-11" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h4 id="コードブロック3-執筆スキルに追加した実機実行ルールの抜粋">コードブロック3: 執筆スキルに追加した実機実行ルールの抜粋</h4>
+<p>再発防止策として執筆スキルに明文化された「実機実行と同一条件再現」のルール規定を示します。</p>
+<p>引用元: 筆者の検証セッションログ（2026-10-23）における執筆スキル設定ファイル（SKILL.md）</p>
+<p>ファイル: SKILL.md</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#7C7F93">**</span><span style="color:#D20F39;font-weight:bold">本文に載せるツールの出力は、実際に走らせて写す</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">: コンパイラのエラー文・集計行など、物語に出る道具の出力（テストの対象外）も、ひな形や記憶から組み立てず、スクラッチパッドに最小の再現を作って走らせ、その出力から </span><span style="color:#40A02B">`snippets/`</span><span style="color:#4C4F69"> に写す。npm パッケージが要る道具は </span><span style="color:#40A02B">`npx -y -p &#x3C;パッケージ>@&#x3C;版> &#x3C;コマンド>`</span><span style="color:#4C4F69"> でスクラッチパッドの中だけで使い、検証済みコードの依存には足さない（テストの依存ゼロは保つ）。端末かどうかで出力が変わる道具は、物語の場面（CI のログなら端末ではない）に合わせたオプションで走らせる。走らせたコマンドと版を完了報告に書く（code-falconer ep09 で </span><span style="color:#40A02B">`tsc`</span><span style="color:#4C4F69"> の集計行 </span><span style="color:#40A02B">`Found N errors in M files.`</span><span style="color:#4C4F69"> を、CI のログの最後の行として本文に載せた。実際は端末でない出力には出ず、出る場合も後ろにファイルごとの表が続く）</span></span>
+<span class="line"></span></code></pre>
+<p>ツール出力を記憶や推測で組み立てることを禁止し、スクラッチパッドでの最小再現・実機コマンド実行・場面に応じたオプション指定を義務付けています。</p>
+<h3 id="人間の認知的限界と自動検収の将来展望">人間の認知的限界と自動検収の将来展望</h3>
+<p>成果物の確認（特にコードレビューやログ精査）は、人間の認知的限界を超えています。確認自体も AI や自動テストに担わせ、人間が判断すべき量を許容できる水準まで減らす設計が必要です。</p>
+<p>人間が数千行のログやドキュメントをすべて目視で精査することは不可能であり、「もっともらしさ」にだまされるのは人間も同じです。</p>
+<p>将来的には、エージェント実行ハーネス自体が、ドキュメント内のコードブロックや実行例を自動検出し、隔離されたコンテナ環境で実際に実行して出力差分を機械的に検収するパイプラインが標準化されていくと考えられます。検証を決定論的なプログラムに委ねることで、人間は「何を出力させるべきか」「読者にどんな価値を届けるか」という本質的な意思決定に集中できるようになります。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-tscのci実行ログで集計行が出ない理由とは何か">Q. tscのCI実行ログで集計行が出ない理由とは何か？</h3>
+<p><strong>A.</strong> <code>tsc</code> は標準出力が対話端末（TTY）に接続されている場合（または <code>--pretty true</code> 指定時）にのみ集計行 <code>Found N errors in M files.</code> を出力する実装になっているためです <sup><a href="#user-content-fn-7" id="user-content-fnref-7-3" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。CI 環境などの非TTY環境では <code>--pretty</code> が既定で無効化され、集計処理そのものがスキップされます。</p>
+<h3 id="q-tscのエラー出力におけるttyprettyと非ttyの違いは">Q. tscのエラー出力におけるTTY（pretty）と非TTYの違いは？</h3>
+<p><strong>A.</strong> 非TTY環境（CI等）では色装飾や集計行が出力されず、エラー各行が <code>ファイル名(行,列): error TSxxxx:</code> の形式で始まります <sup><a href="#user-content-fn-9" id="user-content-fnref-9-2" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。一方、TTY環境（端末）では色装飾とともに <code>ファイル名:行:列 - error TSxxxx:</code> とハイフン区切りで表示され、複数ファイルエラー時には集計行の直後にファイル別の内訳表（<code>Errors  Files</code>）が出力されます <sup><a href="#user-content-fn-8" id="user-content-fnref-8-2" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<h3 id="q-生成aiに技術記事のciエラーログを書かせるときの注意点は">Q. 生成AIに技術記事のCIエラーログを書かせるときの注意点は？</h3>
+<p><strong>A.</strong> 生成 AI にプロンプト指示だけで CI ログを作文させず、必ずスクラッチパッド等の実機環境で同一条件（非TTY）のコマンドを実行させ、その出力を直接取り込むことです。AI はエラー定義ひな形や対話端末の記憶から整った集計行をもっともらしく捏造しやすいため、プロンプトでの予防ではなく実機実行による決定論的検収が不可欠です。</p>
+<h2 id="まとめ">まとめ</h2>
+<ol>
+<li><strong>ツール出力は AI に作文させず、実機で同一条件のコマンドを実行して得た出力から取り込む</strong>: もっともらしさは正しさの証拠になりません。スクラッチパッド等の最小環境で実際にコマンドを走らせることが唯一の品質担保となります。</li>
+<li><strong>手元の端末（TTY）と CI 環境（非TTY）の出力差異を意識する</strong>: 普段ターミナルで見ている出力（pretty、カラー装飾、集計行）は CI パイプラインの出力とは異なります。ドキュメントに掲載する場面の環境条件を正確に再現する必要があります。</li>
+<li><strong>高価な出力トークンでログを丸暗記・作文させない</strong>: LLM の出力トークンは入力の約 5 倍高価です。データの取得やファイルコピーは決定論的なスクリプトやツールに委ねるべきです。</li>
+<li><strong>予防は原因の空間に、検収は結果の空間に対して設計する</strong>: プロンプト指示をいくら積み増しても確率的な漏れは防げません。得られた出力が実機仕様と一致しているかを外部テストで検証する検収設計が不可欠です。</li>
+<li><strong>人間の認知的限界を前提に、検証自体を自動化する</strong>: ドキュメントやコードの全量目視チェックは破綻します。検証をプログラムや自動パイプラインに担わせ、人間が判断すべき負荷を許容範囲に抑える設計が重要です。</li>
+</ol>
+<p>開発プロセスの標準化やコンテンツ制作パイプラインの品質管理、AI Operations の導入設計について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p>筆者の検証セッションログおよび制作リポジトリの修正記録 2026年10月22日〜10月23日、自社パイプライン実務記録。技術連載記事制作における Claude Code の推測作文発覚、スクラッチパッドでの実機検証ログ（§2、§3）、記事・スニペット・台帳の修正、および執筆スキルへのルール追加の一次記録。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-1-5" data-footnote-backref="" aria-label="Back to reference 1-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-1-6" data-footnote-backref="" aria-label="Back to reference 1-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-1-7" data-footnote-backref="" aria-label="Back to reference 1-7" class="data-footnote-backref">↩<sup>7</sup></a> <a href="#user-content-fnref-1-8" data-footnote-backref="" aria-label="Back to reference 1-8" class="data-footnote-backref">↩<sup>8</sup></a> <a href="#user-content-fnref-1-9" data-footnote-backref="" aria-label="Back to reference 1-9" class="data-footnote-backref">↩<sup>9</sup></a> <a href="#user-content-fnref-1-10" data-footnote-backref="" aria-label="Back to reference 1-10" class="data-footnote-backref">↩<sup>10</sup></a> <a href="#user-content-fnref-1-11" data-footnote-backref="" aria-label="Back to reference 1-11" class="data-footnote-backref">↩<sup>11</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://github.com/microsoft/TypeScript/blob/v5.9.3/src/compiler/diagnosticMessages.json">TypeScript v5.9.3 定義: diagnosticMessages.json</a> Microsoft、2025年9月、Git リポジトリ（tag: v5.9.3）。L1931-L1934（TS2305: <code>Module '{0}' has no exported member '{1}'.</code>）、L5640-L5643（TS6261: <code>Found {0} errors in {1} files.</code>）。AI が実機未確認のまま推測作文の根拠としたひな形定義の原典。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://www.typescriptlang.org/tsconfig/#noEmit">TSConfig Reference: noEmit</a> Microsoft、2026年確認。<code>noEmit</code> オプションの役割（JavaScript 等の出力ファイルを生成せず型チェック等を行う）の根拠。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://www.typescriptlang.org/tsconfig/#pretty">TSConfig Reference: pretty</a> Microsoft、2026年確認。<code>pretty</code> オプションの役割（コンパイラメッセージの色・装飾）および既定値が <code>true</code> である仕様の根拠。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://nodejs.org/api/tty.html#writestreamistty">Node.js API Docs: writeStream.isTTY</a> OpenJS Foundation、2026年確認。<code>writeStream.isTTY</code> が対話端末で <code>true</code>、パイプやリダイレクトで未定義となるランタイム仕様の根拠。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://github.com/microsoft/TypeScript/blob/v5.9.3/src/compiler/sys.ts">TypeScript v5.9.3 ソースコード: sys.ts</a> Microsoft、2025年9月、Git リポジトリ（tag: v5.9.3）。L1533-L1535（Node.js 環境における <code>writeOutputIsTTY</code> メソッドが <code>process.stdout.isTTY</code> を返すブリッジ実装の根拠）。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://github.com/microsoft/TypeScript/blob/v5.9.3/src/compiler/executeCommandLine.ts">TypeScript v5.9.3 ソースコード: executeCommandLine.ts</a> Microsoft、2025年9月、Git リポジトリ（tag: v5.9.3）。L159-L168（<code>defaultIsPretty</code> における <code>sys.writeOutputIsTTY()</code> および <code>NO_COLOR</code> 判定）、L888-L892（<code>createReportErrorSummary</code> における集計行コールバック制御。非TTY では <code>undefined</code> となり集計がスキップされる実装）。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-7-2" data-footnote-backref="" aria-label="Back to reference 7-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-7-3" data-footnote-backref="" aria-label="Back to reference 7-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://github.com/microsoft/TypeScript/blob/v5.9.3/src/compiler/watch.ts">TypeScript v5.9.3 ソースコード: watch.ts</a> Microsoft、2025年9月、Git リポジトリ（tag: v5.9.3）。L124-L140（<code>createDiagnosticReporter</code> におけるフォーマッタ分岐）、L275-L298（<code>getErrorSummaryText</code> における集計行生成）、L300-L330（<code>createTabularErrorsDisplay</code> におけるファイル別エラー件数表の出力）。対話端末でも集計行が末尾行にならない実装の根拠。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-8-2" data-footnote-backref="" aria-label="Back to reference 8-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://github.com/microsoft/TypeScript/blob/v5.9.3/src/compiler/program.ts">TypeScript v5.9.3 ソースコード: program.ts</a> Microsoft、2025年9月、Git リポジトリ（tag: v5.9.3）。L666-L674（<code>formatDiagnostic</code> による非TTY 単行カッコ表記 <code>file(line,col):</code> の生成）、L779-L820（<code>formatDiagnosticsWithColorAndContext</code> による TTY 装飾形式 <code>file:line:col -</code> の生成）。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-9-2" data-footnote-backref="" aria-label="Back to reference 9-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

@@ -1,0 +1,372 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>26Bモデルが常駐1.5GBで動いた──ただし同じ入力で16回測ったら速度が2.8倍ブレた | Meetsource</title><meta name="description" content="メモリに載らないMoEモデルをSSDストリーミングで動かすTurboFieldfareを、前回Ollamaで挫折したのと同じM1 Pro 16GBで実測。常駐1.5GB・スワップ増加ゼロという約束は守られましたが、同じ入力での16回の計測が4.3〜11.9 tok/sとブレました。原因を追ってpowermetricsまで回した記録です。"><link rel="canonical" href="https://www.meetsource.work/blog/expert-streaming-local-llm-variance"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="26Bモデルが常駐1.5GBで動いた──ただし同じ入力で16回測ったら速度が2.8倍ブレた | Meetsource"><meta property="og:description" content="メモリに載らないMoEモデルをSSDストリーミングで動かすTurboFieldfareを、前回Ollamaで挫折したのと同じM1 Pro 16GBで実測。常駐1.5GB・スワップ増加ゼロという約束は守られましたが、同じ入力での16回の計測が4.3〜11.9 tok/sとブレました。原因を追ってpowermetricsまで回した記録です。"><meta property="og:url" content="https://www.meetsource.work/blog/expert-streaming-local-llm-variance"><meta property="og:image" content="https://www.meetsource.work/blog/expert-streaming-local-llm-variance-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-02T09:40:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="26Bモデルが常駐1.5GBで動いた──ただし同じ入力で16回測ったら速度が2.8倍ブレた | Meetsource"><meta name="twitter:description" content="メモリに載らないMoEモデルをSSDストリーミングで動かすTurboFieldfareを、前回Ollamaで挫折したのと同じM1 Pro 16GBで実測。常駐1.5GB・スワップ増加ゼロという約束は守られましたが、同じ入力での16回の計測が4.3〜11.9 tok/sとブレました。原因を追ってpowermetricsまで回した記録です。"><meta name="twitter:image" content="https://www.meetsource.work/blog/expert-streaming-local-llm-variance-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"26Bモデルが常駐1.5GBで動いた──ただし同じ入力で16回測ったら速度が2.8倍ブレた","description":"メモリに載らないMoEモデルをSSDストリーミングで動かすTurboFieldfareを、前回Ollamaで挫折したのと同じM1 Pro 16GBで実測。常駐1.5GB・スワップ増加ゼロという約束は守られましたが、同じ入力での16回の計測が4.3〜11.9 tok/sとブレました。原因を追ってpowermetricsまで回した記録です。","datePublished":"2026-08-02T09:40:00.000Z","image":"https://www.meetsource.work/blog/expert-streaming-local-llm-variance-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/expert-streaming-local-llm-variance"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-02T09:40:00.000Z" data-astro-cid-7jjqptxk> 2026.08.02 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#ローカルLLM</span><span class="tag" data-astro-cid-7jjqptxk>#Mac</span><span class="tag" data-astro-cid-7jjqptxk>#AI開発</span><span class="tag" data-astro-cid-7jjqptxk>#moe</span><span class="tag" data-astro-cid-7jjqptxk>#apple-silicon</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>26Bモデルが常駐1.5GBで動いた──ただし同じ入力で16回測ったら速度が2.8倍ブレた</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/expert-streaming-local-llm-variance-hero.webp" alt="26Bモデルが常駐1.5GBで動いた──ただし同じ入力で16回測ったら速度が2.8倍ブレた" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p><a href="/blog/ollama-local-llm-reality-check">前回の記事</a> で、Claude Code の利用制限の逃げ道としてローカルLLMを試し、スワップ地獄に沈んだ話を書きました。結論は「クラウドの代替にはならない」でした。</p>
+<p>今回は同じ話の続きです。ただし、使う機械は前回とまったく同じ M1 Pro / 16GB です。</p>
+<p>試したのは TurboFieldfare という推論エンジンで、発想が変わっています。 <strong>メモリに載らないモデルを、載せずに動かす。</strong> MoE（Mixture of Experts）モデルの共有部分だけを常駐させ、残りの expert はトークンごとに SSD から読み出す、という作りです<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>動かしたモデルは Gemma 4 26B-A4B の4bit量子化版です。インストール後の実測サイズは 14,291,915,755 バイト、37ファイルでした。なお「26B」は製品名で、公式のモデルカード上は総パラメータ 25.2B、トークンあたりのアクティブパラメータは 3.8B、128 experts に shared expert が1つ、という構成です。</p>
+<p>前回の結論が変わるのか。同じ機械で確かめました。</p>
+<h2 id="先に結論制約が置き換わっただけだった">先に結論：制約が置き換わっただけだった</h2>
+<p><strong>メモリの約束は守られました。</strong></p>
+<p>peak RSS の実測値は <strong>1,521.5〜1,551.3 MB</strong> です。26Bクラスのモデルを動かして、常駐がこれだけで済んでいます。</p>
+<p>そして <code>vm.swapusage</code> の used は、 <strong>計装をつけて記録した4ランすべてで増加しませんでした</strong> （<code>1061.38 → 1053.38 MB</code> と、むしろ 8MB 減っています）。前回スワップで沈んだのと同じ機械です。</p>
+<p>ただし正確に書いておくと、 <strong>約1,053MB のスワップは最初から最後まで存在し続けています</strong>。消えたのは「増加」であって、スワップそのものではありません。また swap を記録できたのは4ランだけで、後述する低速フェーズと連続負荷のログには swap の記録がありません。ですので言えるのは「<strong>記録した4時点では増加しなかった</strong>」までです。</p>
+<p><strong>速度の安定性は裏切られました。</strong></p>
+<p>入力条件を揃えた16ラン（同じプロンプト、prefill 61トークン、生成511トークン、<code>stop=endOfTurn</code> がすべて一致）で、 <strong>4.298〜11.884 tok/s</strong> という結果になりました。最速と最遅で <strong>2.77倍</strong> です。</p>
+<p>ここで「同一条件」と書きたくなるのですが、一致しているのは <strong>推論への入力</strong> であって、システムの状態ではありません。そしてまさにそこが今回の主題になります。</p>
+<p>この二つを並べると、この技術の性格が見えてきます。 <strong>これは速くする技術ではなく、RAM を買い戻す技術でした。</strong> 作者を名乗るユーザーは、自身の M5 Mac Pro で「同じモデルを MLX で動かすと 75 tok/s で RAM 14GB、このエンジンなら RAM 2GB で 31〜35 tok/s」と報告し、<code>If you need maximum speed and flexibility just use MLX</code> と書いています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。速度を差し出して RAM を受け取る取引です。</p>
+<h2 id="セットアップでつまずいた3点">セットアップでつまずいた3点</h2>
+<p>README に書かれていない、あるいは書かれていることと違った点が3つありました。</p>
+<h3 id="xcode-は少なくともこの構成では要りませんでした">Xcode は（少なくともこの構成では）要りませんでした</h3>
+<p>README の Requirements には <code>Xcode 26 and Swift 6.2 or newer</code> とあります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。数十GBの Xcode を入れる前提だと思って、ここで離脱する人がいそうです。</p>
+<p>ところが私の環境には Xcode.app がなく、Command Line Tools 26.6.0 だけでした。それでも <code>swift build -c release</code> は <strong>146.44秒で成功</strong> しました。</p>
+<p>理由はソースに書いてあります。<code>MetalContext.swift</code> のコメントにこうあります<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<blockquote><p>This keeps the dev loop fast — edit a shader, rebuild the Swift target, no Xcode metallib step.</p></blockquote>
+<p>実装は <code>device.makeLibrary(source:)</code> で、Metal シェーダを起動時にランタイムコンパイルしています。ビルド時に <code>metal</code> コンパイラを呼ばないので、Command Line Tools で足りるわけです。</p>
+<p>ただしこれは私の環境・CLT 26.6.0 での1例です。「Xcode は不要である」と一般化はできません。</p>
+<h3 id="--overwrite---resume-を同時に付けると初回は失敗します"><code>--overwrite --resume</code> を同時に付けると初回は失敗します</h3>
+<p>README にはこの2つを併記した例がありますが、初回インストールで両方付けるとこうなります。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>install failed: no resumable install state exists for .../gemma4.gturbo.resume.json</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><code>--resume</code> は中断状態のファイルが既にあることが前提です。初回は <code>--overwrite</code> だけが正解でした。</p>
+<h3 id="--prompt-で素に叩くと出力が壊れます"><code>--prompt</code> で素に叩くと出力が壊れます</h3>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span> much like thethought own exampleer.</span></span>
+<span class="line"><span>thought</span></span>
+<span class="line"><span>It appears your sentence was cut off or contains some typographical errors</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>instruction tuned モデルにチャットの枠なしで raw completion を投げたためです。<code>--messages-file</code> を使えば正常に動きます。動作確認のつもりで <code>--prompt</code> を叩いて「壊れてる」と判断してしまうと、もったいないことになります。</p>
+<h2 id="スワップが増えなかった記録した4時点では">スワップが増えなかった（記録した4時点では）</h2>
+<p>前回いちばん痛かったのがスワップでした。物理RAMを超えた瞬間に何もかもが遅くなり、ファンが回り続ける状態です。</p>
+<p>今回、記録できた4ランではスワップの増加が観測されませんでした。前回と同じ機械で、モデルは前回より大きいのにです。</p>
+<p>理由は方式そのものにあります。 <strong>スワップは「書き込み」を伴います。</strong> 書き込みは NAND を摩耗させますし、macOS では物理RAMを超えた瞬間に破滅的な連鎖に入ることがあります。llama.cpp の Issue には、M4 Pro / 24GB / macOS 26.2 の環境でこれが「swap death spiral」と表現され、カーネルパニックに至ったという報告があります<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。ただしこれは一人のユーザーによる報告で、メンテナからの応答はなく、報告者自身がクローズしています。llama.cpp が公式に認めた挙動ではない点は補足しておきます。</p>
+<p>対して expert streaming は <strong>読み出しだけ</strong> です。心配の対象が「書き込みによる破滅」から「読み出しの詰まり」へ移った、というのが今回の本質でした。</p>
+<p>SSD の寿命を心配する方もいると思いますが、読み出しは NAND を実質的に摩耗させません。ただしエネルギーは別問題です。SSD オフロードが <strong>トークンあたりのエネルギー（J/token）を最大約12倍に増やす</strong> という研究があります<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。ここで注意が必要で、この研究のベースラインは <strong>HBM</strong> であり、対象は DeepSeek-R1 級のデータセンター構成です。Mac には HBM がないので比較対象そのものが存在しません。「読み出しはタダではない」という方向性の傍証として読むのが妥当です。</p>
+<h2 id="同じ入力で16回測ったら28倍ブレた">同じ入力で16回測ったら、2.8倍ブレた</h2>
+<p>ここからが本題です。</p>
+<p>計測は公開されているコミュニティのベンチマーク手順に乗せました<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。固定シード、固定プロンプト、temperature 0.2 / top-k 64 / top-p 0.95、コンテキスト4096、生成上限1024、warmup 1回は破棄、という手順です。</p>
+<p>集計結果です。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>項目</th><th>値</th></tr></thead><tbody><tr><td>n</td><td>16</td></tr><tr><td>最小</td><td>4.298 tok/s</td></tr><tr><td>最大</td><td>11.884 tok/s</td></tr><tr><td>中央値</td><td>9.495 tok/s</td></tr><tr><td>最速÷最遅</td><td>2.77倍</td></tr></tbody></table>
+<p>時系列で並べると、こうなります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>時刻</th><th>tok/s</th><th>備考</th></tr></thead><tbody><tr><td>12:16</td><td>10.124</td><td>インストール直後</td></tr><tr><td>12:37</td><td>11.884</td><td></td></tr><tr><td>12:40</td><td>9.921</td><td></td></tr><tr><td>12:45</td><td>4.298</td><td></td></tr><tr><td>12:50</td><td>6.666</td><td></td></tr><tr><td>12:52</td><td>5.281</td><td></td></tr><tr><td>—</td><td>—</td><td><strong>15分アイドル</strong></td></tr><tr><td>13:11</td><td>10.630</td><td>計装あり</td></tr><tr><td>13:12</td><td>11.191</td><td>計装あり</td></tr><tr><td>—</td><td>—</td><td><strong>3時間10分の空白</strong></td></tr><tr><td>16:23〜16:31</td><td>9.156 / 9.400 / 9.522 / 8.729 / 8.864 / 9.468 / 9.831 / 9.826</td><td><code>powermetrics</code> 併走</td></tr></tbody></table>
+<p>なお最後の8ランはフッタだけを記録しており、シードやフラグの記録が残っていません。prefill 61トークン・生成511トークン・<code>stop=endOfTurn</code> が一致していることからの推定です。</p>
+<h3 id="空きram量では説明できませんでした">空きRAM量では説明できませんでした</h3>
+<p>まず簡単に潰せるものから潰しました。スワップは記録した範囲で増えていません。取り残しのプロセスも <code>pgrep</code> で0件でした。</p>
+<p>空きRAMはどうか。ここが面白いところで、 <strong>単調な関係がありません</strong>。</p>
+<ul>
+<li>空き 69,872ページ（約1.1GB）のとき → 10.630 tok/s（速い側）</li>
+<li>空き 219,595ページ（約3.4GB）のとき → 11.191 tok/s（速い側）</li>
+<li>空き 190,306〜206,070ページで推移していたブロックに → 4.298 tok/s が含まれる</li>
+</ul>
+<p>空きが多ければ速い、少なければ遅い、という関係になっていません。</p>
+<p>ここで最初、私は「ページキャッシュ説は否定できた」と考えました。 <strong>これは間違いでした。</strong> macOS では <strong>ファイルキャッシュに使われているページは <code>Pages free</code> に計上されません</strong>。つまり「空きページが最低」は「キャッシュに余裕がない」ではなく、むしろ <strong>キャッシュが充填されている</strong> と読むほうが自然です。私の観測はページキャッシュ説を否定するどころか、整合してしまいます。</p>
+<p>file-backed なページ数を直接測っていない以上、言えるのは「<strong>空きRAM量では説明できない</strong>」までです。実際、作者を名乗るユーザーも <code>yeah, looks like a page cache matters a lot</code> と述べ、メモリ圧をかけると 35 → 27 tok/s に落ちたと報告しています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。ページキャッシュは依然として有力な容疑者のままです。</p>
+<h3 id="冷やせば戻るとも言い切れませんでした">「冷やせば戻る」とも言い切れませんでした</h3>
+<p>15分アイドルした直後の2ランは 10.630 / 11.191 と速い側に戻りました。ここだけ見ると「連続で回すと落ちて、休ませると回復する」という気持ちのいい物語になります。</p>
+<p>ところが、 <strong>3時間10分空けてから走らせた8ランは 9.156〜9.831 で、10 tok/s に一度も届いていません</strong>。いちばん長く冷やした後のブロックが、15分アイドル後より低い側に出ています。</p>
+<p>さらにこの8ランは <code>sudo powermetrics</code> を併走させた状態で走らせており、そのオーバーヘッドを分離していません。</p>
+<p>したがって「アイドルで回復する」は、1回観測されたものの、その後の長時間アイドル後には再現していません。回復すると書くことはできませんでした。</p>
+<h3 id="原因は特定できていません">原因は特定できていません</h3>
+<p>インストール直後には、別のプロンプトで <strong>0.654 tok/s</strong> という極端な値も出ています（同じプロンプトの別の測定は 4.391 tok/s でした）。14.3GB を書き込んだ直後という時間帯のI/O競合が最有力ですが、特定はできていません。</p>
+<p>計測上の抜けもあります。低速フェーズは計装を外してフッタだけを取っていたため、 <strong>TTFT と RSS の記録がありません</strong>。そのため「decode だけが落ちたのか、TTFT も伸びたのか」を低速時について言えません。言えるのは、速い時の TTFT が 10.2〜10.7 秒で安定していたことだけです。</p>
+<h3 id="単発測定は間違っていないただ足りない">単発測定は間違っていない。ただ、足りない</h3>
+<p>同じ構成での先行報告があります。Model Identifier まで一致する MacBookPro18,3 / M1 Pro / 8コア（6P+2E）/ 16GB で、同じプロンプトのケースで <strong>9.477 tok/s</strong> という報告です<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<p><strong>私の16ランのレンジ（4.298〜11.884）は、この値を挟んでいます。</strong></p>
+<p>ここで「中央値がほぼ一致したので先行報告は正確だった」と書きたくなるのですが、それは踏み込みすぎです。16本のうち8本は連続実行の1ブロックで、中央値はそのブロックがほぼ決めています（前半8本だけの中央値は 10.02 です）。中央値の一致は独立した16サンプルの帰結ではなく、測定ブロックの構成に依存しています。</p>
+<p>そのうえで言えることは、 <strong>先行報告が外れ値を引いたと責める理由はない</strong>、ということです。足りなかったのは分散の情報でした。</p>
+<p>コミュニティのベンチマーク手順が求めているのは「各ケース warmup 1回（破棄）＋ 測定1回」です<sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。同じ文書には <code>Prompt length, generated tokens, storage, cache state, and the number of runs all affect decode speed.</code> と実行回数の影響への言及があり、結果表12行のうち6行は「Median of five runs」で提出されています。分散の報告を禁じてはいませんが、必須にもしていません。</p>
+<p>実務で使っている Mac では、 <strong>一つの数字より「レンジ」のほうが実用的な情報になる</strong>、というのが今回いちばん強く感じたことです。</p>
+<h2 id="熱を測りに行って届かなかった話">熱を測りに行って、届かなかった話</h2>
+<p>ブレの原因が熱なのかを確かめようと、<code>sudo powermetrics --samplers cpu_power,gpu_power,thermal</code> を別ターミナルで走らせながら推論を回しました。</p>
+<p>先に期間を正確に書いておきます。 <strong>powermetrics の観測窓は 16:22:12〜16:28:18 の6分06秒（74サンプル）</strong>、 <strong>負荷の実行は 16:22:34〜16:31:18 の8分44秒</strong> です。末尾の約2分半は熱の計装がありません。</p>
+<p>熱圧（thermal pressure level）は観測窓の <strong>74サンプルすべてが <code>Nominal</code></strong> で、他の値は一度も出ませんでした。</p>
+<p>GPU の P-state 別の平均滞在率は、立ち上がりを除いた負荷区間69サンプルでこうなりました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>P-state</th><th>平均滞在率</th></tr></thead><tbody><tr><td>389 MHz</td><td>24.61%</td></tr><tr><td>486 MHz</td><td>14.07%</td></tr><tr><td>648 MHz</td><td>20.10%</td></tr><tr><td>778 MHz</td><td>18.74%</td></tr><tr><td>972 MHz</td><td>7.05%</td></tr><tr><td><strong>1296 MHz</strong></td><td><strong>2.17%</strong></td></tr></tbody></table>
+<p><strong>負荷区間の69サンプルすべてで、最上段の 1296 MHz に到達していました。</strong> つまり GPU は全開まで届いています。滞在が 2.17% と極端に短いだけです。</p>
+<p>ここは私が最初に読み違えたところで、<code>GPU HW active frequency</code> として報告される値（負荷区間の中央値 614.0 MHz）を見て「クロックが上がらない」と解釈していました。実際にはこの値は6段に分散した滞在の <strong>時間加重平均</strong> であって、上限ではありません。</p>
+<p>なお「1296 MHz」は自機の powermetrics に現れた P-state 階梯の最上段であって、M1 Pro 一般の公称最大クロックとして裏を取ったものではありません。</p>
+<p>GPU の稼働率（active residency）は負荷区間で平均 86.75%、中央値 96.10% でした。 <strong>稼働率はほぼ埋まっているのに、最上段クロックの滞在は 2.17%。</strong> 一瞬だけ全開になってすぐ落ちる、という細切れの動き方です。</p>
+<p>これは作者を名乗るユーザーの説明と整合します<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<blockquote><p>there is no constant load on ssd or gpu. i/o and gpu work are alternating and there is a brief idle periods for each i/o and gpu during inference (because gpu waits for i/o and after that i/o waits for gpu)</p></blockquote>
+<p>ただし、 <strong>これは「SSD が律速である」ことの直接的な証拠にはなりません</strong>。今回回したサンプラーは <code>cpu_power,gpu_power,thermal</code> だけで、ディスクI/Oの読み出しレイテンシもIOPSも帯域も一切測っていないからです。</p>
+<h3 id="で熱はどうだったのか">で、熱はどうだったのか</h3>
+<p>前半と後半で比べると、負荷区間69サンプルの分割で <strong>631.7 → 605.9 MHz</strong>、約4%の低下です。</p>
+<p>最初これを「負荷開始直後のランプアップで説明できる」と考えましたが、ログを取り直すと <strong>冒頭を除外しても減少が消えません</strong>。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>除外</th><th>n</th><th>前半→後半</th><th>変化</th></tr></thead><tbody><tr><td>なし</td><td>69</td><td>631.7 → 605.9 MHz</td><td>−4.1%</td></tr><tr><td>冒頭6</td><td>63</td><td>630.5 → 606.3 MHz</td><td>−3.8%</td></tr><tr><td>冒頭12</td><td>57</td><td>625.5 → 604.1 MHz</td><td>−3.4%</td></tr><tr><td>冒頭20</td><td>49</td><td>626.0 → 603.6 MHz</td><td>−3.6%</td></tr></tbody></table>
+<p>素直に記述すると、負荷区間の最初の9サンプルが 644.9 MHz と高く、以降の60サンプルは 615.3 MHz でほぼ一定、という形です。</p>
+<p>同じ窓の tok/s も同じ方向に動いています。共観測できた5点は前3点の平均 9.359 に対し後2点の平均 8.796 で、 <strong>−6.0%</strong> です。周波数の −4.1% よりむしろ大きい。片方を「微減」、片方を「横ばい」と呼び分けるわけにはいきません。</p>
+<p>まとめると、こうなります。熱圧は観測窓を通じて Nominal のまま。GPU 周波数は −4.1%、tok/s は −6.0% で、 <strong>どちらも6分間で数%下向きにドリフトしていて向きは一致する</strong>。ただし5点では有意差として扱えませんし、6分06秒ではランプアップ・サーマル・負荷変動を切り分けられません。</p>
+<p><strong>つまりこの計測は、サーマル要因の否定にも肯定にも使えませんでした。</strong> 6分06秒では、そもそも低速側（4〜6 tok/s）が出た時間帯に到達していません。</p>
+<p>作者を名乗るユーザーは発熱について <code>I think it will throttle quite soon, but I haven't tried runs longer than 30minutes with this engine.</code> と述べています<sup><a href="#user-content-fn-9" id="user-content-fnref-9-2" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。この予想の当否も、6分の観測では判定できませんでした。</p>
+<h3 id="io-側は測れていません">I/O 側は測れていません</h3>
+<p>「9 tok/s のとき毎トークンどれだけ読んでいるのか」は、この記事でいちばん答えたかった問いですが、答えられませんでした。ディスクI/Oを計測していないからです。</p>
+<p>参考になるのは、作者を名乗るユーザーが公開している時間の配分です。expert の再利用が効いていて、 <strong>M2 Mac で I/O が 166ms/token から 88ms/token に下がる</strong> とされています。約40%の expert が次のトークンでも再利用され、2トークン以内なら57%だそうです<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。16スロットのキャッシュでヒット率は約67%とのことです<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。</p>
+<p>バイト数や帯域に換算したくなりますが、 <strong>1トークンあたりに読む expert の個数が公開されていない</strong> ため、掛け合わせても意味のある数字になりません。ここは時間の配分だけを紹介するに留めます。</p>
+<h2 id="低スペックでも使えるはどの軸で言うかで結論が変わる">「低スペックでも使える」は、どの軸で言うかで結論が変わる</h2>
+<p>この技術のいちばんの価値は「低スペックのマシンでも使えるようになること」だと考えていました。実測してみると、軸によって答えが変わります。</p>
+<p><strong>RAM の軸なら、はっきり YES です。</strong> MLX なら 14GB、この方式なら 2GB 級です<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。自機の実測でも peak RSS は 1.5GB 台でした。 <strong>MLX が要求する 14GB を払わずに済む</strong> （差分としては約12GB）というのは、16GB 機にとって決定的な差です。</p>
+<p><strong>ストレージの軸は、当初の見立てが調査で覆りました。</strong></p>
+<p>最初は「安いマシンほど SSD が小容量で遅いから、恩恵を受けてほしい層ほど不利になる」と考えていました。expert を毎トークン読む方式なら、SSD が律速になるはずだからです。</p>
+<p>ところがこれは世代依存でした。確かに M2 世代の Mac mini では 256GB 構成が単一チップ化され、読み書きとも約1,500 MB/s、上位容量比で30〜50%遅いと報告されています（M1 では 128GB チップ2枚でした）<sup><a href="#user-content-fn-12" id="user-content-fnref-12" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。しかし <strong>M4 で Apple は 128GB チップ2枚構成に戻しています</strong> <sup><a href="#user-content-fn-13" id="user-content-fnref-13" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup>。</p>
+<blockquote><p>Apple has returned to using two 128GB storage chips in the new Mac mini with 256GB of storage.</p></blockquote>
+<blockquote><p>This means the base-model Mac mini with the M4 chip will not have significantly slower SSD speeds compared to higher-end configurations.</p></blockquote>
+<p>そして、この記事で参照しているコミュニティの報告機はまさに M4 Mac mini です。つまり適用される世代は M4 のほうで、「安いマシンほど不利」は成立しません。</p>
+<p><strong>コミュニティのデータも一枚岩ではありません。</strong> M4 mini 16GB のユーザーが「just over 5 tok/s」と報告している一方<sup><a href="#user-content-fn-14" id="user-content-fnref-14" data-footnote-ref="" aria-describedby="footnote-label">14</a></sup>、同じ M4 mini 16GB / 256GB の内蔵SSDで <strong>8.43〜11.38 tok/s（5回の中央値）</strong> という報告もあります<sup><a href="#user-content-fn-15" id="user-content-fnref-15" data-footnote-ref="" aria-describedby="footnote-label">15</a></sup>。食い違いの原因は分かっていません。どちらか一方を採用する根拠が私にはないので、両方を並べておきます。</p>
+<p>なお誤読しやすい数字があります。後者の報告にある「+27.99% / +30.56%」は <strong>外付けの Samsung 990 PRO と内蔵256GBの比較</strong> であって、256GB と 512GB の内蔵同士の比較ではありません<sup><a href="#user-content-fn-15" id="user-content-fnref-15-2" data-footnote-ref="" aria-describedby="footnote-label">15</a></sup>。</p>
+<p>もう一つ、SSD 速度のレビューはたいていシーケンシャル帯域の計測です。この方式は細かな読み出しの繰り返しでレイテンシが効くので、そのまま転用はできません。</p>
+<p>そして私の検証機の内蔵SSDは <strong>494GB（512GBクラス）</strong> です。有利な側の構成なので、この実測を「低スペック機でも動く」の根拠に一般化するわけにはいきません。</p>
+<p>結論としては、 <strong>RAM の軸なら裾野は確実に広がります。価格の軸で言えるかは、今回の検証では判定できませんでした。</strong></p>
+<h2 id="結論読ませる用途には届く働かせる用途にはまだ">結論：読ませる用途には届く。働かせる用途にはまだ</h2>
+<p><strong>寄せられる側</strong> は、読む用途です。チャット、要約、翻訳。人間の読速の目安として「7〜8 tok/s」を挙げている記事があります<sup><a href="#user-content-fn-16" id="user-content-fnref-16" data-footnote-ref="" aria-describedby="footnote-label">16</a></sup>。私の実測は中央値 9.495 なので、良い時は十分に上回ります。ただし <strong>悪い時の 4.298 では読速を下回ります</strong>。</p>
+<p><strong>寄せられない側</strong> は、働かせる用途です。理由が4つあります。</p>
+<p>1つ目。 <strong>アプリと CLI はツールを実行しません。</strong> README にこうあります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<blockquote><p>The app and CLI support user and model messages plus optional system guidance; they do not expose or execute tools.</p></blockquote>
+<p>ただし「ツール実行が非対応」と単純化するのは正しくありません。ループバックサーバは OpenAI 形式の tool call を返しますし（実行はクライアント側というのは OpenAI 互換 API では標準の挙動です）、公式ドキュメントには OpenCode の provider 設定が掲載されています<sup><a href="#user-content-fn-17" id="user-content-fnref-17" data-footnote-ref="" aria-describedby="footnote-label">17</a></sup>。</p>
+<p>2つ目。 <strong>Anthropic 形式には対応していません。</strong> Claude Code 連携は機能要望として起票されていますが、応答が付いていない状態です<sup><a href="#user-content-fn-18" id="user-content-fnref-18" data-footnote-ref="" aria-describedby="footnote-label">18</a></sup>。</p>
+<p>3つ目。 <strong>TTFT です。</strong> prefill 61トークンで約10秒（実測 10.2〜10.7秒）、prefill 430トークンでは 19.444秒まで伸びます。エージェント用途はプロンプトが長くなりがちなので、ここは効きます。</p>
+<p>4つ目。 <strong>持続性能が読めません。</strong> これがこの記事の主題そのものです。エージェント用途は往復が多いので、1回あたりのブレが積み上がります。</p>
+<p>なお、エンジン側のコンテキスト上限は最大64K・既定16Kです<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。モデル公称の 256K は使えません。</p>
+<h3 id="16gb-機にはmlx-を使うという逃げ道がない">16GB 機には「MLX を使う」という逃げ道がない</h3>
+<p>作者を名乗るユーザーは「最大速度と柔軟性が欲しいなら MLX を使え」と書いています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。もっともな話です。 <strong>ただしそれは M5 Mac Pro での話です。</strong></p>
+<p>MLX は同じモデルに 14GB の RAM を要求します<sup><a href="#user-content-fn-2" id="user-content-fnref-2-4" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。16GB の機体でそれをやれば、前回観測したスワップの状況に近づくと考えられます（MLX 自体は今回検証していないので、あくまで推論です）。</p>
+<p><strong>だからこの交換レートに意味があります。</strong> 「速度を落として RAM を返す」という取引は、RAM に余裕がある機体では割に合いません。 <strong>RAM が足りない機体でこそ、初めて選択肢になります。</strong></p>
+<h3 id="自分のマシンで判定するには">自分のマシンで判定するには</h3>
+<p>今回の検証を踏まえて、判断材料の集め方を提案します。</p>
+<p><strong>1回測って終わりにしないでください。</strong> この記事の16ランは 2.77倍ブレました。1つの数字は、その日その瞬間のスナップショットでしかありません。</p>
+<p><strong>使い込んだ状態でも測ってください。</strong> ただし正直に書くと、今回は「冷やせば戻る」も確認できませんでした。ですので「何分休ませればよい」という基準を示すことができません。</p>
+<p><strong>公開されているベンチマーク手順に乗せると比較可能になります</strong> <sup><a href="#user-content-fn-6" id="user-content-fnref-6-3" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。固定シード・固定プロンプト・warmup 破棄が定められているので、他の人の報告と直接比べられます。私もこの手順に乗せたおかげで、同じ機種構成の先行報告と突き合わせることができました。</p>
+<p>そして正直なところ、SSD 構成の軸も連続稼働時間の軸も、 <strong>今回の調査範囲では判定基準を作れませんでした</strong>。現時点での答えは「自分の機体で、複数回、時間を空けて測るしかない」です。</p>
+<p>前回からの変化を一文にまとめます。 <strong>スワップという破滅的な失敗は（記録した範囲では）観測されなくなりました。代わりに、予測しづらい変動を受け取りました。</strong> 前者は使えない、後者は条件付きで使える。その差は小さくないと思います。</p>
+<hr>
+<p>ローカルとクラウドの使い分けや、AI導入時のコスト設計について相談したいことがあれば、<a href="/#contact">コンタクトフォーム</a> からお気軽にどうぞ。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://github.com/drumih/turbo-fieldfare">drumih/turbo-fieldfare</a> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://news.ycombinator.com/item?id=49098926">Show HN スレッドの投稿（MLX との比較）</a> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-2-4" data-footnote-backref="" aria-label="Back to reference 2-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://github.com/drumih/turbo-fieldfare/blob/main/Sources/TurboFieldfare/Infrastructure/Metal/MetalContext.swift">MetalContext.swift</a> <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://github.com/ggml-org/llama.cpp/issues/19825">Managed SSD offloading for MoE to prevent macOS kernel panics（llama.cpp）</a> <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://arxiv.org/abs/2508.06978">SSD Offloading for LLM Mixture-of-Experts Weights Considered Harmful in Energy Efficiency</a> <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://github.com/drumih/turbo-fieldfare/blob/main/docs/COMMUNITY_BENCHMARKS.md">COMMUNITY_BENCHMARKS.md</a> <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-6-3" data-footnote-backref="" aria-label="Back to reference 6-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://news.ycombinator.com/item?id=49109034">Show HN スレッドの投稿（ページキャッシュの影響）</a> <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://github.com/drumih/turbo-fieldfare/issues/37">Benchmark: M1 Pro, 16 GB, macOS 26.5.2</a> <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://news.ycombinator.com/item?id=49101935">Show HN スレッドの投稿（I/O と GPU の交互動作）</a> <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-9-2" data-footnote-backref="" aria-label="Back to reference 9-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://news.ycombinator.com/item?id=49099453">Show HN スレッドの投稿（expert の再利用率）</a> <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://news.ycombinator.com/item?id=49099012">Show HN スレッドの投稿（キャッシュヒット率）</a> <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-12">
+<p><a href="https://www.macrumors.com/2023/01/24/m2-mac-mini-256gb-slower-ssd/">New 256GB Mac Mini and 512GB MacBook Pro Have Slower SSD Speeds Than Previous Models</a> <a href="#user-content-fnref-12" data-footnote-backref="" aria-label="Back to reference 12" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-13">
+<p><a href="https://www.macrumors.com/2024/11/08/m4-mac-mini-modular-storage/">New Mac Mini Has Modular Storage, 256GB Model Will Have Faster SSD</a> <a href="#user-content-fnref-13" data-footnote-backref="" aria-label="Back to reference 13" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-14">
+<p><a href="https://news.ycombinator.com/item?id=49099217">Show HN スレッドの投稿（M4 mini での報告）</a> <a href="#user-content-fnref-14" data-footnote-backref="" aria-label="Back to reference 14" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-15">
+<p><a href="https://github.com/drumih/turbo-fieldfare/issues/23">Benchmark: Apple M4, 16 GB RAM / 256 GB SSD, macOS 26.3.1 — internal vs external SSD</a> <a href="#user-content-fnref-15" data-footnote-backref="" aria-label="Back to reference 15" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-15-2" data-footnote-backref="" aria-label="Back to reference 15-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-16">
+<p><a href="https://zenn.dev/znet/articles/2026-best-mac-247-local-llm">24/365稼働の自分用ローカルLLMに最適なMacは? — 帯域でなくprefill(GPUコア)で選ぶ</a> <a href="#user-content-fnref-16" data-footnote-backref="" aria-label="Back to reference 16" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-17">
+<p><a href="https://github.com/drumih/turbo-fieldfare/blob/main/docs/OPENAI_SERVER.md">docs/OPENAI_SERVER.md</a> <a href="#user-content-fnref-17" data-footnote-backref="" aria-label="Back to reference 17" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-18">
+<p><a href="https://github.com/drumih/turbo-fieldfare/issues/18">Claude code integration</a> <a href="#user-content-fnref-18" data-footnote-backref="" aria-label="Back to reference 18" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

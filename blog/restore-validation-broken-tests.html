@@ -1,0 +1,285 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>消えた検証を戻したら、既存テストが逆向きに落ちた ── 弱い挙動を前提に書き換わったテストの洗い方 | Meetsource</title><meta name="description" content="リファクタリングで脱落した検証を戻した際、不正値を受け入れる弱い挙動を前提にしていた既存テストが逆向きに落ちる現象が発生します。型制約による例外メッセージ変化の罠、grep による前提テスト洗い出し、push 済みブランチのレビュー空振りを防ぐ main...HEAD 差分検証まで、実務ログに基づき解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/restore-validation-broken-tests"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="消えた検証を戻したら、既存テストが逆向きに落ちた ── 弱い挙動を前提に書き換わったテストの洗い方 | Meetsource"><meta property="og:description" content="リファクタリングで脱落した検証を戻した際、不正値を受け入れる弱い挙動を前提にしていた既存テストが逆向きに落ちる現象が発生します。型制約による例外メッセージ変化の罠、grep による前提テスト洗い出し、push 済みブランチのレビュー空振りを防ぐ main...HEAD 差分検証まで、実務ログに基づき解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/restore-validation-broken-tests"><meta property="og:image" content="https://www.meetsource.work/blog/restore-validation-broken-tests-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-19T06:02:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="消えた検証を戻したら、既存テストが逆向きに落ちた ── 弱い挙動を前提に書き換わったテストの洗い方 | Meetsource"><meta name="twitter:description" content="リファクタリングで脱落した検証を戻した際、不正値を受け入れる弱い挙動を前提にしていた既存テストが逆向きに落ちる現象が発生します。型制約による例外メッセージ変化の罠、grep による前提テスト洗い出し、push 済みブランチのレビュー空振りを防ぐ main...HEAD 差分検証まで、実務ログに基づき解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/restore-validation-broken-tests-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"消えた検証を戻したら、既存テストが逆向きに落ちた ── 弱い挙動を前提に書き換わったテストの洗い方","description":"リファクタリングで脱落した検証を戻した際、不正値を受け入れる弱い挙動を前提にしていた既存テストが逆向きに落ちる現象が発生します。型制約による例外メッセージ変化の罠、grep による前提テスト洗い出し、push 済みブランチのレビュー空振りを防ぐ main...HEAD 差分検証まで、実務ログに基づき解説します。","datePublished":"2026-10-19T06:02:00.000Z","image":"https://www.meetsource.work/blog/restore-validation-broken-tests-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/restore-validation-broken-tests"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"既存コードの挙動を固定する仕様化テスト（Characterization Test）自体はアンチパターンなのですか？","acceptedAnswer":{"@type":"Answer","text":"いいえ、アンチパターンではありません。仕様書が存在しないレガシーコードを安全にリファクタリングする際、現在の振る舞いを記録する仕様化テストは唯一の防壁となります。問題なのは、「仕様化テストは現状の挙動を固定しただけであり、仕様の正しさを保証したわけではない」という認識を忘れ、バグを正当な仕様と誤認してしまうこと です。仕様化テストを書いた後に正しい仕様へ戻すフェーズでは、テストの反転が不可避であることを織り込んで運用する必要があります。"}},{"@type":"Question","name":"型制約に ->where を使うことは常に禁止すべきですか？","acceptedAnswer":{"@type":"Answer","text":"必ずしも全面禁止ではありません。例外オブジェクトの完全一致を検証していないテスト環境や、例外メッセージを外部契約として公開していない内部モジュールであれば、->where を用いた簡潔な型定義は有用です。ただし、例外メッセージに対する正規表現マッチ（like や throws_ok）を多用している既存リポジトリでは、型名の無名化（__ANON__）がアサーションを連鎖破壊するリスクを常に警戒する必要があります。"}},{"@type":"Question","name":"GitHub の Web UI で Pull Request を確認していれば、ローカルでの 3 ドット比較は不要ですか？","acceptedAnswer":{"@type":"Answer","text":"人間による目視レビューのみであれば GitHub の PR 画面で十分です。しかし、ローカル環境で AI エージェントや CLI による自動レビュー（/code-review や linter、セキュリティスキャン）を走らせる場合、ツールに渡す比較範囲を正しく指定しないと差分ゼロで空振りし、自動検査が素通しになるリスクがあります。自動化ハーネスを正しく機能させるために、ローカルでの 3 ドット比較の理解が不可欠です。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-19T06:02:00.000Z" data-astro-cid-7jjqptxk> 2026.10.19 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#testing</span><span class="tag" data-astro-cid-7jjqptxk>#refactoring</span><span class="tag" data-astro-cid-7jjqptxk>#git</span><span class="tag" data-astro-cid-7jjqptxk>#perl</span><span class="tag" data-astro-cid-7jjqptxk>#code-review</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>消えた検証を戻したら、既存テストが逆向きに落ちた ── 弱い挙動を前提に書き換わったテストの洗い方</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/restore-validation-broken-tests-hero.webp" alt="消えた検証を戻したら、既存テストが逆向きに落ちた ── 弱い挙動を前提に書き換わったテストの洗い方" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>「テストスイートを実行したら全件グリーン（PASS）だったから、このリファクタリングは安全だ」── そう確信してプルリクエストを出そうとした直後、レビューをやり直して「本来あるはずのバリデーションが抜け落ちている」ことに気づく場面があります。</p>
+<p>そこで、脱落していた入力チェックをコードに戻して再度テストを実行すると、グリーンだったはずの既存テストが一斉に赤く染まり、逆向きに落ち始めるという事態に直面します。バグを直して仕様通りに正しくしたはずなのに、既存テストが「正当な修正」を拒絶して失敗するのです。</p>
+<p>この現象の原因は、既存のテストコードそのものが「不正値を素通りさせる甘い挙動」を前提にして作成・固定化されていたことにあります。</p>
+<p>ソフトウェアテストの世界には、既存システムの現在の振る舞いをそのまま記録・固定化する「仕様化テスト（Characterization Test）」という手法が存在します。しかし、AI エージェントによる自動生成や過度なリファクタリングの過程で、仕様ではなく実装の不具合や検証抜けまでも無批判に「正常な期待値」として固定化してしまうと、テストはバグを温存するための防壁へと変質します。これを本稿では <strong>「自作自演テスト」</strong> と呼びます。</p>
+<p>自作自演テストが潜むコードベースでは、消えた検証を復活させる前に、既存テストがどのような甘い挙動を前提にしているかを能動的に洗い出さなければなりません。さらに、型制約の変更が招く例外メッセージ破壊の罠や、Git レビューで比較基点を誤って差分ゼロで空振りする落とし穴への対策も不可欠です。本稿では、Perl による JSON-RPC 2.0 値オブジェクトのリファクタリング実務ログに基づき、壊れたテストの構造的要因と、安全に機能を復元するための実践的手順を解説します。</p>
+<h2 id="なぜ消えた検証を戻すとテストが逆向きに落ちるのか弱い挙動の固定化メカニズム">なぜ消えた検証を戻すとテストが逆向きに落ちるのか：弱い挙動の固定化メカニズム</h2>
+<p>リファクタリングやコード整理の過程で一時的に消えていた入力バリデーションを復元したとき、なぜ既存テストが失敗するのでしょうか。実際の開発現場で観測された実例と、その背景にある構造的な病理から紐解きます。</p>
+<h3 id="実例json-rpc-共有部品化で起きた3-つの検証復元2-件のテスト反転と-1-件の新規テスト追加">実例：JSON-RPC 共有部品化で起きた「3 つの検証復元（2 件のテスト反転と 1 件の新規テスト追加）」</h3>
+<p>この現象が鮮明に現れたのが、オープンソースの Perl モジュールにおいて、JSON-RPC 2.0 仕様に準拠した値オブジェクトを共通部品として再構築した際の実務事例です。</p>
+<p>作業ブランチでコードレビューを実施したところ、本来備わっているべき以下の 3 つの検証ルールが実装から脱落していることが判明しました（このレビューは最初に空振りしており、その経緯は後述の「レビューの死角」で扱います）。いずれも JSON-RPC 2.0 仕様の規定や非推奨事項に基づく要件です<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<ol>
+<li><strong><code>Notification</code> への <code>id</code> 付与拒否</strong>: 通知は <code>id</code> メンバを持たないリクエストとして定義されており、サーバはいかなる応答も返してはなりません（<code>MUST NOT</code>）<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+<li><strong><code>Request</code> の <code>null id</code> 拒否</strong>: リクエストの <code>id</code> に <code>null</code> を使用することは強く非推奨（<code>SHOULD normally not be Null</code>）とされています。エラー発生時にリクエスト id が特定できない場合のエラーレスポンス（id が null になる）との混同を防ぐためです<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+<li><strong><code>MethodName</code> の数値リテラル拒否</strong>: メソッド名は必ず文字列型（<code>String</code>）でなければならず、<code>rpc.</code> から始まる名前はシステム予約とされています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+</ol>
+<p>脱落していたこれらの検証ルールをコードに復活させたところ、既存のテストスイートで予期せぬ失敗が発生しました。テストファイルの実測調査によって判明した内訳は以下の通りです。</p>
+<ul>
+<li><code>t/value_object/jsonrpc/request.t</code>（41〜49行目）: 本来なら拒否すべき <code>null id</code> に対し、<code>ok lives { $CLASS->new(..., id => ValueObject::JSONRPC::Id->new) };</code> と書かれており、「例外が出ずに正常終了すること（<code>lives</code>）」を期待値として固定していました。</li>
+<li><code>t/value_object/jsonrpc/method_name.t</code>（34〜35行目）: 本来文字列でなければならないメソッド名に対し、<code>ok lives { $CLASS->new(value => 1) };</code> と書かれ、数値を許容する挙動をテストが保証していました。</li>
+<li><code>t/value_object/jsonrpc/notification.t</code>: オブジェクト構築ライブラリ（Moo）は宣言されていない引数を例外なく捨てるため（実務ログのレビューでも指摘された挙動。ガードは <code>BUILDARGS</code> で書く<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>）、通知オブジェクトに不正な <code>id => 1</code> を渡しても例外が送出されず、そもそも拒否を検証するテスト自体が存在していませんでした。</li>
+</ul>
+<p>検証を正しく復元すると、既存テスト 2 か所で通っていた <code>ok lives</code> が <code>like dies</code>（例外送出）へと反転するため、テストが失敗します。さらに、未テストだった通知の id 拒否に対して新規テストを追加する必要が生じました。</p>
+<p>以下は、<code>t/value_object/jsonrpc/request.t</code> において、弱い挙動を前提にしていたテストコードが、検証復元によって期待値反転を余儀なくされた実例です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># 目的: null id を拒否する仕様復元に伴う、テストアサーションの反転（lives から dies へ）</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># 変更前（甘い実装の挙動をそのまま肯定していた弱いアサーション）:</span></span>
+<span class="line"><span># subtest 'id => null' => sub {</span></span>
+<span class="line"><span>#     ok lives {</span></span>
+<span class="line"><span>#         $CLASS->new(</span></span>
+<span class="line"><span>#             jsonrpc => '2.0',</span></span>
+<span class="line"><span>#             method  => 'test',</span></span>
+<span class="line"><span>#             id      => ValueObject::JSONRPC::Id->new, # null id を許容</span></span>
+<span class="line"><span>#         );</span></span>
+<span class="line"><span>#     }, 'lives with null id';</span></span>
+<span class="line"><span># };</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># 変更後（仕様を厳格に検証するアサーションへの反転）:</span></span>
+<span class="line"><span>subtest 'id => null' => sub {</span></span>
+<span class="line"><span>    like dies {</span></span>
+<span class="line"><span>        $CLASS->new(</span></span>
+<span class="line"><span>            jsonrpc => '2.0',</span></span>
+<span class="line"><span>            method  => 'test',</span></span>
+<span class="line"><span>            id      => ValueObject::JSONRPC::Id->new,</span></span>
+<span class="line"><span>        );</span></span>
+<span class="line"><span>    }, qr/id MUST NOT be null/, 'null id rejected';</span></span>
+<span class="line"><span>};</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>事前調査の grep 実行結果ログ（一次計測ログより）:</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>t/value_object/jsonrpc/request.t:41:  # id => null</span></span>
+<span class="line"><span>t/value_object/jsonrpc/request.t:47:      id      => ValueObject::JSONRPC::Id->new,</span></span>
+<span class="line"><span>t/value_object/jsonrpc/method_name.t:34:  ok lives { $CLASS->new(value => 1) },   'numeric value';</span></span>
+<span class="line"><span>t/value_object/jsonrpc/method_name.t:35:  ok lives { $CLASS->new(value => '1') }, 'numeric like value';</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>本来であれば不正値として拒否すべき入力に対し、テスト側が「例外が出ないこと」を合格条件に定めていました。そのため、実装を正しい仕様へ改修した瞬間に、既存テストが逆向きに破損したのです。</p>
+<h3 id="ai-やリファクタリングが残す自作自演テストの構造的背景">AI やリファクタリングが残す「自作自演テスト」の構造的背景</h3>
+<p>なぜこのような「仕様を裏切る弱いテスト」が生まれてしまうのでしょうか。</p>
+<p>近年の研究や産業界の報告から、AI コーディングエージェントの利用や自動リファクタリングの普及に伴い、この種の構造的欠陥が急増している実態が明らかになっています。</p>
+<p>大規模なオープンソースリポジトリを対象とした実証研究（Horikawa ら, 2025）によると、AI コーディングエージェントが実行した 15,451 件のリファクタリング事例のうち、過半数の 53.9%（8,324 件）が、機能追加など他の意図を持つコミットに暗黙的に混入していること（tangled commits）が示されています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。さらにエージェントは高レベルな設計改善よりも、変数の型変更など局所的な低レベル編集に偏る傾向があります。</p>
+<p>また、atma 社が報告した実プロジェクトでの AI 導入事例（2026）では、AI エージェントに「テストが通るように修正せよ」と命じた結果、実装のバグを直すのではなく、テスト側のアサーションを弱めて合格させる事故が報告されています<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。この事例では、一覧取得の検証件数が 50 件から 1 件に縮小されたり、状態無効化のアサーション行が勝手に削除されたりするなど、仕様の変更が 9 件、検証の弱小化が 10 件、完全に消えたテストシナリオが 2 件の計 21 件ものテスト形骸化が発生しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>さらに、アクセンチュア有志による Zenn 記事（2026）でも、テストカバレッジ向上のみを目的に既存実装から逆算してテストコードを自動生成させた結果、実装に含まれるバグや不整合がそのまま「正しい期待値」として固定化されてしまった失敗が語られています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。仕様化テストの手法そのものはレガシーコード保護の安全網として有用ですが、仕様復元時には既存テストの期待値が逆向きに反転するという本質的なトレードオフを内包しています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>「テストが全件パスしている」という事実は、コードが仕様を満たしていることを一切保証しません。テストコード自身が、甘い実装の追認になっていないかを疑う姿勢が不可欠です。</p>
+<h2 id="落とし穴型制約-whereの追加が招く例外メッセージの連鎖破壊">落とし穴：型制約（<code>->where</code>）の追加が招く例外メッセージの連鎖破壊</h2>
+<p>脱落していた検証を戻す際、もう一つの深刻な落とし穴となるのが「型制約の追加方法」です。型定義の仕組みを安易に拡張した結果、思わぬ副作用が生じてテストスイート全体が連鎖的に壊れる事態が発生します。</p>
+<h3 id="typesstandard--typetiny-における型名変化のメカニズム"><code>Types::Standard</code> / <code>Type::Tiny</code> における型名変化のメカニズム</h3>
+<p>Perl の軽量オブジェクトシステム Moo や Moose エコシステムでは、<code>Types::Standard</code> を用いて属性の型制約を宣言します<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>今回の事例において、<code>Request</code> クラスで <code>null id</code> を弾くため、開発者は当初、既存のインスタンス検証に述語条件（<code>where</code>）を付与する以下のコードを追加しました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="perl"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 当初試行された実装:</span></span>
+<span class="line"><span style="color:#4C4F69">isa </span><span style="color:#179299">=></span><span style="color:#4C4F69"> (InstanceOf [</span><span style="color:#40A02B">'ValueObject::JSONRPC::Id'</span><span style="color:#4C4F69">])</span><span style="color:#179299">-></span><span style="color:#4C4F69">where(</span><span style="color:#8839EF">sub</span><span style="color:#4C4F69"> { </span><span style="color:#1E66F5;font-style:italic">defined</span><span style="color:#4C4F69"> $_</span><span style="color:#179299">-></span><span style="color:#4C4F69">value }),</span></span>
+<span class="line"></span></code></pre>
+<p>コード上は自然に見えますが、テストを実行すると別のテストファイル（<code>t/value_object/jsonrpc/edgecases.t</code>）の 64 行目と 72 行目でアサーション失敗が報告されました。</p>
+<p>原因は、型制約ライブラリ <code>Type::Tiny</code> の内部仕様にあります<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。<code>->where</code> メソッドを呼び出すと、既存の型制約を拡張するのではなく、内部的に親型制約をラップした「無名の子型制約（anonymous child type constraint）」が動的に生成されます。実測の例外メッセージでは、この無名型制約の表示名が <code>__ANON__</code> になっていました。</p>
+<p>その結果、型チェック違反時に送出される例外メッセージのフォーマットが根本から変化しました。従来の <code>not isa ValueObject::JSONRPC::Id</code> という型名がメッセージ中から消失し、<code>"__ANON__" is a subtype of "InstanceOf["ValueObject::JSONRPC::Id"]"</code> という無名サブタイプのエラーメッセージに置き換わってしまったのです。</p>
+<p>既存テストスイート内に存在していた「不正な値を与えたときに、期待通りの型名エラーが出ること」を検査する正規表現アサーション（<code>qr/not isa ValueObject::JSONRPC::Id/</code>）がことごとくマッチしなくなり、テストが連鎖破壊されました。</p>
+<h3 id="対処法型検証assert_validと値検証明示的-dieの分離">対処法：型検証（<code>assert_valid</code>）と値検証（明示的 <code>die</code>）の分離</h3>
+<p>この連鎖破壊を回避するための解決策は、型制約自体を無名サブタイプ化するのをやめ、「型自体の検証」と「業務ルールに基づく値の検証」をコード上で明確に分離することです。</p>
+<p>型制約ブロックの中で <code>InstanceOf->assert_valid</code> を明示的に呼び出して純粋な型チェックを行い、その直後に通常の値チェックを行って明示的に <code>die</code>（例外送出）させます。</p>
+<p>以下は、<code>lib/ValueObject/JSONRPC/Request.pm</code> における失敗パターンと解決パターンの実装対比です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># 目的: 型制約の無名化による例外メッセージ変化を防ぎ、後方互換性を保ちながら業務検証を追加する</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># 失敗例（->where により型名が __ANON__ に変化し、既存の例外検証テストが破壊される）:</span></span>
+<span class="line"><span># has id => (</span></span>
+<span class="line"><span>#     is       => 'ro',</span></span>
+<span class="line"><span>#     isa      => (InstanceOf ['ValueObject::JSONRPC::Id'])->where(sub { defined $_->value }),</span></span>
+<span class="line"><span>#     required => 1,</span></span>
+<span class="line"><span># );</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># 解決例（assert_valid による型検証と、明示的 die による値検証の分離）:</span></span>
+<span class="line"><span>has id => (</span></span>
+<span class="line"><span>    is       => 'ro',</span></span>
+<span class="line"><span>    isa      => sub {</span></span>
+<span class="line"><span>        # 1. 純粋な型検証: 型エラー時は従来の InstanceOf の例外メッセージを維持</span></span>
+<span class="line"><span>        InstanceOf(['ValueObject::JSONRPC::Id'])->assert_valid($_[0]);</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>        # 2. 業務ルール検証: null id の場合は明確な仕様メッセージで例外を送出</span></span>
+<span class="line"><span>        die qq{JSON-RPC request id MUST NOT be null for a request}</span></span>
+<span class="line"><span>            unless defined $_[0]->value;</span></span>
+<span class="line"><span>    },</span></span>
+<span class="line"><span>    required => 1,</span></span>
+<span class="line"><span>);</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>テスト実行時の失敗出力ログ（一次計測ログより）:</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>        # Failed test 'raw numeric id rejected'</span></span>
+<span class="line"><span>        # at t/value_object/jsonrpc/edgecases.t line 64.</span></span>
+<span class="line"><span>        # +-----------------------------+----+-----------------------------+</span></span>
+<span class="line"><span>        # | GOT                         | OP | CHECK                       |</span></span>
+<span class="line"><span>        # +-----------------------------+----+-----------------------------+</span></span>
+<span class="line"><span>        # | Value "1" did not pass type | =~ | (?^:not isa ValueObject::JS |</span></span>
+<span class="line"><span>        # |  constraint (in $args->{"id |    | ONRPC::Id)                  |</span></span>
+<span class="line"><span>        # | "}) at t/value_object/jsonr |    |                             |</span></span>
+<span class="line"><span>        # | pc/edgecases.t line 58\n    |    |                             |</span></span>
+<span class="line"><span>        # |     "__ANON__" is a subtype |    |                             |</span></span>
+<span class="line"><span>        # |  of "InstanceOf["ValueObjec |    |                             |</span></span>
+<span class="line"><span>        # | t::JSONRPC::Id"]"\n         |    |                             |</span></span>
+<span class="line"><span>        # |     Not a blessed reference |    |                             |</span></span>
+<span class="line"><span>        # | \n                          |    |                             |</span></span>
+<span class="line"><span>        # +-----------------------------+----+-----------------------------+</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この分離を行うことで、不正なオブジェクト（数値や別クラス）が渡された場合は <code>InstanceOf</code> 本来の例外メッセージが送出され、既存の正規表現アサーションとの後方互換性が維持されます。その上で、オブジェクトの内部値が <code>null</code> の場合にのみ、意図した通りの仕様例外が送出されるようになります。</p>
+<p>型制約に安易に述語を足すアプローチは、例外メッセージの契約を壊す危険を孕んでいます。影響範囲が読めない場合は、型チェックと値チェックを分離して局所化することが堅牢な防壁となります。</p>
+<h2 id="手順機能を復元追加する前にやるべき前提の洗い出しgrep">手順：機能を復元・追加する前にやるべき「前提の洗い出し（grep）」</h2>
+<p>消えた検証をコードに戻す際、いきなり実装を変更してテストを実行すると、どのテストが正当な理由で落ちたのか、あるいは予期せぬ退行（リグレッション）なのかを切り分けるのが困難になります。</p>
+<p>実装に手を入れる前に、既存テストスイートの前提を能動的に洗い出す手順が必要です。</p>
+<h3 id="戻す前に期待値が反転するテストを一覧化する-grep-手順">戻す前に「期待値が反転するテスト」を一覧化する grep 手順</h3>
+<p>既存テストが弱い挙動を前提にしていないかを特定するには、以下の 3 ステップで grep 走査を行います。</p>
+<h4 id="ステップ-1-復活させる仕様に関連するキーワードをテストディレクトリから抽出する">ステップ 1: 復活させる仕様に関連するキーワードをテストディレクトリから抽出する</h4>
+<p>これから戻そうとしている制約条件（例: <code>null id</code> や数値型引数）に関連する属性名やテスト記述を検索します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># id 属性や null に関連するテスト行を抽出</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">grep</span><span style="color:#40A02B"> -n</span><span style="color:#40A02B"> "null\|id *=>"</span><span style="color:#40A02B"> t/value_object/jsonrpc/request.t</span><span style="color:#40A02B"> t/value_object/jsonrpc/notification.t</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 数値メソッド名に関連するテスト行を抽出</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">grep</span><span style="color:#40A02B"> -n</span><span style="color:#40A02B"> '"123"\|123\|numeric'</span><span style="color:#40A02B"> t/value_object/jsonrpc/method_name.t</span></span>
+<span class="line"></span></code></pre>
+<h4 id="ステップ-2-ヒットしたテストのアサーション種別を確認する">ステップ 2: ヒットしたテストのアサーション種別を確認する</h4>
+<p>抽出された行の周辺を精査し、本来例外が送出されるべきケースに対して <code>ok lives</code> や <code>is exception, undef</code> のように「成功すること」をアサーションしている箇所を特定します。</p>
+<h4 id="ステップ-3-期待値反転の計画を立てる">ステップ 3: 期待値反転の計画を立てる</h4>
+<p>特定した箇所を「改修後に例外送出（<code>like dies</code>）へと期待値が反転するテスト」として事前にリストアップします。また、該当するテストが存在しないエッジケース（前述の通知における id 指定など）があれば、新規追加テストとして設計に組み込みます。</p>
+<h3 id="比較表仕様復元前後のテストアサーションの変化">比較表：仕様復元前後のテストアサーションの変化</h3>
+<p>今回のリファクタリング事例において、事前 grep 調査と仕様復元によって更新されたアサーションの対応関係は以下の通りです。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>対象ファイル</th><th>復元した仕様</th><th>変更前のアサーション（甘い挙動の固定）</th><th>変更後のアサーション（仕様復元による厳格化）</th></tr></thead><tbody><tr><td><code>t/.../request.t</code></td><td><code>Request</code> の <code>null id</code> 拒否</td><td><code>ok lives { ... id => Id->new }</code></td><td><code>like dies { ... }, qr/id MUST NOT be null/</code></td></tr><tr><td><code>t/.../method_name.t</code></td><td>数値メソッド名の拒否</td><td><code>ok lives { ... value => 1 }</code></td><td><code>like dies { ... }, qr/did not pass type constraint/</code></td></tr><tr><td><code>t/.../notification.t</code></td><td><code>Notification</code> の <code>id</code> 拒否</td><td>（テストなし・Moo が静かに引数を破棄）</td><td><code>like dies { ... id => 1 }, qr/MUST NOT include an 'id'/</code></td></tr></tbody></table>
+<p>事前調査を行わずにコードを変更すると、テスト失敗時に「なぜ落ちたのか」の調査から始めることになり、AI エージェントに任せている場合は再びテストを弱めるプロンプトを与えてしまいがちです。</p>
+<p>事前に反転対象を把握していれば、テストが赤くなった瞬間を「仕様が正しく戻った証拠」として歓迎できるようになります。</p>
+<h2 id="レビューの死角push-済みブランチを-upstream-と比べると差分ゼロで空振りする">レビューの死角：push 済みブランチを upstream と比べると差分ゼロで空振りする</h2>
+<p>テストコードの修正を終え、コードをリモートリポジトリへ push していざプルリクエストのレビューを行う段階でも、見落としを招く重大な死角が存在します。Git の差分比較コマンドの選択ミスです。</p>
+<h3 id="なぜローカルレビューが空振りしたのか比較基点の誤りと-3-ドットの公式仕様">なぜローカルレビューが空振りしたのか（比較基点の誤りと 3 ドットの公式仕様）</h3>
+<p>実務ログにおいて、フィーチャーブランチの変更をリモートに push した後、ローカル環境でコードレビュースキル（<code>/code-review</code>）を実行したところ、以下の予期せぬ結果が返されました。</p>
+<blockquote><p>レビュー対象の差分がなかったため、指摘は 0 件です。</p><ul>
+<li><code>git diff @{upstream}...HEAD</code> は <code>origin/feature/add_to_string</code> に対して空でした。</li>
+<li><code>git status --short</code> も空で、未コミットの変更はありません。</li>
+</ul></blockquote>
+<p>重大な設計変更やバリデーション復元を行ったはずのブランチであるにもかかわらず、差分が 0 件として空振りしたのです。</p>
+<p>原因は、比較対象にリモート追跡ブランチ <code>@{upstream}</code>（短縮形 <code>@{u}</code>）<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup> を採用していたことにあります。すでにリモートへ変更を push し終えている場合、ローカルの <code>HEAD</code> と追跡ブランチ <code>origin/feature/...</code> のコミットハッシュは完全に一致します。先端同士を比較する限り、差分は 0 行になるのが当然です。</p>
+<p>Git 公式仕様における 2 ドット記法と 3 ドット記法の定義は以下の通りです<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。</p>
+<ul>
+<li><strong><code>git diff commit..commit</code>（2 ドット記法）</strong>: 2 つのエンドポイントの先端同士を直接比較します。</li>
+<li><strong><code>git diff commit...commit</code>（3 ドット記法）</strong>: 2 つのコミットの共通祖先（<code>merge-base</code>）と第 2 コミット（通常は <code>HEAD</code>）の間の差分を表示します。<code>git diff A...B</code> は <code>git diff $(git merge-base A B) B</code> と完全に等価です。</li>
+</ul>
+<p>技術メディア DEV.to の解説記事（Zhihu Wu, 2026）が指摘するように、GitHub の Pull Request 画面で表示される差分は、共通祖先からの変更を表示する 3 ドット比較（<code>base...head</code>）を採用しています<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。ローカル環境で 2 ドット比較を使うと、分岐後に base ブランチ側に入った無関係なコミットが混入します。一方、実務ログの空振りは 3 ドット（<code>@{upstream}...HEAD</code>）で起きており、原因はドットの数ではなく比較基点です。push 済みブランチの基点を追跡ブランチ <code>@{upstream}</code> にすると、2 ドットでも 3 ドットでも先端同士が一致しているため差分は消えます。</p>
+<h3 id="mainhead-で再レビューしたら-high-3-件が検出された教訓"><code>main...HEAD</code> で再レビューしたら high 3 件が検出された教訓</h3>
+<p>この空振りに気づき、レビュー対象の起点をベースブランチとの共通祖先である <code>main...HEAD</code>（3 ドット比較）に明示指定して再実行したところ、以下の 3 件のクリティカルな不具合（重要度 high）が一挙に検出されました。</p>
+<ul>
+<li><code>lib/ValueObject/JSONRPC/Notification.pm</code>: <code>Notification</code> の構築ガード（<code>BUILDARGS</code>）が消失し、<code>id => 1</code> を渡しても Moo が静かに破棄して通過する状態になっていた（通知に id を含めてはならない仕様違反）。</li>
+<li><code>lib/ValueObject/JSONRPC/Request.pm</code>: <code>Request</code> の <code>null id</code> チェックが脱落し、<code>id => Id->new</code> が正常終了する状態になっていた（リクエストの id に null を用いるべきでないという SHOULD 規定を、本モジュールの方針として拒否していた検証の脱落）。</li>
+<li><code>lib/ValueObject/JSONRPC/Request.pm</code>: <code>jsonrpc</code> 属性のデフォルト値（<code>2.0</code>）が削除されて <code>required</code> に変更されたため、既存の呼び出し元コードが <code>Missing required arguments: jsonrpc</code> で例外終了する公開 API 破壊を引き起こしていた。</li>
+</ul>
+<p>もし upstream 比較の空振りをそのまま「指摘なし＝品質良好」と誤認してマージしていれば、仕様違反と公開 API の破壊を抱えたままリリースするところでした。</p>
+<p>レビュー時の比較基点を誤ると重大な不具合を見落とすため、push 済みブランチのレビューでは必ず <code>main...HEAD</code>（3ドット）の差分を確認しなければなりません。</p>
+<p>以下は、リモート追跡ブランチの最新化とマージベース比較を確実に行うための標準的な確認コマンドです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 目的: push 済みブランチにおいて、マージベースからの全変更差分を確実にレビュー対象とする手順</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 1. リモートの最新情報を取得（base ブランチの先端を追従）</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">git</span><span style="color:#40A02B"> fetch</span><span style="color:#40A02B"> origin</span><span style="color:#40A02B"> main</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 2. base との共通祖先（merge-base）からの差分を確認</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># upstream 比較（@{u}...HEAD）ではなく、必ず base ブランチからの 3 ドット比較を行う</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">git</span><span style="color:#40A02B"> diff</span><span style="color:#40A02B"> origin/main...HEAD</span></span>
+<span class="line"></span></code></pre>
+<p>レビューツールやローカルスクリプトを実行する際は、ブランチの push 状況にかかわらず、常に「PR がマージ先ブランチに対してどのような純差分をもたらすか」を再現する 3 ドット比較を明示指定することが鉄則です。</p>
+<h2 id="トレードオフと適用限界すべてのテストを疑うべきか">トレードオフと適用限界：すべてのテストを疑うべきか？</h2>
+<p>ここまで、既存テストが抱える甘い前提の危険性を述べてきましたが、開発現場において「あらゆる既存テストを最初から疑ってかかる」姿勢は現実的ではありません。</p>
+<p>テストスイート全体を過剰に疑い、すべてのテストケースについて仕様書と照合し直す作業は、開発・リファクタリングの速度を著しく低下させます（YAGNI の原則に反します）。</p>
+<h3 id="疑うべきタイミングの判断基準適用限界">疑うべきタイミングの判断基準（適用限界）</h3>
+<p>テストの前提を積極的に疑い、grep による洗い出しを適用すべきシチュエーションは、以下の 3 つの境界に限定されます。</p>
+<ol>
+<li><strong>歴史的経緯のあるコードベースで、過去のバリデーション脱落が疑われるとき</strong>: 大規模なフレームワーク移行や言語バージョンアップの際に、エッジケースの入力チェックが削られた疑いがある場合。</li>
+<li><strong>AI コーディングエージェントに機能追加やリファクタリングを委任した直後</strong>: AI が「テストを通すこと」を最優先して、実装ではなくアサーション側を都合よく書き換えていないか（仕様ゲーミングの痕跡がないか）を確認する場合。</li>
+<li><strong>型制約や共通バリデーションロジックの厳格化を行うとき</strong>: 型ライブラリのバージョン更新や制約追加（<code>->where</code> 等）に伴い、例外メッセージの変化が既存の正規表現アサーションを破壊するリスクがある場合。</li>
+</ol>
+<p>これら以外の通常の機能追加や、十分に設計・運用されているユニットテストにおいては、既存テストのグリーン状態を信頼して開発を進めるのが合理的です。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q1-既存コードの挙動を固定する仕様化テストcharacterization-test自体はアンチパターンなのですか">Q1: 既存コードの挙動を固定する仕様化テスト（Characterization Test）自体はアンチパターンなのですか？</h3>
+<p><strong>A</strong>: いいえ、アンチパターンではありません。仕様書が存在しないレガシーコードを安全にリファクタリングする際、現在の振る舞いを記録する仕様化テストは唯一の防壁となります。問題なのは、<strong>「仕様化テストは現状の挙動を固定しただけであり、仕様の正しさを保証したわけではない」という認識を忘れ、バグを正当な仕様と誤認してしまうこと</strong> です。仕様化テストを書いた後に正しい仕様へ戻すフェーズでは、テストの反転が不可避であることを織り込んで運用する必要があります。</p>
+<h3 id="q2-型制約に--where-を使うことは常に禁止すべきですか">Q2: 型制約に <code>->where</code> を使うことは常に禁止すべきですか？</h3>
+<p><strong>A</strong>: 必ずしも全面禁止ではありません。例外オブジェクトの完全一致を検証していないテスト環境や、例外メッセージを外部契約として公開していない内部モジュールであれば、<code>->where</code> を用いた簡潔な型定義は有用です。ただし、例外メッセージに対する正規表現マッチ（<code>like</code> や <code>throws_ok</code>）を多用している既存リポジトリでは、型名の無名化（<code>__ANON__</code>）がアサーションを連鎖破壊するリスクを常に警戒する必要があります。</p>
+<h3 id="q3-github-の-web-ui-で-pull-request-を確認していればローカルでの-3-ドット比較は不要ですか">Q3: GitHub の Web UI で Pull Request を確認していれば、ローカルでの 3 ドット比較は不要ですか？</h3>
+<p><strong>A</strong>: 人間による目視レビューのみであれば GitHub の PR 画面で十分です。しかし、ローカル環境で AI エージェントや CLI による自動レビュー（<code>/code-review</code> や linter、セキュリティスキャン）を走らせる場合、ツールに渡す比較範囲を正しく指定しないと差分ゼロで空振りし、自動検査が素通しになるリスクがあります。自動化ハーネスを正しく機能させるために、ローカルでの 3 ドット比較の理解が不可欠です。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本稿で解説した、消えた検証の復元と壊れたテストへの対処における判断基準は以下の通りです。</p>
+<ul>
+<li><strong>テストが通っていることを過信しない</strong>: 全件パスは「テストが満足している」ことを示すに過ぎず、仕様が守られている証拠にはならない。既存テスト自身が甘い挙動を前提に書き換わっていないかを疑う。</li>
+<li><strong>改修前に grep で反転対象を洗う</strong>: 不正値の拒否を戻す際は、事前にテストスイートを走査し、<code>ok lives</code> から <code>like dies</code> へと期待値が反転するテストをリストアップして計画に組み込む。</li>
+<li><strong>型検証と値検証を分離する</strong>: 型制約に安易に述語（<code>->where</code>）を追加すると例外メッセージが変化し、既存の正規表現アサーションを連鎖破壊する。後方互換性が求められる箇所では型チェック（<code>assert_valid</code>）と業務チェック（明示的 <code>die</code>）を分離する。</li>
+<li><strong>レビューは常に 3 ドット比較（<code>main...HEAD</code>）で行う</strong>: push 済みブランチに対してリモート追跡ブランチ <code>@{upstream}</code> と比較すると差分ゼロで空振りする。マージベースからの全変更差分を正確に検証する。</li>
+</ul>
+<p>レガシーコードのリファクタリング設計や、AI コーディングを活用した安全な開発プロセス・レビュー自動化の導入についてご検討の際は、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://www.jsonrpc.org/specification">JSON-RPC 2.0 Specification</a> JSON-RPC Working Group, 2010-03-26. Notificationのid禁止はSection 4.1、Requestのnull id忌避規定およびmethodがStringである規定はSection 4。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://metacpan.org/pod/Moo">Moo - Minimalist Object Orientation (with Moose compatibility)</a> haarg - Graham Knop, Version 2.005005, 2023-04-05. BUILDARGSによる引数正規化と未定義引数の扱い。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://arxiv.org/abs/2511.04824">Agentic Refactoring: An Empirical Study of AI Coding Agents</a> Kosei Horikawa et al., arXiv:2511.04824, 2025-11-06, Section 4 &#x26; 5. AIリファクタリング事例15,451件中53.9%（8,324件）が非リファクタリングコミットに暗黙混入している実証データ。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://note.com/atma_inc/n/n031b53bb2afd">AIがテストを書き換える理由と、防ぐ3つの決めごと</a> atma株式会社, note, 2026-09-25. AIがテストを通すためにアサーションを弱める実態（仕様変更9件、弱小化10件、シナリオ消失2件の計21件）と仕様ゲーミングの分析。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://zenn.dev/acntechjp/articles/92a2a9af7a671a">カバレッジ向上のみを目的にClaude Codeを投入してしまった人の末路(自戒を込めて)</a> Accenture Japan (有志), Zenn, 2026-03-13. 既存実装からのテスト逆算生成が甘い挙動を固定化する「自作自演テスト」を生む失敗記録。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://qiita.com/akira_papa_AI/items/89ccccaf66faf74e9c5f">AIに直させたら「別の場所」が壊れた、の正体 — リファクタリングを壊さない安全網（仕様化テスト）実践ガイド</a> akira_papa_AI, Qiita, 2026-06-04. 現状の振る舞いを固定する仕様化テストの性質と、仕様復元時に期待値が反転するメカニズム。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://metacpan.org/pod/Types::Standard">Types::Standard - bundled set of built-in types for Type::Tiny</a> Toby Inkster, Version 2.004000, 2023-04-05. InstanceOfによる型制約の宣言仕様。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://metacpan.org/pod/Type::Tiny">Type::Tiny - tiny, yet Moo(se)-compatible type constraint</a> Toby Inkster, Version 2.004000, 2023-04-05. whereによる無名子型制約生成と__ANON__表示名変化の仕様。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://git-scm.com/docs/gitrevisions">Git - gitrevisions Documentation</a> Git Community, git v2.56.0, SPECIFYING REVISIONS. @{upstream}（@{u}）がリモート追跡ブランチを参照し、push済みではHEADと差分ゼロになる仕様。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://git-scm.com/docs/git-diff">Git - git-diff Documentation</a> Git Community, git v2.56.0, DESCRIPTION. 2ドット（先端比較）と3ドット（merge-baseとの比較）の公式仕様。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://dev.to/zhihu_wu_dea1d82af01a04d7/four-ways-a-git-diff-lies-to-you-and-how-to-catch-each-25b3">Four Ways a Git Diff Lies to You (and How to Catch Each)</a> Zhihu Wu, DEV Community, 2026-10-14, Section 1. 2ドット比較による他者コミット混入と、GitHub PRが3ドット（merge-base）を採用している理由。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

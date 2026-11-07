@@ -1,0 +1,164 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>図の Mermaid ソースを本文のコメントに残す運用を、147記事分まとめて捨てた ── Git にあるものを本文に二重に持たない | Meetsource</title><meta name="description" content="静的サイトで図を画像化した後、元ソースを HTML コメントに残す運用はエスケープ事故と過剰な検査スクリプトを招きます。画像化前のコミット履歴を信頼し、147記事・243ブロックの二重管理を一括削除した実務の経緯と判断軸を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/drop-mermaid-html-comment-retention"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="図の Mermaid ソースを本文のコメントに残す運用を、147記事分まとめて捨てた ── Git にあるものを本文に二重に持たない | Meetsource"><meta property="og:description" content="静的サイトで図を画像化した後、元ソースを HTML コメントに残す運用はエスケープ事故と過剰な検査スクリプトを招きます。画像化前のコミット履歴を信頼し、147記事・243ブロックの二重管理を一括削除した実務の経緯と判断軸を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/drop-mermaid-html-comment-retention"><meta property="og:image" content="https://www.meetsource.work/blog/drop-mermaid-html-comment-retention-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-29T05:00:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="図の Mermaid ソースを本文のコメントに残す運用を、147記事分まとめて捨てた ── Git にあるものを本文に二重に持たない | Meetsource"><meta name="twitter:description" content="静的サイトで図を画像化した後、元ソースを HTML コメントに残す運用はエスケープ事故と過剰な検査スクリプトを招きます。画像化前のコミット履歴を信頼し、147記事・243ブロックの二重管理を一括削除した実務の経緯と判断軸を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/drop-mermaid-html-comment-retention-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"図の Mermaid ソースを本文のコメントに残す運用を、147記事分まとめて捨てた ── Git にあるものを本文に二重に持たない","description":"静的サイトで図を画像化した後、元ソースを HTML コメントに残す運用はエスケープ事故と過剰な検査スクリプトを招きます。画像化前のコミット履歴を信頼し、147記事・243ブロックの二重管理を一括削除した実務の経緯と判断軸を解説します。","datePublished":"2026-10-29T05:00:00.000Z","image":"https://www.meetsource.work/blog/drop-mermaid-html-comment-retention-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/drop-mermaid-html-comment-retention"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Git履歴から過去のMermaidソースを復元するには具体的にどうすればよいですか？","acceptedAnswer":{"@type":"Answer","text":"git log コマンドで該当のファイルを追跡します。特定の記事で使われていた Mermaid を探す場合は git log -S \"mermaid\" -- <記事ファイルパス> を実行して挿入や削除のコミットハッシュを特定し、git show <コミットハッシュ>:<記事ファイルパス> で過去のリビジョンを表示すれば、画像化前の完全な生ソースをいつでも安全に取り出せます。"}},{"@type":"Question","name":"AIアシスタントに図の意図を正確に読ませるために、コメントでソースを残す必要はありませんか？","acceptedAnswer":{"@type":"Answer","text":"必須ではありません。画像の alt 属性や前後の本文テキストで図の意図や主要な関係性を自然言語で記述しておけば、現代の AI は十分に文脈を理解できます。むしろ、エスケープ崩れによって HTML コメントが途中で閉じた壊れたコード片が本文に露出する方が、AI のパーサーや読解に悪影響を及ぼします。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-29T05:00:00.000Z" data-astro-cid-7jjqptxk> 2026.10.29 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#ブログ</span><span class="tag" data-astro-cid-7jjqptxk>#automation</span><span class="tag" data-astro-cid-7jjqptxk>#ssg</span><span class="tag" data-astro-cid-7jjqptxk>#refactoring</span><span class="tag" data-astro-cid-7jjqptxk>#technical-debt</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>図の Mermaid ソースを本文のコメントに残す運用を、147記事分まとめて捨てた ── Git にあるものを本文に二重に持たない</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/drop-mermaid-html-comment-retention-hero.webp" alt="図の Mermaid ソースを本文のコメントに残す運用を、147記事分まとめて捨てた ── Git にあるものを本文に二重に持たない" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>静的サイトジェネレーター（SSG）や技術ブログで図解を掲載する際、Mermaid などのテキスト記法で作成したダイアグラムを画像（PNG や WebP）へ変換して記事へ貼り付けるワークフローは広く使われています。表示の高速化やプラットフォームごとのレンダリング差異を避ける上でも、画像の事前生成は堅実な選択肢です。</p>
+<p>その一方で、画像化した後に必ず直面するのが「元となったダイアグラムのソースコードをどう保守するか」という問題です。「将来の修正や再編集に備えて、画像のすぐ近くにソースを残しておきたい」「AI アシスタントにも図の設計意図を読ませたい」という親切心から、記事の Markdown 内に HTML コメント（<code>&#x3C;!-- ... --></code>）として Mermaid コードを埋め込んでおく運用パターンが考案され、現場で実践されてきました。</p>
+<p>ドキュメントの二重保持とは、静的サイトや技術文書において、画像等の成果物と同一のファイル内に、保守や再編集用の元ソースコード（Mermaid 等）をコメントなどの形式で重複して残す運用パターンです。</p>
+<p>しかし、私の個人サイトにおいて 147 記事にわたってこの二重保持を運用した結果、待っていたのは「エスケープ事故の頻発」と「それを防ぐための検査スクリプトの肥大化」という不毛な泥沼でした。</p>
+<p>「後で直すかもしれない」「念のため」とドキュメント本文にソースを二重保持するのは、Git の存在意義を殺すアンチパターンです。画像化前のコミット履歴に完全な生ソースが残されているのであれば、本文に二重管理する理由はどこにもありません。</p>
+<p>本記事では、147 記事に蓄積された 243 ブロックの Mermaid コメントを一括削除（5,777 行削減）し、検査スクリプトごと運用を全廃した実務の経緯と、Git 履歴を信頼してドキュメントを最小限に保つ設計判断について解説します。</p>
+<h2 id="なぜ本文コメントの-mermaid-保持は破綻したのか実務での選択理由">なぜ本文コメントの Mermaid 保持は破綻したのか：実務での選択理由</h2>
+<p>画像化した図の元ソースを HTML コメントに残すアプローチは、一見すると非常に合理的で便利な工夫に見えます。実際、技術メディア等でも「人間の視認性と AI の理解を両立する設計パターン」として具体的に紹介されてきました<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>引用元: <a href="https://tech-lab.sios.jp/archives/51351">https://tech-lab.sios.jp/archives/51351</a></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#9CA0B0;font-style:italic">&#x3C;!-- この図のソースコード（AI向け）:</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">sequenceDiagram</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    Client->>+Server: ログインリクエスト</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    Server->>+DB: ユーザー照合</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    DB--></span><span style="color:#4C4F69">>-Server: 結果</span></span>
+<span class="line"><span style="color:#40A02B">    Server-->>-Client: トークン発行</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">設計意図: DB直接参照を避け、サービス層を経由する設計。</span></span>
+<span class="line"><span style="color:#4C4F69">理由: テスタビリティとマイクロサービス移行への備え。</span></span>
+<span class="line"><span style="color:#4C4F69">--></span></span>
+<span class="line"><span style="color:#1E66F5">![</span><span style="color:#40A02B">認証フロー図</span><span style="color:#1E66F5">]</span><span style="color:#7C7F93">(</span><span style="color:#1E66F5">./images/auth-flow.png</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span></code></pre>
+<p>人間には PNG 画像を見せつつ、エディタを開いた作業者やテキストを走査する AI には HTML コメント内の構造化テキストを読ませるという二層管理です。しかし、この運用を実際の Markdown 原稿で運用し続けると、仕様上の構造的な罠に嵌まることになります。</p>
+<h3 id="commonmark-仕様と-mermaid-矢印記法の構造的衝突">CommonMark 仕様と Mermaid 矢印記法の構造的衝突</h3>
+<p>最大の問題は、Markdown の標準仕様である CommonMark と、Mermaid の基本構文が真っ向から衝突する点にあります。</p>
+<p>CommonMark 0.31.2 の仕様（Section 4.6 HTML blocks）において、HTML コメント（Type 2 HTML block）は「<code>&#x3C;!--</code> で始まり、行内に <code>--></code> が含まれると終了する」と明確に定義されています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>一方、Mermaid のフローチャートで最も頻繁に使われる矢印記法はまさに <code>--></code> です<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。そのため、HTML コメント内に Mermaid のコードを生のまま記述すると、パーサーは最初の矢印が出現した瞬間に HTML コメントが閉じたと判断してしまいます。</p>
+<p>ファイル: <code>markdown:broken-comment.md</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#9CA0B0;font-style:italic">&#x3C;!--</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">```mermaid</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">graph TD</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  A --></span><span style="color:#4C4F69"> B</span></span>
+<span class="line"><span style="color:#7C7F93">```</span></span>
+<span class="line"><span style="color:#4C4F69">--></span></span>
+<span class="line"></span></code></pre>
+<p>上記のコードを CommonMark パーサーが処理すると、<code>A --></code> の時点でコメントブロックが強制終了します。結果として後続の <code> B</code> や <code>```</code> が通常の段落テキストや壊れたコードブロックとして解釈され、公開された記事の本文に生のテキストやゴミ文字が露出・破損してしまいます。</p>
+<p>HTML Standard の仕様においても、コメントの内部テキストに <code>--></code> や <code>--!></code> を含めることは禁止されています<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。さらに歴史的にも、XML や SGML において二重ハイフン（<code>--</code>）はコメント内部で厳しく制限されてきた経緯があります<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。行頭以外に置かれた不完全なコメントはインライン HTML として扱われ、前後のブロック構造を意図せず分割してしまう問題も知られています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>この早期終了を避けるためには、Mermaid コード内のすべての <code>--</code> を <code>\-\-</code> のように手動またはスクリプトでエスケープしなければなりません。しかし、置換処理のミスによって本来の矢印が <code>--\-\-></code> のように壊れた記法へ変換されてしまうインシデントが発生しました。壊れたエスケープは画像の文字照合検査などを素通りし、手動で正規表現を書いて初めて自己発見されるという有様でした。</p>
+<h3 id="検査スクリプト追加という過剰防衛の罠">検査スクリプト追加という「過剰防衛」の罠</h3>
+<p>エスケープ崩れ事故が起きたとき、最初に頭に浮かぶ解決策は「検査を強化すること」です。「壊れたエスケープを機械的に検出するバリデーションスクリプトを書こう」と考え、私は筆者が運営する技術ブログのリポジトリ（非公開。以下、リポジトリA）に <code>mermaid-comment.py</code>（46 行）を実装しました。</p>
+<p>引用元: リポジトリAの mermaid-comment.py（削除前の版）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#40A02B">"""mermaid-comment: HTML コメントに退避した Mermaid が壊れていないかを判定する。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">用途: python3 tools/checks/mermaid-comment.py &#x3C;記事.md> [--against &#x3C;git-rev>]</span></span>
+<span class="line"><span style="color:#40A02B">判定:</span></span>
+<span class="line"><span style="color:#40A02B">  1. コメント内の Mermaid に、エスケープされていない `--` が残っていない（残るとコメントがそこで閉じる）</span></span>
+<span class="line"><span style="color:#40A02B">  2. --against を付けたとき: その版の記事にあった生の Mermaid と、コメント内の Mermaid の `</span><span style="color:#EA76CB">\\</span><span style="color:#40A02B">-</span><span style="color:#EA76CB">\\</span><span style="color:#40A02B">-` を戻したものが、出現順に一字一句一致する</span></span>
+<span class="line"><span style="color:#40A02B">契約: 違反を stderr に出して exit 1。問題が無ければ exit 0。</span></span>
+<span class="line"><span style="color:#40A02B">"""</span></span>
+<span class="line"></span></code></pre>
+<p>このスクリプトは、未エスケープの <code>--</code> が残っていないか検査し、さらに過去のコミットの生 Mermaid と一字一句一致するかどうかまで検証する精密なものでした。画像化スキルの手順内バリデータとして組み込み、エスケープの破壊を防ごうとしたのです。</p>
+<p>しかし、これは典型的な「過剰防衛」でした。壊れやすい複雑な運用を守るために、専用の検査スクリプトを作り、例外ルールを増やし、保守対象を増やしていたのです。しかもこのスクリプトは特定の作業手順の中でしか走らず、手動の修正やすでに過去の記事に埋もれた破損までは防ぎきれませんでした。</p>
+<h2 id="検査を増やすのではなく運用を捨てる147記事243ブロックの一括削除">検査を増やすのではなく運用を捨てる：147記事・243ブロックの一括削除</h2>
+<p>「エスケープが壊れていないかをどう検査するか」を考えるのをやめ、「そもそもこの運用は本当に必要なのか」と問い直した瞬間に、事態は一気に単純になりました。</p>
+<h3 id="画像化直前のコミットに生ソースがあるという気づき">「画像化直前のコミットに生ソースがある」という気づき</h3>
+<p>当時の意思決定メモを振り返ると、事故直後の議論ですでに「バリデータを書いて検査するより、画像化直前（生 Mermaid を挿入した段階）にコミットを挟んで Git 履歴から復元できるようにする方が低コストである」という方針が確認されていました。</p>
+<p>実際、ある連載記事の執筆中に画像生成 API のエラーが発生した際、直前の生 Mermaid 挿入コミット（71 行追加）をわずか 16 分後に <code>git revert</code> して元の状態へ戻すという実務を経験しました。ソースコードは、コミット履歴の側に完全に保管されていたのです。</p>
+<p>当サイトの執筆パイプラインでは、下書き作成時にまず生 Mermaid を含んだ状態でコミットを刻み、その後に画像化スクリプトを実行して生成画像をコミットする多段コミット運用を標準としています。そのため、過去のリビジョンには画像化前の完全な生ソースが必ず残されていました。</p>
+<p>Git にあるものを本文に二重に持つ必要はありません。画像化前のコミットに生ソースが残っているなら、本文の HTML コメントはただの冗長な二重管理であり、エスケープ事故のリスク源でしかありませんでした。</p>
+<p>2026 年 10 月 20 日、私は本文コメント保持運用の全廃を決定し、<code>mermaid-comment.py</code> を完全削除しました。スクリプトに欠陥があったから消したのではなく、守るべき運用そのものが不要になったからです。</p>
+<h3 id="一括削除の実測とコメント早期終了の実態">一括削除の実測と、コメント早期終了の実態</h3>
+<p>運用を廃止した直後、既存記事に残っていた退避コメントを一括削除するスクリプトを実行しました。その結果、1 回のコミットで <strong>147 ファイル・5,777 行の削除</strong> が行われました（<code>git show --shortstat</code> による確認）。</p>
+<p>引用元: リポジトリAの一括削除コミットの <code>git show --shortstat</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span> 147 files changed, 5777 deletions(-)</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>一括削除の過程で 243 ブロックの Mermaid コメントを精査したところ、驚くべき事実が判明しました。243 ブロック中、実に <strong>15 ブロック</strong>（過去の連載記事ファイルなど）において未エスケープの <code>--></code> が残存しており、HTML コメントが途中で意図せず終了して本文が破損したまま、数か月にわたって公開されていたのです。</p>
+<p>精密な検査スクリプトを作っていたにもかかわらず、手作業や個別編集による破損はすり抜けていました。147 記事分のコメントを一括削除したことで、長年放置されていた 15 箇所の表示崩れは一掃され、画像化を行わずにサイト上で直接描画されている生レンダリング用の Mermaid（380 ブロック）には一切手を触れずに無傷で維持されました。</p>
+<h3 id="検査の向きの逆転コメント残存を弾く検収へ">検査の向きの逆転：コメント残存を弾く検収へ</h3>
+<p>運用を撤回した後の再発防止策として、私は検査の向きを 180 度逆転させました。</p>
+<p>これまでは「HTML コメント内の Mermaid が壊れていないか」を検査していました。しかし新しく導入した <code>publish-ready.py</code>（49 行）の役割は、<strong>「そもそも記事本文にコメントアウトされた Mermaid が残っていないこと」</strong> を検知することです。</p>
+<p>引用元: リポジトリAの publish-ready.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#4C4F69">COMMENTED_MERMAID </span><span style="color:#179299">=</span><span style="color:#4C4F69"> re</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">compile</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">r</span><span style="color:#EA76CB">'</span><span style="color:#40A02B">&#x3C;!--\s</span><span style="color:#179299">*</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">\s</span><span style="color:#179299">*</span><span style="color:#40A02B">```mermaid</span><span style="color:#EA76CB">'</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span></code></pre>
+<p>予防は「原因の空間」に対して設計し、検収は「結果の空間」に対して設計します。エスケープミスや構文崩れという原因は無限に存在するため、予防ルールをどれだけ積んでも漏れが生じます。一方で、気にしている性質（本文にコメント退避しない）を結果の空間として検収すれば、わずか 1 つの正規表現で完全に閉じることができます。</p>
+<p>このチェックをテストコマンド（<code>mise run test</code>）および記事編集時フックに組み込んだことで、退避コメントの混入は機械的に恒久的に遮断されました。</p>
+<h2 id="本文二重保持-vs-git履歴復元のトレードオフと適用限界">本文二重保持 vs Git履歴復元のトレードオフと適用限界</h2>
+<p>本文への HTML コメント保持を全廃し、Git 履歴への委託に切り替えたアプローチの特性を整理します。</p>
+<p>ドキュメントのソース管理方針について、本文内への二重保持と Git 履歴への委託を比較すると、保守コストと破損リスクにおいて明確な違いが生じます。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>評価軸</th><th>本文HTMLコメント保持</th><th>Git履歴への委託（採用方針）</th></tr></thead><tbody><tr><td><strong>再編集の手軽さ</strong></td><td>ファイル単体で完結し即座に確認可能</td><td><code>git log</code> や過去コミットの参照が必要</td></tr><tr><td><strong>本文の保守性・破損リスク</strong></td><td>エスケープ漏れによる構文破壊・表示崩れのリスク大</td><td>コメント自体が存在しないため破損リスクはゼロ</td></tr><tr><td><strong>CI・検査の複雑性</strong></td><td>エスケープ整合性検査（バリデータ）の維持が必要</td><td>「コメント残存なし」の1点検収のみで完結</td></tr><tr><td><strong>向いている環境</strong></td><td>Git 履歴を持たない CMS、単一ファイル完結の配布文書</td><td>Git でバージョン管理されている静的サイト・技術ブログ</td></tr></tbody></table>
+<p>Git でバージョン管理されているリポジトリであれば、本文内に二重管理するリスクを背負うよりも、履歴を信頼して本文から完全に排除する方が長期的な保守コストを圧倒的に低減できます。</p>
+<p>もちろん、このアプローチにもトレードオフはあります。エディタ上で Markdown を開いた際、その場ですぐに Mermaid ソースをコピーすることはできず、Git のログを辿る手間が発生します。しかし、公開済みの記事の図を再編集する頻度は、記事全体の保守頻度や新規執筆の頻度に比べて極めて低いのが通常です。滅多に起きない再編集の手軽さのために、日常の執筆・ビルド時に破損リスクを抱え続けるのは割に合わない取引でした。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>この結論は、「静的サイトで図を画像化して配信する」という前提に基づいています。</p>
+<p>もし今後、静的サイトジェネレーターのビルドパイプラインがさらに進化し、ビルド時に完全自動かつゼロランタイム JS で Mermaid を最適化されたインライン SVG へ変換できるようになれば、そもそも「事前画像化と元ソースの保管場所」という二者択一の悩み自体が消滅します。生の Mermaid をそのまま本文に書き、ビルド成果物として画像が出るのが理想形です。</p>
+<p>しかし、ビルド時の描画オーバーヘッドやフォントレンダリングの安定性が課題となる現行の環境においては、「画像として記事に配置し、元ソースは Git のコミット履歴に委ねる」という切り分けが、最も壊れにくくシンプルな運用境界となります。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-git履歴から過去のmermaidソースを復元するには具体的にどうすればよいですか">Q. Git履歴から過去のMermaidソースを復元するには具体的にどうすればよいですか？</h3>
+<p><strong>A.</strong> <code>git log</code> コマンドで該当のファイルを追跡します。特定の記事で使われていた Mermaid を探す場合は <code>git log -S "mermaid" -- &#x3C;記事ファイルパス></code> を実行して挿入や削除のコミットハッシュを特定し、<code>git show &#x3C;コミットハッシュ>:&#x3C;記事ファイルパス></code> で過去のリビジョンを表示すれば、画像化前の完全な生ソースをいつでも安全に取り出せます。</p>
+<h3 id="q-aiアシスタントに図の意図を正確に読ませるためにコメントでソースを残す必要はありませんか">Q. AIアシスタントに図の意図を正確に読ませるために、コメントでソースを残す必要はありませんか？</h3>
+<p><strong>A.</strong> 必須ではありません。画像の <code>alt</code> 属性や前後の本文テキストで図の意図や主要な関係性を自然言語で記述しておけば、現代の AI は十分に文脈を理解できます。むしろ、エスケープ崩れによって HTML コメントが途中で閉じた壊れたコード片が本文に露出する方が、AI のパーサーや読解に悪影響を及ぼします。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本記事で解説した設計判断の要点は以下の通りです。</p>
+<ul>
+<li><strong>守るべき運用自体の要否を問う</strong>: 検査スクリプトやエスケープ規約を増やす前に、守ろうとしている運用そのものが本当に必要かを問い直してください。</li>
+<li><strong>Git履歴にあるものを本文に二重保持しない</strong>: バージョン管理システムを信頼し、現在の原稿ファイルは「今レンダリングに必要な最小限」に保つのが原則です。</li>
+<li><strong>原因の予防より結果の検収へ逆転させる</strong>: 無限に広がるエスケープ失敗を検査で追うのではなく、望まない状態（退避コメントの残存）を機械的に遮断する検収へ倒すことで、CI と運用を極小化できます。</li>
+</ul>
+<p>ドキュメント管理の簡素化や自動化パイプラインの設計、運用改善について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://tech-lab.sios.jp/archives/51351">仕様書の図はAIに読ませるな — 軽量コードを添える設計パターン</a> 龍：Ryu, SIOS Tech Lab, 2026年2月24日。人間向け画像とAI向けHTMLコメント退避を併用する二層管理パターンの提唱・具体マークアップ例。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://spec.commonmark.org/0.31.2/#html-blocks">CommonMark Spec</a> John MacFarlane, 2024年版 (v0.31.2)。Section 4.6 HTML blocks: Type 2 HTMLコメントの開始条件（<code>&#x3C;!--</code>）と終了条件（<code>--></code>）の定義。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://mermaid.js.org/syntax/flowchart.html">Flowcharts - Basic Syntax</a> Mermaid 公式ドキュメント。フローチャートの標準リンク矢印 <code>--></code> の記法、および行頭 <code>%%</code> による Mermaid 固有コメント構文。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://html.spec.whatwg.org/multipage/syntax.html#comments">HTML Standard</a> WHATWG, Living Standard。13.1.6 Comments: コメント内部における <code>--></code> や <code>--!></code> の禁止規定。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://www.robertprice.co.uk/robblog/double_dash_in_html_comments-shtml/">Double Dash In HTML Comments</a> Robert Price, 2009年12月2日。XML/SGML/HTML仕様における二重ハイフン（<code>--</code>）の制限とパーサー破壊の歴史的背景。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://talk.commonmark.org/t/clarify-the-following-html-comment-case/4598">Clarify the following HTML comment case</a> CommonMark Discussion Forum。行頭以外のHTMLコメントが <code>inline raw HTML</code> として扱われブロック分割される仕様挙動。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

@@ -1,0 +1,194 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>型を広げた理由のコメントは、検算するまで正しいか分からない ── i128 が i64 で足りていた話 | Meetsource</title><meta name="description" content="整数オーバーフロー修正で AI が付与した「和と積が i64 を超え得る」という理由コメントは、定数から最悪値を手計算すると i64 に対し約10万倍の余裕がある完全な誤りでした。もっともらしい解説を鵜呑みにせず、入力上限と定数の積を手元で検算して不要な 128bit 化を防ぐレビューの判断軸を実務の一次ログから解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/widened-type-comment-bounds-check"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="「i64 も超える」と書かれたオーバーフロー修正を検算したら、10万倍足りていた"><meta property="og:description" content="AI が書いた「安全のため型を広げました」という理由コメント、検算していますか？実務で起きた i128 過剰拡大の是正ログから、128bit 除算のランタイム負荷と境界値レビューの必須ステップを紐解きます。"><meta property="og:url" content="https://www.meetsource.work/blog/widened-type-comment-bounds-check"><meta property="og:image" content="https://www.meetsource.work/blog/widened-type-comment-bounds-check-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-02T01:36:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="「i64 も超える」と書かれたオーバーフロー修正を検算したら、10万倍足りていた"><meta name="twitter:description" content="AI が書いた「安全のため型を広げました」という理由コメント、検算していますか？実務で起きた i128 過剰拡大の是正ログから、128bit 除算のランタイム負荷と境界値レビューの必須ステップを紐解きます。"><meta name="twitter:image" content="https://www.meetsource.work/blog/widened-type-comment-bounds-check-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"型を広げた理由のコメントは、検算するまで正しいか分からない ── i128 が i64 で足りていた話","description":"整数オーバーフロー修正で AI が付与した「和と積が i64 を超え得る」という理由コメントは、定数から最悪値を手計算すると i64 に対し約10万倍の余裕がある完全な誤りでした。もっともらしい解説を鵜呑みにせず、入力上限と定数の積を手元で検算して不要な 128bit 化を防ぐレビューの判断軸を実務の一次ログから解説します。","datePublished":"2026-11-02T01:36:00.000Z","image":"https://www.meetsource.work/blog/widened-type-comment-bounds-check-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/widened-type-comment-bounds-check"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"なぜ AI エージェントは「i64 も超える」といった誤った理由コメントを生成してしまうのですか？","acceptedAnswer":{"@type":"Answer","text":"AI エージェントは直前の会話やコミット履歴に強く影響されるバイアス（文脈同調）を持ち、プロジェクト全体の定数定義まで遡って厳密な掛け算を行うことが苦手だからです。先行する修正で 128bit 化が行われていた場合、そのパターンに同調して「より安全側に倒したもっともらしい理由」を補完（ハルシネーション）してしまう傾向があります。"}},{"@type":"Question","name":"整数オーバーフロー対策として、とりあえず 128bit 整数（i128/u128）を使っておくのはアンチパターンですか？","acceptedAnswer":{"@type":"Answer","text":"内部計算の上限を検算しないまま漫然と 128bit 整数を採用するのは避けるべきです。現行の多くの 64bit CPU にはネイティブな 128bit 除算命令が存在しないため、コンパイラがランタイム関数（__divti3）の呼び出しを生成してオーバーヘッドが生じるほか、周囲のコードとの型不整合や誤った前提コメントの固定化を招くためです。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-02T01:36:00.000Z" data-astro-cid-7jjqptxk> 2026.11.02 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#rust</span><span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#コードレビュー</span><span class="tag" data-astro-cid-7jjqptxk>#品質管理</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>型を広げた理由のコメントは、検算するまで正しいか分からない ── i128 が i64 で足りていた話</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/widened-type-comment-bounds-check-hero.webp" alt="型を広げた理由のコメントは、検算するまで正しいか分からない ── i128 が i64 で足りていた話" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>型拡張（Type Widening）とは、数値演算におけるオーバーフローを防ぐために変数や中間計算のデータ型をよりビット幅の広い型へ昇格させる修正手法です。</p>
+<p>コーディング支援ツールや AI エージェントに整数オーバーフローのバグ修正を任せると、「// i128: … can exceed u32 and i64」といった自信満々の理由コメントが付与される場面によく遭遇します。レビュアーはその解説を読んで「安全側に倒してくれたなら問題ないだろう」と安易にプルリクエストを承認してしまいがちです。</p>
+<p>筆者が個人で開発している Rust 製シミュレーションゲーム（以下、プロジェクトA）において、まさにこの現象が発生しました。AI worker が商業収容計算を <code>i128</code> に広げ、「和と積が u32 と i64 を超え得る」ともっともらしいコメントを添えた差分を提出してきたのです。</p>
+<p>しかし、定数定義と入力上限から最悪値を手計算したところ、計算値は約 8.59 × 10^13 であり、<code>i64::MAX</code>（約 9.22 × 10^18）に対して約 10^5 倍もの開きがありました。コメントの「exceed i64」は完全な虚偽だったのです。以下、AI が出力する理由コメントを鵜呑みにせず、手元で上限を検算して適切な型に留めるレビュー作法と、過剰な 128bit 化がもたらす技術的代償を実務ログに基づいて解説します。</p>
+<h2 id="なぜもっともらしい理由コメントを検算する必要があるのか実務での選択と虚偽の露呈">なぜ「もっともらしい理由コメント」を検算する必要があるのか：実務での選択と虚偽の露呈</h2>
+<h3 id="直前の成功体験に引きずられた型拡張の連鎖">直前の成功体験に引きずられた型拡張の連鎖</h3>
+<p>プロジェクトAでは、今回の課題に先立って2件の整数オーバーフロー修正が行われていました。人口剰余計算や冒険者流入計算において、実際に中間計算が <code>u64::MAX</code> を超え得る数理的根拠が存在したため、それらの修正では <code>u128</code> への型拡張が行われ、理由コメントが付与されていました。</p>
+<p>その直後に起票された課題（Issue）の完了条件には、「直し方は先行修正に揃える（中間の計算を広い型で組む）」と明記されていました。この先行する成功パターンに同調する形で、worker（Claude Sonnet 5.5）により 128bit 化が選択されたと推測されます。</p>
+<p>文脈同調やプロンプトの前提に引きずられて誤った判断を下す現象は、AI コードレビューにおけるハルシネーションの類型（Prompt-Induced Errors）としても知られています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="worker-による-i128-化とi64-も超えるというコメント">worker による i128 化と「i64 も超える」というコメント</h3>
+<p>worker が提出した修正差分では、商業収容計算の中間変数が <code>i128</code> に広げられ、コード内に次のようなコメントが添えられていました。</p>
+<p>引用元: プロジェクトA（非公開）の migration.rs</p>
+<p>ファイル: migration.rs（抜粋）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#8839EF">     let</span><span style="color:#4C4F69"> commerce </span><span style="color:#179299">=</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> total </span><span style="color:#179299">==</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#FE640B">         1000</span></span>
+<span class="line"><span style="color:#7C7F93">     }</span><span style="color:#8839EF"> else</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93">        (</span><span style="color:#8839EF">i64</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">((</span><span style="color:#4C4F69">f</span><span style="color:#179299">.</span><span style="color:#1E66F5">inn </span><span style="color:#179299">+</span><span style="color:#4C4F69"> f</span><span style="color:#179299">.</span><span style="color:#1E66F5">tavern</span><span style="color:#7C7F93">)</span><span style="color:#179299"> *</span><span style="color:#FE640B"> COMMERCE_RESIDENTS_PER_SCALE</span><span style="color:#7C7F93">)</span><span style="color:#179299"> *</span><span style="color:#FE640B"> 1000</span><span style="color:#179299"> /</span><span style="color:#4C4F69"> total</span><span style="color:#7C7F93">)</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">min</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">1000</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#179299">+</span><span style="color:#9CA0B0;font-style:italic">        // i128: inn/tavern (u32) are unbounded, so the sum and product can exceed u32 and i64.</span></span>
+<span class="line"><span style="color:#179299">+</span><span style="color:#8839EF">        let</span><span style="color:#4C4F69"> residents </span><span style="color:#179299">=</span></span>
+<span class="line"><span style="color:#179299">+</span><span style="color:#7C7F93">            (</span><span style="color:#8839EF">i128</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">f</span><span style="color:#179299">.</span><span style="color:#1E66F5">inn</span><span style="color:#7C7F93">)</span><span style="color:#179299"> +</span><span style="color:#8839EF"> i128</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">f</span><span style="color:#179299">.</span><span style="color:#1E66F5">tavern</span><span style="color:#7C7F93">))</span><span style="color:#179299"> *</span><span style="color:#8839EF"> i128</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">COMMERCE_RESIDENTS_PER_SCALE</span><span style="color:#7C7F93">);</span></span>
+<span class="line"><span style="color:#179299">+</span><span style="color:#7C7F93">        (</span><span style="color:#4C4F69">residents </span><span style="color:#179299">*</span><span style="color:#FE640B"> 1000</span><span style="color:#179299"> /</span><span style="color:#8839EF"> i128</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">total</span><span style="color:#7C7F93">))</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">min</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">1000</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> as</span><span style="color:#8839EF"> i64</span></span>
+<span class="line"><span style="color:#7C7F93">     };</span></span>
+<span class="line"></span></code></pre>
+<p>元の計算式 <code>(f.inn + f.tavern) * COMMERCE_RESIDENTS_PER_SCALE * 1000 / total</code> に対し、<code>inn</code> と <code>tavern</code> を <code>i128</code> へキャストし、乗算結果全体を <code>i128</code> で計算した上で最終的に <code>as i64</code> で縮小キャストしています。同時に追加されたテストは、極端な施設値（<code>u32::MAX</code>）を設定して panic しないことだけを確認しており、計算値自体の妥当性やアサーションは含んでいませんでした。</p>
+<h3 id="レビュー指示による定数検算とi64-超過の否定">レビュー指示による定数検算と「i64 超過」の否定</h3>
+<p>司令塔セッションによるレビューにおいて、diff に書かれたコメント「sum and product can exceed u32 and i64」の真偽を定数の実値で裏取りするよう明示的に指示しました。</p>
+<p>AI レビューで拾える欠陥の種類は「レビューを入れたか」より「そのレビュアーに何を読ませたか」で決まります。過去に検証した <a href="/blog/ai-reviewer-implicit-arguments">AIレビュアーへの暗黙の前提漏洩</a> とも通底する視点です。</p>
+<p>レビューサブエージェントが定数 <code>COMMERCE_RESIDENTS_PER_SCALE = 10</code> を参照して最悪値を厳密に検算した結果は以下の通りでした。</p>
+<ul>
+<li>入力上限: <code>f.inn = u32::MAX</code>（4,294,967,295<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>）、<code>f.tavern = u32::MAX</code>（4,294,967,295）</li>
+<li>和の最大値: 4,294,967,295 + 4,294,967,295 = 8,589,934,590（<code>u32::MAX</code> を超過。コメントの「exceed u32」は真実）</li>
+<li>定数倍の最大値: 8,589,934,590 × 10 = 85,899,345,900</li>
+<li>分子の最悪値（千分率係数倍）: 85,899,345,900 × 1000 = <strong>85,899,345,900,000</strong>（約 8.59 × 10^13）</li>
+<li><code>i64::MAX</code> との比較: <code>i64::MAX = 9,223,372,036,854,775,807</code>（約 9.22 × 10^18<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>）</li>
+<li>余裕度: <code>i64::MAX / 最悪値 ≈ 107,374</code> 倍（約 1.07 × 10^5 倍の開き）</li>
+</ul>
+<p>定数が約100万を超えない限り、<code>i64</code> は絶対にオーバーフローしません。</p>
+<p>「exceed i64」は完全な虚偽であり、AI がプロジェクト全体の定数定義コンテキストを追跡できずに誤認（False Positive）した結果と推測されます<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<h2 id="メリットの裏にあるトレードオフと念のため-128bitの代償">メリットの裏にあるトレードオフと「念のため 128bit」の代償</h2>
+<h3 id="反論大は小を兼ねるのだから念のため-128bit-にしておけば安全ではないか">反論：「大は小を兼ねるのだから、念のため 128bit にしておけば安全ではないか？」</h3>
+<p>ここで当然考えられる反論は、「たとえ <code>i64</code> で足りていたとしても、<code>i128</code> にしておけば将来定数が変更された際にも壊れないのだから、過剰に広い型にしておく方が防衛的プログラミングとして安全ではないか？」という意見です。</p>
+<p>しかし、「念のため」で行う安易な型拡張には、無視できない3つの技術的代償が存在します。</p>
+<h3 id="1-ハードウェア命令の喪失とランタイム除算関数呼び出し">1. ハードウェア命令の喪失とランタイム除算関数呼び出し</h3>
+<p>多くの 64bit アーキテクチャ（x86_64 や AArch64）には、ネイティブな 128bit 整数除算命令が存在しません。</p>
+<p>コンパイラ（<code>rustc -O</code>）が生成するアセンブリコードを比較すると、その違いは顕著です。</p>
+<ul>
+<li><strong><code>i64</code> 除算</strong>: AArch64 では <code>sdiv</code>、x86_64 では <code>cqo</code> + <code>idiv</code> という単一または最小限のインラインハードウェア命令列で完結し、即座に実行されます。</li>
+<li><strong><code>i128</code> 除算</strong>: ネイティブ命令がないため、LLVM compiler-rt のランタイム関数 <strong><code>__divti3</code></strong> <sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup> へのサブルーチン呼び出し（<code>bl ___divti3</code>）を生成します。</li>
+</ul>
+<p>ランタイム関数呼び出しが発生すると、ABI 上のレジスタ退避・復元（スタックフレーム確保）やサブルーチン分岐が生じ、インライン完結する 64bit 除算に比べてオーバーヘッド要因となります。</p>
+<h3 id="2-周囲のコードベースとの整合性破壊と不要なキャスト">2. 周囲のコードベースとの整合性破壊と不要なキャスト</h3>
+<p>同一関数内のわずか6行上にある <code>jobs</code> の計算では、同様の施設値計算が <code>i64</code> で行われていました。</p>
+<p>ここだけを <code>i128</code> にすると、関数の戻り値のために <code>as i64</code> という縮小キャストが必要になり、分母の <code>total</code> も <code>i128::from(total)</code> へ変換する必要が生じるなど、不要な型キャストのノイズが周囲のコードベースに散乱します。</p>
+<h3 id="3-嘘の前提コメントがコードベースに固定化されるリスク">3. 嘘の前提コメントがコードベースに固定化されるリスク</h3>
+<p>最も有害なのは、「i64 も超える」という誤った理由コメントがコードベースに残存することです。</p>
+<p>将来コードを読む人間や次世代の AI エージェントがそのコメントを真実だと信じ込み、「ここは i64 に戻してはいけない危険な領域だ」と誤ったメンタルモデルを継承してしまう原因になります。</p>
+<h3 id="是正と反証テストによる検証">是正と反証テストによる検証</h3>
+<p>司令塔から worker への差し戻し指示により、型を <code>i64</code> に戻し、不要なキャストを削り、コメントを「the sum and product of inn/tavern (u32) can exceed u32.」に変更して事実に合わせました。</p>
+<p>テストが通っていることを仕様が守られている証拠として過信してはならず、既存テスト自体が弱い挙動を前提に書き換わっていないか疑う姿勢が不可欠です。</p>
+<p>司令塔は承認前に一時 worktree を作成し、修正前のコードに対して追加テストを実行しました。その結果、<code>migration.rs:102:20</code> で <code>attempt to add with overflow</code> による panic が実際に発生することを確認できました。バグが実在し、かつ <code>i64</code> への修正によってそのバグが確実に解消されていることを実証したのです。</p>
+<p>引用元: プロジェクトA（非公開）の migration.rs</p>
+<p>ファイル: migration.rs（抜粋）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#8839EF">     let</span><span style="color:#4C4F69"> commerce </span><span style="color:#179299">=</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> total </span><span style="color:#179299">==</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#FE640B">         1000</span></span>
+<span class="line"><span style="color:#7C7F93">     }</span><span style="color:#8839EF"> else</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#9CA0B0;font-style:italic">        // i128: inn/tavern (u32) are unbounded, so the sum and product can exceed u32 and i64.</span></span>
+<span class="line"><span style="color:#179299">+</span><span style="color:#9CA0B0;font-style:italic">        // i64: the sum and product of inn/tavern (u32) can exceed u32.</span></span>
+<span class="line"><span style="color:#8839EF">         let</span><span style="color:#4C4F69"> residents </span><span style="color:#179299">=</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93">            (</span><span style="color:#8839EF">i128</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">f</span><span style="color:#179299">.</span><span style="color:#1E66F5">inn</span><span style="color:#7C7F93">)</span><span style="color:#179299"> +</span><span style="color:#8839EF"> i128</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">f</span><span style="color:#179299">.</span><span style="color:#1E66F5">tavern</span><span style="color:#7C7F93">))</span><span style="color:#179299"> *</span><span style="color:#8839EF"> i128</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">COMMERCE_RESIDENTS_PER_SCALE</span><span style="color:#7C7F93">);</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93">        (</span><span style="color:#4C4F69">residents </span><span style="color:#179299">*</span><span style="color:#FE640B"> 1000</span><span style="color:#179299"> /</span><span style="color:#8839EF"> i128</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">total</span><span style="color:#7C7F93">))</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">min</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">1000</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> as</span><span style="color:#8839EF"> i64</span></span>
+<span class="line"><span style="color:#179299">+</span><span style="color:#7C7F93">            (</span><span style="color:#8839EF">i64</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">f</span><span style="color:#179299">.</span><span style="color:#1E66F5">inn</span><span style="color:#7C7F93">)</span><span style="color:#179299"> +</span><span style="color:#8839EF"> i64</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">f</span><span style="color:#179299">.</span><span style="color:#1E66F5">tavern</span><span style="color:#7C7F93">))</span><span style="color:#179299"> *</span><span style="color:#8839EF"> i64</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">COMMERCE_RESIDENTS_PER_SCALE</span><span style="color:#7C7F93">);</span></span>
+<span class="line"><span style="color:#179299">+</span><span style="color:#7C7F93">        (</span><span style="color:#4C4F69">residents </span><span style="color:#179299">*</span><span style="color:#FE640B"> 1000</span><span style="color:#179299"> /</span><span style="color:#4C4F69"> total</span><span style="color:#7C7F93">)</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">min</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">1000</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#7C7F93">     };</span></span>
+<span class="line"></span></code></pre>
+<p>修正前コードに対して追加テストを実行した際の反証テストログは以下の通りです。</p>
+<p>引用元: プロジェクトA（非公開）の migration_test.rs</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>thread 'test_extreme_commerce_facilities_do_not_overflow_attractiveness' (11054739) panicked at crates/trillion-core/src/migration.rs:102:20:</span></span>
+<span class="line"><span>attempt to add with overflow</span></span>
+<span class="line"><span>test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s</span></span>
+<span class="line"><span></span></span></code></pre>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<h3 id="定数の変更可能性とドメイン境界">定数の変更可能性とドメイン境界</h3>
+<p>今回 <code>i64</code> で十分と断定できたのは、定数 <code>COMMERCE_RESIDENTS_PER_SCALE = 10</code> が明確に定義されていたためです。</p>
+<p>もし将来のゲームバランス調整でこの定数が 10^6（100万）を超える規模に引き上げられる可能性があるなら、あるいは外部設定ファイルから動的に巨大な値が注入されるアーキテクチャであれば、128bit 化や <code>saturating_*</code> 演算の導入が必要になります。</p>
+<p>型の選定は「念のため」という感覚ではなく、「現在のドメイン境界（定数と入力値域）の積」に基づいて決定論的に行われるべきです。</p>
+<h3 id="言語仕様と安全な境界値設計">言語仕様と安全な境界値設計</h3>
+<p>Rust における整数オーバーフローの言語仕様は以下の通りです。</p>
+<ul>
+<li>Debug ビルドでは <code>-C debug-assertions</code> によりパニックが発生する<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</li>
+<li>Release ビルドでは 2の補数ラップアラウンド（wrapping）が行われる<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</li>
+<li>言語仕様上は <code>unsafe</code>（未定義動作）とは見なされない<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>が、CWE-190<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup> にあるようにビジネスロジックの重大な破綻やセキュリティリスクを引き起こす。</li>
+</ul>
+<p>SEI CERT C の INT32-C<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup> にある事前条件チェック（Precondition Testing）や、Alexis King の提唱する <code>Parse, don’t validate</code><sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup> の思想に基づき、型システムとドメイン境界を厳密に一致させることが重要です。</p>
+<h2 id="整数オーバーフロー対策アプローチの比較">整数オーバーフロー対策アプローチの比較</h2>
+<p>整数オーバーフローへの対処は、単に「最も広い型を使う」ことではなく、計算コスト、型システムの表現力、およびコードの可読性のバランスを考慮して選択する必要があります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>アプローチ</th><th>実行時コスト</th><th>コードの簡潔さ</th><th>安全性の根拠</th><th>向いているユースケース</th></tr></thead><tbody><tr><td><strong>i64 への適切な型拡張</strong> （本アプローチ）</td><td><strong>最小</strong> （ネイティブ 64bit 命令で完結）</td><td><strong>高</strong> （周囲のコードと統一、キャスト最小）</td><td>定数と入力上限の乗算検算による数学的証明</td><td>ドメイン定数と入力の型範囲が確定している内部計算</td></tr><tr><td><strong>念のための i128 拡張</strong></td><td><strong>中〜高</strong> （除算時にランタイム <code>__divti3</code> 呼び出し）</td><td><strong>低</strong> （縮小キャストや周囲との不整合が発生）</td><td>「とりあえず入るだろう」という感覚的判断</td><td>中間計算が真に 64bit を超える超巨大演算のみ</td></tr><tr><td><em><em>saturating_</em> / checked_</em> 演算**</td><td><strong>小〜中</strong> （分岐または条件付き移動命令）</td><td><strong>中</strong> （メソッドチェーンが必要）</td><td>上限飽和や None 処理による網羅的ハンドリング</td><td>外部からの無制限な入力や、上限で頭打ちにしてよい処理</td></tr></tbody></table>
+<p>入力境界と定数が明確であるならば、手元での最悪値検算に基づきネイティブに処理できる最小の安全な型（本例では <code>i64</code>）を選択することが、パフォーマンスと保守性の両面において最善の選択肢となります。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-なぜ-ai-エージェントはi64-も超えるといった誤った理由コメントを生成してしまうのですか">Q. なぜ AI エージェントは「i64 も超える」といった誤った理由コメントを生成してしまうのですか？</h3>
+<p><strong>A.</strong> AI エージェントは直前の会話やコミット履歴に強く影響されるバイアス（文脈同調）を持ち、プロジェクト全体の定数定義まで遡って厳密な掛け算を行うことが苦手だからです。先行する修正で 128bit 化が行われていた場合、そのパターンに同調して「より安全側に倒したもっともらしい理由」を補完（ハルシネーション）してしまう傾向があります。</p>
+<h3 id="q-整数オーバーフロー対策としてとりあえず-128bit-整数i128u128を使っておくのはアンチパターンですか">Q. 整数オーバーフロー対策として、とりあえず 128bit 整数（i128/u128）を使っておくのはアンチパターンですか？</h3>
+<p><strong>A.</strong> 内部計算の上限を検算しないまま漫然と 128bit 整数を採用するのは避けるべきです。現行の多くの 64bit CPU にはネイティブな 128bit 除算命令が存在しないため、コンパイラがランタイム関数（<code>__divti3</code>）の呼び出しを生成してオーバーヘッドが生じるほか、周囲のコードとの型不整合や誤った前提コメントの固定化を招くためです。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li><strong>型を広げる PR に付いた理由コメントは、定数定義と入力上限を手計算するまで信用してはならない。</strong> AI は文脈に同調して「i64 も超える」といったもっともらしい虚偽を平然と作文します。</li>
+<li><strong>128bit 整数への過剰な型拡張は、ネイティブ命令の喪失とランタイム関数呼び出し（<code>__divti3</code>）という実害を伴う。</strong> 大は小を兼ねるという安易な防衛策は、不要なキャストやサブルーチン呼び出しのオーバーヘッドを引き起こします。</li>
+<li><strong>型選定の正しさは、修正前コードでの反証テスト（panic 再現確認）によって担保する。</strong> テストが通ったことだけで満足せず、本来のバグが確実に防がれているかを実測で裏付けます。</li>
+</ul>
+<p>AI を活用した開発プロセスの品質管理、AI Operations の導入設計、コードレビュー運用の見直しについて、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://diffray.ai/blog/llm-hallucinations-code-review/">LLM Hallucinations in AI Code Review</a> Diffray、2026年。AI コードレビューにおけるハルシネーションの類型（Factual Errors、先行文脈に引きずられる Prompt-Induced Errors）。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://doc.rust-lang.org/std/primitive.u32.html">Primitive Type u32</a> Rust Standard Library Documentation。<code>u32::MAX</code> の値（4,294,967,295）の定義と仕様。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://doc.rust-lang.org/std/primitive.i64.html">Primitive Type i64</a> Rust Standard Library Documentation。<code>i64::MAX</code> の値（9,223,372,036,854,775,807）の定義と演算メソッド。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://www.cubic.dev/blog/the-false-positive-problem-why-most-ai-code-reviewers-fail-and-how-cubic-solved-it">AI code review false positives: causes, rates and fixes</a> Cubic、2025年。AI コードレビューにおける False Positive の主要因と、プロジェクト全体の文脈欠落に関する分析。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/builtins/divti3.c">LLVM compiler-rt: divti3.c</a> LLVM Project。128bit 符号付き除算関数 <code>__divti3</code> のランタイム実装。ハードウェア命令を持たない環境でのソフトウェアエミュレーション。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://doc.rust-lang.org/reference/expressions/operator-expr.html">Expressions - The Rust Reference</a> The Rust Project Developers。整数オーバーフロー時における Debug ビルドでのパニック挙動の仕様。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://doc.rust-lang.org/book/ch03-02-data-types.html">Data Types - The Rust Programming Language</a> Steve Klabnik and Carol Nichols。Release モードでの 2の補数ラップアラウンド挙動および <code>wrapping_*</code> / <code>checked_*</code> / <code>saturating_*</code> メソッドファミリの仕様。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://doc.rust-lang.org/reference/behavior-not-considered-unsafe.html">Behavior not considered unsafe - The Rust Reference</a> The Rust Project Developers。整数オーバーフローが言語仕様上 <code>unsafe</code>（未定義動作）に該当しないことの規定。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://cwe.mitre.org/data/definitions/190.html">CWE-190: Integer Overflow or Wraparound</a> MITRE。整数オーバーフローの脆弱性定義。計算結果が型の許容範囲を超えて予期しない挙動を引き起こすリスク。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/integers-int/int32-c/">INT32-C: Ensure that operations on signed integers do not result in overflow</a> SEI CERT C Coding Standard。符号付き整数演算におけるオーバーフロー防止のための事前条件チェック（Precondition Testing）の原則。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/">Parse, don’t validate</a> Alexis King、2019年11月5日。型システムによるドメインモデリングの思想。入力境界での厳密な型確定の重要性。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 
