@@ -1,0 +1,192 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>位置で対応させた手書き JSON のテストは、入力値が重なっていると取り違えを見逃す | Meetsource</title><meta name="description" content="手書き JSON の単体テストで出力全体をパースして比較していてもフィールドの取り違えを見逃すのは、テスト入力データ内で値が重なっているとスワップ変異が偶発的に等価になってしまうためです。本記事では言語境界の実測ログをもとに、入力値の対称性が生む偽陰性の死角と、全値相異テストデータおよび自己検証（メタアサーション）による堅牢化手法を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/distinct-values-positional-json-test"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="位置で対応させた手書き JSON のテストは、入力値が重なっていると取り違えを見逃す | Meetsource"><meta property="og:description" content="手書き JSON の単体テストで出力全体をパースして比較していてもフィールドの取り違えを見逃すのは、テスト入力データ内で値が重なっているとスワップ変異が偶発的に等価になってしまうためです。本記事では言語境界の実測ログをもとに、入力値の対称性が生む偽陰性の死角と、全値相異テストデータおよび自己検証（メタアサーション）による堅牢化手法を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/distinct-values-positional-json-test"><meta property="og:image" content="https://www.meetsource.work/blog/distinct-values-positional-json-test-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-01T17:20:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="位置で対応させた手書き JSON のテストは、入力値が重なっていると取り違えを見逃す | Meetsource"><meta name="twitter:description" content="手書き JSON の単体テストで出力全体をパースして比較していてもフィールドの取り違えを見逃すのは、テスト入力データ内で値が重なっているとスワップ変異が偶発的に等価になってしまうためです。本記事では言語境界の実測ログをもとに、入力値の対称性が生む偽陰性の死角と、全値相異テストデータおよび自己検証（メタアサーション）による堅牢化手法を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/distinct-values-positional-json-test-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"位置で対応させた手書き JSON のテストは、入力値が重なっていると取り違えを見逃す","description":"手書き JSON の単体テストで出力全体をパースして比較していてもフィールドの取り違えを見逃すのは、テスト入力データ内で値が重なっているとスワップ変異が偶発的に等価になってしまうためです。本記事では言語境界の実測ログをもとに、入力値の対称性が生む偽陰性の死角と、全値相異テストデータおよび自己検証（メタアサーション）による堅牢化手法を解説します。","datePublished":"2026-11-01T17:20:00.000Z","image":"https://www.meetsource.work/blog/distinct-values-positional-json-test-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/distinct-values-positional-json-test"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"全値相異にするだけで十分なら、なぜテスト内で重複アサーションまで行う必要があるのですか？","acceptedAnswer":{"@type":"Answer","text":"将来の仕様変更や初期値変更による「サイレントなテストの腐食（偽陰性化）」を防ぐためです。手動で一度重複を解消しても、後の機能追加でフィールドが1つ増えたりデフォルト値が変わったりした瞬間に、再び偶発的な値の一致が発生してテストの検出力が失われる危険があります。テスト自身が前提条件を assert することで、腐食を即座に検知できます。"}},{"@type":"Question","name":"ドメインの制約上、すべてのフィールドを異なる値にできない場合はどう対処すべきですか？","acceptedAnswer":{"@type":"Answer","text":"構造上必然的に一致する項目（最小制約で決まる容量など）は、アサーションの走査ループ内でホワイトリストとして明示的に除外します。重要なのは「何が重複してはならず、何が必然的に重複するのか」をテストコード上にドキュメントとして残し、意図しない偶発的な重複だけを確実に防ぐことです。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-01T17:20:00.000Z" data-astro-cid-7jjqptxk> 2026.11.02 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#テスト設計</span><span class="tag" data-astro-cid-7jjqptxk>#rust</span><span class="tag" data-astro-cid-7jjqptxk>#wasm</span><span class="tag" data-astro-cid-7jjqptxk>#品質管理</span><span class="tag" data-astro-cid-7jjqptxk>#ミューテーションテスト</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>位置で対応させた手書き JSON のテストは、入力値が重なっていると取り違えを見逃す</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/distinct-values-positional-json-test-hero.webp" alt="位置で対応させた手書き JSON のテストは、入力値が重なっていると取り違えを見逃す" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>全値相異（Distinct Values）テストとは、テスト入力データに含まれるすべてのフィールドや引数に互いに異なる値を割り当て、データの対称性による欠陥見逃しを防ぐテスト設計手法です。</p>
+<p>通常であればフロントエンドには TypeScript を選ぶところですが、AI によるコーディングを前提とするならば、ゼロからコードを組み立てるコストは大きく下がるため、初期作成の負担はそれほど気になりません。むしろフロントエンドとバックエンドを同じ言語で書ける利点を優先し、フロントエンド側にも Rust を採用しました。かつてフルスタック単一言語といえば JavaScript や Node.js が主流でしたが、現在では Rust でも同様に揃えられる時代になっています。</p>
+<p>しかし、WebAssembly（Wasm）境界においてバイナリサイズ削減のために約37個の位置プレースホルダを用いて手書き展開した JSON（ある都市シミュレーションの Wasm クレートにおける状態取得関数）に対し、出力全体をパースして構造体と丸ごと照合するテストを書いたものの、レビューの変異テストで思わぬ死角が露呈しました。テスト入力データ内で値が重複している項目同士を入れ替えても、テストが全件 PASS してしまったのです。</p>
+<p>人手による値調整の限界を痛感した私は、テスト入力を「全値相異」に設計し直し、さらにテスト自身が重複のないことを機械的に検証する自己 assert（メタアサーション）を導入しました。本記事では、出力全体を照合するテストでもフィールド取り違えを見逃す原理と、その対策について実測ログをもとに論じます。</p>
+<h2 id="なぜ全体パース照合でも取り違えを見逃すのか実務での選択と盲点">なぜ「全体パース照合」でも取り違えを見逃すのか：実務での選択と盲点</h2>
+<h3 id="37個の位置プレースホルダと似た項目に別々の値を入れるという油断">37個の位置プレースホルダと「似た項目に別々の値を入れる」という油断</h3>
+<p>言語境界（Wasm や FFI）において、Rust 側の複雑な構造体を外部へ渡す手法にはいくつかの選択肢があります。プロトタイプ初期や軽量化が最優先される場面では、外部シリアライザへの依存を避け、<code>format!</code> マクロと位置プレースホルダを用いて手動で JSON 文字列を組み立てる実装が選ばれることがあります。</p>
+<p>私たちが開発していた都市シミュレーションの Wasm クレートでも、バイナリサイズを最小限に抑えるため、約37個の <code>{}</code> プレースホルダを並べた手書きの JSON フォーマットを採用していました。</p>
+<p>引用元: プロジェクトA（非公開）の lib.rs</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#4C4F69">        f</span><span style="color:#179299">.</span><span style="color:#4C4F69">agriculture</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">        t</span><span style="color:#179299">.</span><span style="color:#4C4F69">smithy</span><span style="color:#7C7F93">,</span></span>
+<span class="line"></span></code></pre>
+<p>このような手書き JSON は、引数の位置を1つでも間違えると出力 JSON のキーと値の対応が狂ってしまいます。そこで、初期の単体テストでは出力全体を <code>serde_json::Value</code> にパースし、期待値の JSON 構造と丸ごと <code>assert_eq!</code> で比較するテストを作成しました。</p>
+<p>このテストを書いた開発者も、値の重複が危険であることは認識していました。そのため、テストコード内には以下のようなコメントが残されていました。</p>
+<p>引用元: プロジェクトA（非公開）の lib.rs</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#9CA0B0;font-style:italic">// 値が対称だと項目の取り違えを検出できないので、似た項目に別々の値を入れる。</span></span>
+<span class="line"><span style="color:#4C4F69">c</span><span style="color:#179299">.</span><span style="color:#4C4F69">population</span><span style="color:#179299">.</span><span style="color:#4C4F69">general</span><span style="color:#179299">.</span><span style="color:#4C4F69">child_female </span><span style="color:#179299">+=</span><span style="color:#FE640B"> 3</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">c</span><span style="color:#179299">.</span><span style="color:#4C4F69">population</span><span style="color:#179299">.</span><span style="color:#4C4F69">general</span><span style="color:#179299">.</span><span style="color:#4C4F69">elder_male </span><span style="color:#179299">+=</span><span style="color:#FE640B"> 5</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#7C7F93"> (</span><span style="color:#4C4F69">industry</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> rate_permille</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> in</span><span style="color:#7C7F93"> [(</span><span style="color:#DF8E1D;font-style:italic">IndustryType</span><span style="color:#179299">::</span><span style="color:#DF8E1D;font-style:italic">Agriculture</span><span style="color:#7C7F93">,</span><span style="color:#FE640B"> 110</span><span style="color:#7C7F93">),</span><span style="color:#7C7F93"> (</span><span style="color:#DF8E1D;font-style:italic">IndustryType</span><span style="color:#179299">::</span><span style="color:#DF8E1D;font-style:italic">Tavern</span><span style="color:#7C7F93">,</span><span style="color:#FE640B"> 230</span><span style="color:#7C7F93">)]</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">    enact</span><span style="color:#7C7F93">(</span><span style="color:#179299">&#x26;</span><span style="color:#8839EF">mut</span><span style="color:#4C4F69"> c</span><span style="color:#7C7F93">,</span><span style="color:#DF8E1D"> Policy</span><span style="color:#179299">::</span><span style="color:#DF8E1D;font-style:italic">SetTaxRate</span><span style="color:#7C7F93"> {</span><span style="color:#4C4F69"> industry</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> rate_permille</span><span style="color:#7C7F93"> })</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">unwrap</span><span style="color:#7C7F93">();</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span></code></pre>
+<p>男女比や特定の税率を手動でずらし、「似た項目に別々の値を入れた」ことで、開発者は十分なテストケースを用意できたと考えました。前方一致のような部分検証ではなく、出力 JSON 全体をパースしてキーの構造まで完全一致を確かめているのだから、フィールドの漏れや取り違えは確実に防げるという安心感があったのです。</p>
+<h3 id="レビューの変異テストが突いた2組の死角">レビューの変異テストが突いた2組の死角</h3>
+<p>しかし、その安心感はコードレビューで実施された変異テスト（Mutation Testing）によって打ち砕かれました。</p>
+<p>レビューを担当した Spec Review サブエージェントが、実装コードに対して引数を入れ替える変異（スワップ変異）を注入してテストを実行したところ、意外な結果が返ってきました。水道施設数（90）と衛生施設数（80）の入れ替えはテスト失敗として正しく検出できたものの、<strong>以下の2組の入れ替えはテストが全件 PASS して見逃されてしまった</strong> のです。</p>
+<ol>
+<li>収容能力と住宅規模（<code>cap.capacity</code> と <code>cap.housing</code>、どちらも 700）</li>
+<li>農業施設数と鍛冶屋税率（<code>f.agriculture</code> と <code>t.smithy</code>、どちらも 100）</li>
+</ol>
+<p>引用元: hands-on-log.md §1</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#4C4F69">    s_mut </span><span style="color:#179299">=</span><span style="color:#4C4F69"> s</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">replace</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"        f.agriculture,</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "@@@"</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">replace</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"        t.smithy,</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "        f.agriculture,</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">replace</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"@@@"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "        t.smithy,</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span></code></pre>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="console"><code><span class="line"><span style="color:#4C4F69">test result: ok. 5 passed</span></span>
+<span class="line"></span></code></pre>
+<p>なぜ出力全体をパースして照合しているテストが、明らかな実装バグを見逃してしまうのでしょうか。</p>
+<p>原因は、テスト入力データ内における <strong>値の偶発的な一致（データの対称性）</strong> にあります。テスト入力において農業施設数が 100 であり、鍛冶屋税率の初期値も偶然 100‰ であった場合、手書き JSON 内でプレースホルダの引数をどれだけ入れ替えても、出力される JSON 文字列中の該当フィールドの値はどちらも <code>100</code> のまま変わりません。結果として、期待値との照合は何事もなく成功してしまいます。</p>
+<p>変異テストの理論において、コードに変更を加えてもテストケース内限定で意味論的に同一の結果を生んでしまう変異体を等価変異体（equivalent mutations）と呼びます。Rust 向けの変異テストツール <code>cargo-mutants</code> の用語を用いれば、テストが欠陥を検出できずにミュータントが生存してしまった（<code>missed</code>）状態です<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>API テストの分野では、レスポンス全体をキャプチャして比較するスナップショットテストが「すべてを捕獲できる（Catching everything）」網羅的な手段として語られることがあります<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。Jest などのツールでもスナップショット照合は広く普及しています<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。しかし、スナップショットテストが保証できるのは「記録されたベースラインと現在の出力が一致していること」だけであり、テスト入力データ自身が抱える対称性の死角までは暴いてくれません。入力値が重なっている限り、どれほど厳密に出力全体を照合していても、フィールドの取り違えは原理的にすり抜けてしまうのです。</p>
+<h2 id="メリットの裏にあるトレードオフと適用限界">メリットの裏にあるトレードオフと適用限界</h2>
+<h3 id="手動調整を阻む連鎖的衝突cascading-collisionsの実態">手動調整を阻む「連鎖的衝突（Cascading Collisions）」の実態</h3>
+<p>レビューでの指摘を受けた私たちは、即座に入力データの調整に着手しました。指示の内容は明確でした。「テストデータ内の全値が互いに異なるように調整し、全値が互いに異なっていることをテスト内で assert せよ」というものです。</p>
+<p>そこで、テストの末尾に出力 JSON の数値を再帰走査して、重複した値が見つかったら即座に panic する重複アサーションを追加しました。ところが、そのアサーションを有効化した途端、テストは次々と panic を引き起こしました。</p>
+<p>引用元: hands-on-log.md §2</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="log"><code><span class="line"><span style="color:#4C4F69">値 </span><span style="color:#D20F39">150</span><span style="color:#4C4F69"> が .</span><span style="color:#D20F39">taxRates.inn</span><span style="color:#4C4F69"> と .</span><span style="color:#D20F39">population.elderMale</span><span style="color:#4C4F69"> で重なっている</span></span>
+<span class="line"></span></code></pre>
+<p>手動で値を修正しようと試みるたびに、別の離れたフィールド間で連鎖的な値の衝突（Cascading Collisions）が発生したのです。実測ログに残された衝突の推移は以下の通りです。</p>
+<ol>
+<li><strong>税率と人口</strong>: 宿屋税率 150‰ と老人男性 150 人が衝突</li>
+<li><code>elder_male += 7</code> に調整: ターン数 37 と月の満ち欠け周期（<code>slowMoonPhase</code>）37 が衝突</li>
+<li>ターン数を 45 に変更: 月の満ち欠け周期が再度計算され、ターン数 45 と月の満ち欠け 45 が再衝突</li>
+<li>ターン数 200 を試行: 未着工工事数 0 と春の季節インデックス 0 が衝突</li>
+<li>ターン数 210 を試行: 老人男性 72 人と子供男性 72 人が衝突</li>
+<li>ターン数 220 を試行: 老人男性 70 人と住宅施設数 70 が衝突</li>
+</ol>
+<p>37個もの整数値が数百程度の限られた値域に分布する場合、誕生日のパラドックスと同様に、意図しない値の一致が起こる確率は極めて高くなります。しかも、シミュレーションモデル内部で人口動態や天体周期、経済パラメータが非線形に連動しているため、1つの変数を動かすと別の変数が連鎖的に変動し、手動による目分量の調整は完全に泥沼化してしまいました。</p>
+<p>私の実感としても、ゲームのバランス調整は、モデルが理論的に正しくてもゲームとして成立しなければ意味がなく、何度も実際に動かして感覚的な違和感がないか（手触りやプレイフィール）を判断基準に据える必要があります。テストデータの設計もこれとまったく同じです。頭の中の想定だけで「これで重複はないだろう」と手動で調整しても破綻しやすく、機械的なフィードバックループが不可欠でした。</p>
+<h3 id="メタアサーションの実装と必然的一致の除外設計">メタアサーションの実装と「必然的一致」の除外設計</h3>
+<p>この泥沼を抜け出すために確立したのが、テスト自身が入力データの前提条件を検証する <strong>メタアサーション（自己 assert）</strong> です。</p>
+<p>単に出力と期待値を比べるだけでなく、テスト実行時に得られた JSON ツリーをスタック走査し、すべての数値フィールドが一意であることを <code>HashMap</code> で検証します。</p>
+<p>引用元: プロジェクトA（非公開）の lib.rs</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#9CA0B0;font-style:italic">// 値が重なると、その組の取り違えを検出できない。carrying は最小の制約と同値になるので除く。</span></span>
+<span class="line"><span style="color:#8839EF">let</span><span style="color:#8839EF"> mut</span><span style="color:#4C4F69"> seen </span><span style="color:#179299">=</span><span style="color:#DF8E1D"> std</span><span style="color:#179299">::</span><span style="color:#DF8E1D">collections</span><span style="color:#179299">::</span><span style="color:#DF8E1D;font-style:italic">HashMap</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">new</span><span style="color:#7C7F93">();</span></span>
+<span class="line"><span style="color:#8839EF">let</span><span style="color:#8839EF"> mut</span><span style="color:#4C4F69"> stack </span><span style="color:#179299">=</span><span style="color:#1E66F5;font-style:italic"> vec!</span><span style="color:#7C7F93">[(</span><span style="color:#DF8E1D;font-style:italic">String</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">new</span><span style="color:#7C7F93">(),</span><span style="color:#179299"> &#x26;</span><span style="color:#4C4F69">v</span><span style="color:#7C7F93">)];</span></span>
+<span class="line"><span style="color:#8839EF">while</span><span style="color:#8839EF"> let</span><span style="color:#DF8E1D;font-style:italic"> Some</span><span style="color:#7C7F93">((</span><span style="color:#4C4F69">path</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> node</span><span style="color:#7C7F93">))</span><span style="color:#179299"> =</span><span style="color:#4C4F69"> stack</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">pop</span><span style="color:#7C7F93">()</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#8839EF">    match</span><span style="color:#4C4F69"> node </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#DF8E1D;font-style:italic">        Value</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">Object</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">m</span><span style="color:#7C7F93">)</span><span style="color:#179299"> =></span><span style="color:#4C4F69"> stack</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">extend</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">m</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">iter</span><span style="color:#7C7F93">()</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">map</span><span style="color:#7C7F93">(</span><span style="color:#179299">|</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">k</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> x</span><span style="color:#7C7F93">)</span><span style="color:#179299">|</span><span style="color:#7C7F93"> (</span><span style="color:#1E66F5;font-style:italic">format!</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">{</span><span style="color:#40A02B">path</span><span style="color:#7C7F93">}</span><span style="color:#40A02B">.</span><span style="color:#7C7F93">{</span><span style="color:#40A02B">k</span><span style="color:#7C7F93">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">),</span><span style="color:#4C4F69"> x</span><span style="color:#7C7F93">))),</span></span>
+<span class="line"><span style="color:#DF8E1D;font-style:italic">        Value</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">Number</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">n</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> path </span><span style="color:#179299">!=</span><span style="color:#40A02B"> ".capacity.carrying"</span><span style="color:#179299"> =></span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#8839EF">            if</span><span style="color:#8839EF"> let</span><span style="color:#DF8E1D;font-style:italic"> Some</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">prev</span><span style="color:#7C7F93">)</span><span style="color:#179299"> =</span><span style="color:#4C4F69"> seen</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">insert</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">n</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">to_string</span><span style="color:#7C7F93">(),</span><span style="color:#4C4F69"> path</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">clone</span><span style="color:#7C7F93">())</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">                panic!</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"値 </span><span style="color:#7C7F93">{</span><span style="color:#40A02B">n</span><span style="color:#7C7F93">}</span><span style="color:#40A02B"> が </span><span style="color:#7C7F93">{</span><span style="color:#40A02B">prev</span><span style="color:#7C7F93">}</span><span style="color:#40A02B"> と </span><span style="color:#7C7F93">{</span><span style="color:#40A02B">path</span><span style="color:#7C7F93">}</span><span style="color:#40A02B"> で重なっている"</span><span style="color:#7C7F93">);</span></span>
+<span class="line"><span style="color:#7C7F93">            }</span></span>
+<span class="line"><span style="color:#7C7F93">        }</span></span>
+<span class="line"><span style="color:#4C4F69">        _ </span><span style="color:#179299">=></span><span style="color:#7C7F93"> {}</span></span>
+<span class="line"><span style="color:#7C7F93">    }</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span></code></pre>
+<p>ここで重要な設計判断となったのが、<strong>ドメイン上の「必然的一致」をどう扱うか</strong> という点です。</p>
+<p>現実のシステムでは、すべてのフィールドを機械的に相異なる値にできるとは限りません。例えば本システムにおける最大収容力（<code>carrying</code>）は、食料や水、住宅といった各資源の制約のうち「最も小さい値」を採用するというドメインルールが存在していました。したがって、<code>carrying</code> は常にいずれかの制約値と一致してしまいます。</p>
+<p>これを無理に解消しようとするとテストが成立しなくなるため、上記のコードのように <code>path != ".capacity.carrying"</code> として、除外理由をコメントに明記した上で意図的にチェックから外すホワイトリスト設計を採用しました。何が偶発的な重複であり、何が仕様上不可避な一致なのかを境界づけることが肝要です。</p>
+<p>最終的に、探索ループを経てターン数を 205 まで進め、各施設の規模と税率を調整することで、全37項目の重複を完全に解消したテストデータを確立できました。この状態で Spec Review で指摘されたスワップ変異（農業施設数と鍛冶屋税率の入れ替え）を再度注入したところ、テストは確実に失敗し、バグを捕獲できるようになりました。</p>
+<p>引用元: hands-on-log.md §3</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#4C4F69">    s_mut </span><span style="color:#179299">=</span><span style="color:#4C4F69"> s</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">replace</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"        f.agriculture,</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "@@@"</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">replace</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"        t.smithy,</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "        f.agriculture,</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">replace</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"@@@"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "        t.smithy,</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span></code></pre>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="console"><code><span class="line"><span style="color:#4C4F69">FAILED</span></span>
+<span class="line"></span></code></pre>
+<h3 id="テスト入力設計アプローチの比較">テスト入力設計アプローチの比較</h3>
+<p>単体テストにおける入力データの設計アプローチには、実装の簡便さと欠陥検出力の間に明確なトレードオフが存在します。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>アプローチ</th><th>手法</th><th>フィールド取り違えの検出力</th><th>保守コスト・課題</th></tr></thead><tbody><tr><td><strong>手動値調整（デフォルト）</strong></td><td>似た項目（男女比など）に別々の値を目分量で割り当てる</td><td><strong>低（危険）</strong>: 離れた区画の偶発的重複を見落とす</td><td>テスト変更のたびに重複が再発しやすい</td></tr><tr><td><strong>単純ランダム / ファジング</strong></td><td>乱数ジェネレータで毎回異なる値を注入する</td><td><strong>中（不安定）</strong>: 偶発的一致による間欠的失敗（Flaky）の恐れ<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup></td><td>失敗時の再現性が低くデバッグが困難</td></tr><tr><td><strong>全値相異＋メタアサーション</strong></td><td>全項目を相異なる値にし、テスト自身で重なりを assert する</td><td><strong>高（確実）</strong>: スワップ変異を確実に捕獲</td><td>初期値探索のコストと必然的一致の除外設計が必要</td></tr></tbody></table>
+<p>xUnit パターンにおける <code>Distinct Generated Value</code> は、元来データベースの一意制約違反やテスト間の干渉を防ぐ目的で提唱されたパターンでした<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。しかし本事例が示すように、この概念は構造体や位置引数のスワップ欠陥を検知するための「入力値の対称性を壊す（Breaking Input Symmetry）」強力な設計原則へと発展させることができます。</p>
+<p>言語境界や位置引数が残るコードベースでは、全値相異を前提としつつ、テストコード自身がその前提条件を検証するメタアサーションの組み合わせが最も確実な防壁となります。</p>
+<h2 id="前提が変われば結論はどう変わるか境界の進化と将来展望">前提が変われば結論はどう変わるか：境界の進化と将来展望</h2>
+<h3 id="手書き-json-から型付きバインディングidl-への昇格判断">手書き JSON から型付きバインディング・IDL への昇格判断</h3>
+<p>ここまで手書き JSON におけるテスト堅牢化を論じてきましたが、そもそも「手書き JSON」という選択自体が過渡期のものである点には留意が必要です。</p>
+<p>プロトタイプ初期においては、serde などの外部依存を本体クレートから排除し、高速なビルドとバイナリサイズの極小化を図るために手書きフォーマットが有効に機能します。しかし、The Rust and WebAssembly Book が指摘している通り、<code>format!</code> などの文字列フォーマット処理自体も Wasm バイナリの肥大化（bloat）を引き起こす要因となります<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>プロジェクトが成長し、受け渡すデータ構造が複雑化した段階では、以下のような一段上のアプローチへ昇格させることが推奨されます。</p>
+<ol>
+<li><strong><code>serde-wasm-bindgen</code> による直接シリアライズ</strong>:
+JSON 文字列を中継せず、Rust のデータ型を JavaScript のネイティブオブジェクト（<code>JsValue</code>）へ直接変換します。JSON パースのオーバーヘッドをなくし、コードサイズと実行速度の両面で優れた公式推奨のアプローチです<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup><sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</li>
+<li><strong>IDL（インターフェース記述言語）による自動生成</strong>:
+Mozilla UniFFI のように、スキーマ定義から各言語向けの型付きグルーコードを自動生成するツールを導入します<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。コンパイラが静的型チェックを行えるため、位置引数の取り違えといった人為的ミスはビルド時に完全に排除されます。</li>
+</ol>
+<p>型安全な自動生成機構を導入できるのであれば、それに越したことはありません。しかし、レガシーな FFI 境界、サードパーティ API との連携、あるいは初期プロトタイプのように手書きマッピングを選択せざるを得ない局面は現場に数多く存在します。そのような境界において、静的型チェックの不在を埋める最後の砦となるのが「全値相異＋メタアサーション」というテスト設計なのです。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-全値相異にするだけで十分ならなぜテスト内で重複アサーションまで行う必要があるのですか">Q. 全値相異にするだけで十分なら、なぜテスト内で重複アサーションまで行う必要があるのですか？</h3>
+<p><strong>A.</strong> 将来の仕様変更や初期値変更による「サイレントなテストの腐食（偽陰性化）」を防ぐためです。手動で一度重複を解消しても、後の機能追加でフィールドが1つ増えたりデフォルト値が変わったりした瞬間に、再び偶発的な値の一致が発生してテストの検出力が失われる危険があります。テスト自身が前提条件を assert することで、腐食を即座に検知できます。</p>
+<h3 id="q-ドメインの制約上すべてのフィールドを異なる値にできない場合はどう対処すべきですか">Q. ドメインの制約上、すべてのフィールドを異なる値にできない場合はどう対処すべきですか？</h3>
+<p><strong>A.</strong> 構造上必然的に一致する項目（最小制約で決まる容量など）は、アサーションの走査ループ内でホワイトリストとして明示的に除外します。重要なのは「何が重複してはならず、何が必然的に重複するのか」をテストコード上にドキュメントとして残し、意図しない偶発的な重複だけを確実に防ぐことです。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li><strong>全体パース照合は万能ではない</strong>: 出力全体をパースして比較していても、入力データ内で値が重なっているフィールド同士の取り違えは原理的に見逃されます。</li>
+<li><strong>入力値の対称性を壊す（Breaking Input Symmetry）</strong>: 位置依存の引数や手書きシリアライズをテストする際は、すべての項目に異なる値を割り当てて対称性を排除しなければなりません。</li>
+<li><strong>メタアサーションで前提条件を保護する</strong>: テストデータが「全値相異」を満たしていること自体をテストコード内で assert することで、将来の仕様変更によるテストの腐食を機械的に防ぎます。</li>
+<li><strong>必然的一致はホワイトリストで明示する</strong>: ドメイン制約上どうしても重複する項目は、除外理由をテストコードに記録し、意図せぬ偶発的重複と明確に区別します。</li>
+<li><strong>境界の進化を見据える</strong>: プロトタイプ初期の手書きマッピングは全値相異で守りつつ、規模拡大に伴い <code>serde-wasm-bindgen</code> や IDL 自動生成（UniFFI）への昇格を検討します。</li>
+<li><strong>AI コーディング時代のフルスタック選択</strong>: 作成コストが下がった現代では、フロントエンド・バックエンドを同一言語（Rust）で揃える利点が大きく、境界のテスト設計さえ堅牢にしておけば安心して試行錯誤に没頭できます。</li>
+</ul>
+<p>開発プロセスの標準化、自動テスト基盤の堅牢化、AI コーディングを活用したアーキテクチャ設計について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://mutants.rs/print.html#mutant-outcomes">cargo-mutants User Guide: Mutant outcomes</a> Martin Pool、2026年11月確認。Mutant outcomes 節における caught と missed の定義、テストの死角警告。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://pitest.org/quickstart/mutators/">PIT (Pitest) Mutation operators: Available mutators and groups</a> PIT (Pitest) 公式ドキュメント、2026年11月確認。Mutation operators 節における変異体と等価変異体（equivalent mutations）の定義。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://dev.to/kreya/why-snapshot-testing-is-the-secret-weapon-for-api-stability-4797">Why Snapshot Testing Is the Secret Weapon for API Stability</a> Kreya、2026年2月23日公開。Catching everything 節および The whole response is under guard 節におけるスナップショット完全性の言説。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://jestjs.io/docs/snapshot-testing">Jest: Snapshot Testing</a> Meta Platforms, Inc.、2026年11月確認。Snapshot Testing 節におけるスナップショットテストの基本理念。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="http://xunitpatterns.com/Generated%20Value.html#Distinct%20Generated%20Value">xUnit Test Patterns: Generated Value / Distinct Generated Value</a> Gerard Meszaros、Addison-Wesley、2007年。Distinct Generated Value パターン定義節におけるテスト入力の一意化による干渉回避。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://rustwasm.github.io/book/reference/code-size.html#avoid-string-formatting">The Rust and WebAssembly Book: Shrinking .wasm Code Size</a> The Rust and WebAssembly Working Group、2026年11月確認。Shrinking .wasm Code Size 節における Avoid String Formatting 指針。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://docs.rs/serde-wasm-bindgen/latest/serde_wasm_bindgen/">docs.rs: serde_wasm_bindgen</a> Cloudflare、docs.rs、2026年11月確認。crate ドキュメント冒頭におけるコードサイズと実行速度の優位性解説。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://rustwasm.github.io/docs/wasm-bindgen/reference/arbitrary-data-with-serde.html">The wasm-bindgen Guide: Arbitrary Data with Serde</a> The wasm-bindgen Guide、2026年11月確認。Arbitrary Data with Serde 節における複合型の型付きシリアライズ移行手順。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://mozilla.github.io/uniffi-rs/latest/Motivation.html">Mozilla UniFFI: Motivation</a> Mozilla、2026年11月確認。Motivation 節における手書き FFI コードの脆弱性と IDL 自動生成への昇格判断基準。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

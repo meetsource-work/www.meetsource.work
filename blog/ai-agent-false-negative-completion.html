@@ -1,0 +1,182 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>委譲したエージェントが started=no を返したのに、実は作業を終えていた ── 完了の偽陰性と、報告前に実物を見る手順 | Meetsource</title><meta name="description" content="AIエージェントへの作業委譲でタスク完了や未着手を正確に判定するには、中継ツールの終了コードやステータスフラグ（中間観測値）を鵜呑みにせず、報告前にGit logやタスク状態などの客観的成果物（実物）を直接検証することが不可欠です。本記事では、委譲先がstarted=noを返しながら裏でタスクを完了させていた実インシデントをもとに、完了の偽陰性のメカニズム、判定の3値化、および他者の報告を事実と説明に分ける現場規律を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/ai-agent-false-negative-completion"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="委譲したエージェントが started=no を返したのに、実は作業を終えていた ── 完了の偽陰性と、報告前に実物を見る手順 | Meetsource"><meta property="og:description" content="AIエージェントへの作業委譲でタスク完了や未着手を正確に判定するには、中継ツールの終了コードやステータスフラグ（中間観測値）を鵜呑みにせず、報告前にGit logやタスク状態などの客観的成果物（実物）を直接検証することが不可欠です。本記事では、委譲先がstarted=noを返しながら裏でタスクを完了させていた実インシデントをもとに、完了の偽陰性のメカニズム、判定の3値化、および他者の報告を事実と説明に分ける現場規律を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/ai-agent-false-negative-completion"><meta property="og:image" content="https://www.meetsource.work/blog/ai-agent-false-negative-completion-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-19T11:06:05.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="委譲したエージェントが started=no を返したのに、実は作業を終えていた ── 完了の偽陰性と、報告前に実物を見る手順 | Meetsource"><meta name="twitter:description" content="AIエージェントへの作業委譲でタスク完了や未着手を正確に判定するには、中継ツールの終了コードやステータスフラグ（中間観測値）を鵜呑みにせず、報告前にGit logやタスク状態などの客観的成果物（実物）を直接検証することが不可欠です。本記事では、委譲先がstarted=noを返しながら裏でタスクを完了させていた実インシデントをもとに、完了の偽陰性のメカニズム、判定の3値化、および他者の報告を事実と説明に分ける現場規律を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/ai-agent-false-negative-completion-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"委譲したエージェントが started=no を返したのに、実は作業を終えていた ── 完了の偽陰性と、報告前に実物を見る手順","description":"AIエージェントへの作業委譲でタスク完了や未着手を正確に判定するには、中継ツールの終了コードやステータスフラグ（中間観測値）を鵜呑みにせず、報告前にGit logやタスク状態などの客観的成果物（実物）を直接検証することが不可欠です。本記事では、委譲先がstarted=noを返しながら裏でタスクを完了させていた実インシデントをもとに、完了の偽陰性のメカニズム、判定の3値化、および他者の報告を事実と説明に分ける現場規律を解説します。","datePublished":"2026-10-19T11:06:05.000Z","image":"https://www.meetsource.work/blog/ai-agent-false-negative-completion-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/ai-agent-false-negative-completion"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"委譲したエージェントが「未着手」や「エラー」と判定された場合、まず何をすべきですか？","acceptedAnswer":{"@type":"Answer","text":"ツールの終了ステータスを鵜呑みにせず、まず作業空間の Git log（git log -1）やタスク管理の終了履歴（task <uuid> export）などの実物を確認してください。バックグラウンドで委譲先が作業を完遂している「完了の偽陰性」が発生している可能性があります。"}},{"@type":"Question","name":"完了の「偽陽性」と「偽陰性」では、対策にどのような違いがありますか？","acceptedAnswer":{"@type":"Answer","text":"偽陽性（やっていないのに完了）には「完了報告にコミットハッシュや Diff などの不変の証跡を義務付ける」対策が有効です。一方、偽陰性（やったのに未着手）には「未着手・エラー判定時に成果物の実物を 1 手確認するガードレール」が有効です。どちらもエージェントの自己申告や中間フラグではなく、決定論的な客観的成果物で判定する点が共通しています。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-19T11:06:05.000Z" data-astro-cid-7jjqptxk> 2026.10.19 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#subagents</span><span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>委譲したエージェントが started=no を返したのに、実は作業を終えていた ── 完了の偽陰性と、報告前に実物を見る手順</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/ai-agent-false-negative-completion-hero.webp" alt="委譲したエージェントが started=no を返したのに、実は作業を終えていた ── 完了の偽陰性と、報告前に実物を見る手順" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>AI エージェントに作業を委譲して自律的に実行させる仕組みを組む際、多くの開発者が警戒するのは、エージェントが作業を終えていないにもかかわらず「完了しました」と嘘をつく <strong>「完了の偽陽性（False Positive）」</strong> です。当社でも <a href="/blog/ai-agent-completion-evidence">先行記事</a><sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> において、エージェントの自己申告を信じず、Diff やコミットハッシュといった客観的証跡を義務付ける検証ルールの重要性を論じてきました。</p>
+<p>しかし、実務でマルチエージェントや非同期タスク委譲パイプラインを運用していると、偽陽性とは真逆のトラブルに直面します。それが、バックグラウンドのエージェントが正常に作業を終えているにもかかわらず、状態監視スクリプトが「未着手」や「失敗」と判定してしまう <strong>「完了の偽陰性（False Negative）」</strong> です。</p>
+<p>完了の偽陰性（False Negative）とは、バックグラウンドのエージェントが作業を正常に完了させているにもかかわらず、中継ツールや状態監視機構の判定によって「未着手」や「失敗」と誤認されてしまう現象を指します。</p>
+<p>ある日、当社の開発環境において、タスクを別端末（Git worktree）に非同期委譲した際、委譲スクリプトが <code>started=no</code>（未着手）を出力しました。親エージェントは「出力が <code>started=no</code> だったため、作業は始まっていません」と報告しましたが、実際にはその裏で委譲先エージェントが着実に作業を進めており、約 6 分後には Git コミットを作成してタスクを完遂していました。</p>
+<p>中継ツールが返す終了ステータスやフラグは、システムの「事実」そのものではなく、ある断面を切り取った「中間観測値」に過ぎません。以下では、現場で起きた偽陰性インシデントの具体的な経過をもとに、なぜ完了の偽陰性が生じるのか、判定の 3 値化（yes/timeout/no）と報告前の「実物確認 1 手」をどう設計すべきか、そして他者やツールの報告を鵜呑みにしない現場規律を解説します。</p>
+<h2 id="なぜ状態取得ツールの出力は事実ではなく中間観測値なのか">なぜ状態取得ツールの出力は「事実」ではなく「中間観測値」なのか</h2>
+<p>プロセス起動ラッパーや状態監視ツールが観測できるのは、あくまで「プロセスの立ち上げ直後」や「特定ポーリング時点」という局所的な断面です。</p>
+<p>今回の委譲スクリプトは、待ち時間（改修前は 60 秒）のあいだタスク管理側に委譲先の start が記録されるかを見て、見えなければ一律に <code>started=no</code>（未着手）を返す作りでした。エージェントの起動が遅れれば、作業が始まる前に締め切られます。後述の改修は、setup 待ちによるエージェント起動遅延に対応するものです。しかし、タイムアウトを迎えたからといって、バックグラウンドの端末プロセスまで停止しているとは限りません。プロセス自体は独立して生存し、初期化が完了した直後から委譲されたタスクを自律的に開始・完遂することがあります。</p>
+<p>その結果、監視ツール上のステータス（未着手）と作業ディレクトリの実態（作業完了）の間に深刻な乖離（State Drift）が生じます。</p>
+<p>タスク管理ツール Taskwarrior のライフサイクル仕様<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup> にあるとおり、タスクは <code>pending</code> の状態で作られ、開始されると <code>start</code> 属性が付いて active と呼ばれ、完了すると <code>completed</code> の状態になって <code>end</code> 属性が付与されます。プロセス起動ラッパーが返す「起動したかどうか」という一時的なフラグと、実際のタスク状態遷移は、別々の観測対象です。</p>
+<p>この問題は、とんのかつ氏が論じている「エージェントの自己改善ループで偽の成功を防ぐ設計」<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> とも深く響き合います。同氏は、ループを安全に回す原則の 1 つに「検証の成功を呼び出し元に自己申告させない」を挙げています。また、テストのタイムアウトをそのまま製品の不具合と分類せず、テストハーネスの実行モデル（起動のばらつき）も観測対象に含める必要があると述べています。監視ツールが返す表層的な文字列を事実と同一視してしまうと、観測器側のタイムアウトをタスク側の失敗と履き違える構造的欠陥が生まれます。</p>
+<p>完了判定における偽陽性と偽陰性は、以下のように対称的な構造を持っています。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>観点</th><th>完了の偽陽性（False Positive）</th><th>完了の偽陰性（False Negative）</th></tr></thead><tbody><tr><td><strong>ツールの判定</strong></td><td>「完了」と誤認・誤報告</td><td>「未着手・失敗」と誤認・誤報告</td></tr><tr><td><strong>実際の作業状態</strong></td><td>作業は未実施（未保存・放置）</td><td>実際には作業完了（コミット済み）</td></tr><tr><td><strong>主な発生要因</strong></td><td>LLM の次トークン予測、思考の完了と実行完了の同質化</td><td>起動遅延、タイムアウト、中間フラグ誤認</td></tr><tr><td><strong>現場でのリスク</strong></td><td>未実施の素通り、成果物の不整合</td><td>作業の二重着手、成果物の巻き戻し・上書き破棄</td></tr><tr><td><strong>対策の核</strong></td><td>不変の証跡（Diff やコミット）の義務付け<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></td><td>報告前の実物（Git log やタスク状態）確認</td></tr></tbody></table>
+<p>どちらの失敗も、エージェントやツールの表層テキストを鵜呑みにせず、客観的成果物（実物）で検証することで防げます。</p>
+<h2 id="現場で起きた偽陰性インシデントと2-つの改善実装">現場で起きた偽陰性インシデントと、2 つの改善実装</h2>
+<p>実際に現場で発生した偽陰性インシデントの経過を振り返ります。</p>
+<p>2026 年 10 月 2 日 01:23:35 UTC、親エージェントは未コミット変更の整理タスクを <code>dispatch</code> スクリプトを用いて別端末（Git worktree）へ委譲しました。
+スクリプトの出力は <code>started=no</code> で、そのときの端末プレビューはプロンプト欄が空（<code>❯</code>）のままでした。これを受けた親エージェントは、「出力は <code>started=no</code> で、作業はまだ始まっていません」と報告しました。</p>
+<p>しかしその裏で、委譲先エージェントは作業を進めており、01:29:36 UTC（約 6 分後）には worktree 側でコミットを作成し、タスク完了処理を実行していました。
+親エージェントが約 11 分後（01:34:28 UTC）にタスク管理コマンドを実行して初めて、裏でタスクが完了していた事実が発覚しました。</p>
+<p>このインシデントを受け、当社では直ちに 2 つの改善実装を行いました。</p>
+<h3 id="改善実装-1-判定の-3-値化yestimeoutnoと待ち時間の延長">改善実装 1: 判定の 3 値化（yes/timeout/no）と待ち時間の延長</h3>
+<p>第 1 の改善は、スクリプトにおける判定ロジックの改修です。従来の 2 値判定（yes/no）を改め、端末プロセスの生存状況を組み合わせた 3 値判定（<code>yes</code> / <code>timeout</code> / <code>no</code>）を導入しました。あわせて、エージェント起動時の初期化遅延を許容するため、既定の待機時間を 60 秒から 180 秒へと延長しました。</p>
+<p>以下は、改修されたディスパッチスクリプトの状態判定ロジックです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># ファイル: skills/dispatch/scripts/dispatch.py</span></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> started_state</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">started</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> term</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> started</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">        return</span><span style="color:#40A02B"> "yes"</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#40A02B"> "timeout"</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> term</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"connected"</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> else</span><span style="color:#40A02B"> "no"</span></span>
+<span class="line"></span></code></pre>
+<p>この関数により、タスクの開始が確認できれば <code>yes</code> を返し、制限時間内に開始が確認できなかった場合は、端末プロセスが接続中（生存）であれば <code>timeout</code>、消失していれば <code>no</code> を返します。「バックグラウンドで起動処理が続いている状態」と「起動そのものに失敗した状態」が機械的に切り分けられるようになりました。</p>
+<h3 id="改善実装-2-報告前の実物確認-1-手の明文化">改善実装 2: 報告前の「実物確認 1 手」の明文化</h3>
+<p>第 2 の改善は、エージェントが人間に報告を行う前に、客観的な成果物の実物を 1 手確認する運用規律の策定です。</p>
+<p>ツールの運用ガイドラインに以下の規則を明文化しました。</p>
+<blockquote><p><code>started</code> は着手の有無の証拠ではない（<code>no</code> でも委譲先が完了まで終えていた事例や、<code>timeout</code> は start が一度も打たれていなかった事例が存在する）。
+「着手されなかった」やその原因を報告・記録に書く前に、タスク管理の Start 履歴・status・end と、Git の <code>git log</code> を確かめること。</p></blockquote>
+<p>引用中の <code>no</code> の事例は、3 値化より前の 2 値判定で起きた今回のインシデントを指します。</p>
+<p>確認に用いるのは、以下の標準的な CLI コマンドです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># タスク管理ツールから構造化された完了状態を取得（完了時は "completed" が返る）</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">task</span><span style="color:#179299"> &#x3C;</span><span style="color:#40A02B">uui</span><span style="color:#4C4F69">d</span><span style="color:#179299">></span><span style="color:#40A02B"> export</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> jq</span><span style="color:#40A02B"> '.[0].status'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 作業ツリー側の直近コミットを確認</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">git</span><span style="color:#40A02B"> log</span><span style="color:#40A02B"> -1</span><span style="color:#40A02B"> --oneline</span></span>
+<span class="line"></span></code></pre>
+<p>Taskwarrior の <code>task &#x3C;uuid> info</code> コマンドはタスクのメタデータや status を人間可読形式で表示し<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>、<code>task export</code> は JSON 形式で機械判定可能な <code>status</code> を出力します<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。さらに <code>git log -1 --oneline</code> を実行することで、直近のコミットハッシュとメッセージを即座に確認できます<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>報告前にこの 1 手を挟むだけで、中間フラグの誤認による誤報を水際で防げます。</p>
+<h2 id="他者の報告文は事実の主張と原因の説明に分ける">他者の報告文は「事実の主張」と「原因の説明」に分ける</h2>
+<p>この偽陰性インシデントでは、誤認報告に続く「二次被害」も発生していました。</p>
+<p>委譲スクリプトが <code>started=no</code> を返して停止した際、人間のシステムオーナーは「新しく切った worktree からは、未コミットの変更が見えなかったために作業できなかったのだろう」と推測を口にしました。
+親エージェントは、worktree の実ファイルやログを検証することなくその推測を鵜呑みにし、社内台帳に「事前チェック漏れにより作業不能だった」と原因を記録してしまいました。</p>
+<p>実際には作業が完了していたため、台帳に記録された原因説明は実態と完全に食い違っていました。</p>
+<p>この失敗を契機として、当社では <strong>「他者の報告文は『事実の主張』と『原因の説明』に分ける」</strong> という原則を策定しました。</p>
+<ol>
+<li><strong>事実の主張</strong>: 「コミットが存在する」「ファイルが更新されている」といった客観的な状態。これらは <code>git show</code> や <code>ls</code>、ステータス確認コマンドなどの実物で検証する。</li>
+<li><strong>原因の説明</strong>: 「なぜそうなったのか」「なぜ失敗したのか」という推測や解釈。これらは一次資料による裏付けや実測が取れるまで、公式な記録や報告本文には含めない。</li>
+</ol>
+<p>この原則の根底にあるのは、「予防は原因の空間、検収は結果の空間に対して設計する」という設計思想です。</p>
+<p>エージェントがなぜ失敗したのかという「原因の推測」は無限に広がります。「ネットワークが瞬断したのかもしれない」「コンテキスト長を超過したのかもしれない」「プロンプトの解釈がずれたのかもしれない」と原因空間に対して場当たり的な予防策を積み増していくと、システムは際限なく複雑化します。
+そうではなく、私たちが最終的に得たい結果（Git コミットやタスクの正常終了）に対して、客観的な成果物の状態を 1 手で「検収」するアプローチをとるべきです。前述の待ち時間の延長は、起動遅延という原因側への予防にあたります。予防は想定した原因しか塞げないので、改善実装 2 の実物確認で結果側から閉じています。</p>
+<h2 id="あなたのエージェントパイプラインに組み込む実物確認ルール">あなたのエージェントパイプラインに組み込む実物確認ルール</h2>
+<p>以上の教訓は 1 件のインシデントから得たものですが、委譲先の成果物が Git やタスク管理に残る仕組みであれば、スクリプトでも CI/CD パイプラインでも同じ形で組み込めます。</p>
+<p>委譲先のエージェントが「エラー」や「未着手」を返した際、即座にパイプラインを落としたりリトライを走らせたりする前に、以下の「実物確認ガードレール」を挟むことを推奨します。</p>
+<ol>
+<li><strong>作業ツリーの未コミット変更・未追跡ファイルを機械検知する</strong>:
+スクリプト内で <code>git status --porcelain</code> を実行します。<code>--porcelain</code> オプションを指定することで、スクリプト解析に適した安定したフォーマットで作業ツリーとインデックスの状態が出力されます<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。これにより、エージェントがコミット直前で停止したのか、作業をまったく行わずに終了したのかを機械的に判定できます。</li>
+<li><strong>直前コミットの整合性を検証する</strong>:
+<code>git log -1 --oneline</code> を実行し、委譲先エージェントが目的のブランチに対して意図したコミットを生成したか確認します<sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</li>
+<li><strong>タスク管理メタデータを構造化 JSON で照合する</strong>:
+自然言語の終了メッセージに依存せず、タスク管理システムやオーケストレータの API、または <code>task export</code> などのコマンドを用いて、<code>status</code> や <code>end</code> タイムスタンプを機械照合します<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</li>
+</ol>
+<p>中継ツールの終了コードだけをトリガーにしてエラーハンドリングを行うのではなく、成果物ベースの決定論的な検証ステップを 1 行挟むだけで、偽陰性による不要な再作業や二重実行の手戻りを防げます。</p>
+<h2 id="メリットの裏にあるトレードオフと適用限界">メリットの裏にあるトレードオフと適用限界</h2>
+<p>実物確認ルールの導入には多くのメリットがありますが、運用上のトレードオフと適用限界も把握しておく必要があります。</p>
+<h3 id="想定される反論への検討">想定される反論への検討</h3>
+<p><strong>反論 1: 毎回コマンドを叩いて実物を見るのは、完全自律エージェントの自動化メリットを損なうのではないか？</strong></p>
+<p>検討: 確認は <code>git log -1</code> や <code>task export</code> といった単発のコマンドで済みます。一方で、完了の偽陰性を放置すれば、同じタスクを別のエージェントが二重実行して既存のコミットを上書きしたり、人間が調査に入ったりする手戻りが生じます。今回のインシデントでも、完了の発覚までに約 11 分かかりました。読み取りだけで副作用のない確認だからこそ、報告直前に毎回挟めます。</p>
+<p><strong>反論 2: タイムアウトを 180 秒に延ばすと、本当にクラッシュしたプロセスの検知が遅れるのではないか？</strong></p>
+<p>検討: 遅れます。改修後のスクリプトは 180 秒待ってから端末プロセスの生存を確認するので、<code>no</code> が返るのも待ち時間が切れた後です。3 値化が解消したのは検知の遅れではなく、プロセスが接続中なら <code>timeout</code>（起動遅延の可能性）、消失していれば <code>no</code> と判定を分け、「起動遅延」と「プロセス死」を同じ <code>no</code> にまとめないことです。</p>
+<h3 id="適用限界">適用限界</h3>
+<p>この実物確認手法が有効に機能するのは、成果物が Git リポジトリやファイルシステム、構造化タスク管理データベースといった「客観的かつ不変な状態」として永続化される処理に限られます。
+インメモリキャッシュの一時的更新や、外部 SaaS に対する冪等性のない API コールなど、永続的なファイルやコミットが残らない揮発的なタスクにおいては、本手法を直接適用することはできません。そのような領域では、独立した分散トレーシングや冪等なトランザクションログの設計が必要となります。</p>
+<p>もう 1 つの限界は、確認の時点です。今回の委譲先がコミットしたのは <code>started=no</code> の約 6 分後でした。判定の直後に確認しても、まだ何も出ない可能性があります。何も出なかったことは「まだ成果物が無い」ことしか意味せず、「未着手」の証拠にはなりません。<code>timeout</code> が返ったときは時間を置いて同じ確認を繰り返し、再委譲するのは委譲先が動いていないと分かってからにします。また <code>git log -1</code> は直近のコミットを見るだけなので、委譲前からあったコミットと区別するには、委譲時点の HEAD と比べる必要があります。</p>
+<h2 id="今後変わり得る前提と将来展望">今後変わり得る前提と将来展望</h2>
+<p>AI エージェントを統括するオーケストレーションフレームワークは急速に進化しています。</p>
+<p>例えば CrewAI では、<code>Task</code> 定義において <code>guardrail</code> パラメータを指定することで、エージェントが出力したタスク結果を関数によって厳密にバリデーションする機構が整備されています<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。また LangGraph では、Functional API と <code>checkpointer</code>（<code>MemorySaver</code> など）の組み合わせにより、ワークフローの結果や完了したタスクの結果がチェックポイントとして永続化されます<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<p>フレームワーク自体の Guardrail や永続化機構が成熟すれば、独自スクリプトによる泥臭いポーリング監視や状態取得の機会は減少していくかもしれません。</p>
+<p>しかし、どれほど高度なフレームワークを採用したとしても、「中継ツールやオーケストレータが観測した状態フラグ」と「実行環境（OS・ファイルシステム・外部サービス）における実際の副作用」の境界が消えることはありません。分散システムにおける観測値の不確実性と向き合う限り、「表層のステータスフラグを見るな、成果物の実物を見よ」という原則は、技術の前提が変わっても色褪せない設計の基礎であり続けます。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-委譲したエージェントが未着手やエラーと判定された場合まず何をすべきですか">Q. 委譲したエージェントが「未着手」や「エラー」と判定された場合、まず何をすべきですか？</h3>
+<p><strong>A.</strong> ツールの終了ステータスを鵜呑みにせず、まず作業空間の Git log（<code>git log -1</code>）やタスク管理の終了履歴（<code>task &#x3C;uuid> export</code>）などの実物を確認してください。バックグラウンドで委譲先が作業を完遂している「完了の偽陰性」が発生している可能性があります。</p>
+<h3 id="q-完了の偽陽性と偽陰性では対策にどのような違いがありますか">Q. 完了の「偽陽性」と「偽陰性」では、対策にどのような違いがありますか？</h3>
+<p><strong>A.</strong> 偽陽性（やっていないのに完了）には「完了報告にコミットハッシュや Diff などの不変の証跡を義務付ける」対策が有効です。一方、偽陰性（やったのに未着手）には「未着手・エラー判定時に成果物の実物を 1 手確認するガードレール」が有効です。どちらもエージェントの自己申告や中間フラグではなく、決定論的な客観的成果物で判定する点が共通しています。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>エージェント委譲で押さえる要点は、次の 4 点です。</p>
+<ol>
+<li><strong>状態取得ツールの出力は「事実」ではなく「中間観測値」に過ぎない</strong>: 起動ラッパーのタイムアウトはプロセスの失敗を意味しない。</li>
+<li><strong>完了判定には「偽陽性」と「偽陰性」の対称的な失敗が存在する</strong>: 未実施の完了誤認だけでなく、完了済みの未着手誤認による二重実行リスクにも備える。</li>
+<li><strong>報告や記録を行う前に、Git log やタスク状態などの実物を 1 手で確認する</strong>: 判定の 3 値化（yes/timeout/no）と成果物確認をパイプラインに組み込む。</li>
+<li><strong>他者やツールの報告文は「事実の主張」と「原因の説明」に分ける</strong>: 事実は実物で確かめ、原因の推測は裏取りを経るまで記録しない。</li>
+</ol>
+<p>AI エージェントを活用した開発プロセスの標準化や、安全で信頼性の高い自律エージェント運用のプロセス設計・導入について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="/blog/ai-agent-completion-evidence">「完了しました」に証跡がないと虚偽報告が紛れ込む — AIエージェントの報告検証ルール</a> Meetsource、2026年8月9日。完了の偽陽性問題と不変の証跡義務付けの対比。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://taskwarrior.org/docs/terminology/">Taskwarrior - Terminology</a> Taskwarrior Project（2026年10月19日閲覧）。pending・completed などの状態と、active（start 属性を持つタスク）・end 属性の定義。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://zenn.dev/cutlet_of_pork/articles/bounded-agent-loop-false-success">エージェントの自己改善ループで偽の成功を防ぐ設計</a> とんのかつ、2026年8月12日。自己申告の禁止、コントローラ生成の証拠、観測器の偽陽性対策、テストハーネスの実行モデルの観測。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://taskwarrior.org/docs/commands/info/">Taskwarrior - Info Command</a> Taskwarrior Project（2026年10月19日閲覧）。<code>task info</code> コマンドによるタスクメタデータ表示、UUID 指定による完了タスク照会仕様。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://taskwarrior.org/docs/commands/export/">Taskwarrior - Export Command</a> Taskwarrior Project（2026年10月19日閲覧）。<code>task export</code> コマンドによる JSON 形式での status 出力仕様。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://git-scm.com/docs/git-log">Git - git-log Documentation</a> Git Project、git-log last updated in 2.56.0（2026年10月19日閲覧）。<code>--oneline</code>, <code>--stat</code> によるコミット履歴確認仕様。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://git-scm.com/docs/git-status">Git - git-status Documentation</a> Git Project、git-status last updated in 2.53.0（2026年10月19日閲覧）。<code>--porcelain</code> オプションによるスクリプト向け安定ステータス出力仕様。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://docs.crewai.com/v1.15.23/en/concepts/tasks">Tasks - CrewAI Documentation</a> CrewAI、v1.15.23（2026年10月19日閲覧）。Task の expected_output、guardrail による出力検証仕様。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://docs.langchain.com/oss/javascript/langgraph/use-functional-api">Use the functional API - Docs by LangChain</a> LangChain（2026年10月19日閲覧）。LangGraph の Functional API、checkpointer による状態永続化仕様。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

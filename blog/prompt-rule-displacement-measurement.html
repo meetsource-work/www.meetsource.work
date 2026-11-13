@@ -1,0 +1,290 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>規則を足すと、Claude が普段やっていることが消える ── 8規則と2規則で実測したプロンプトの規則の選び方 | Meetsource</title><meta name="description" content="プロンプトや CLAUDE.md に規則を足しすぎると、モデルが自発的に行っていた完了条件の提示などの良い振る舞いが押しのけられます。架空題材3種・計75本の実測ログをもとに、指定しなくても守られる no-op 規則を削り、最小限の規則だけを選ぶ手順を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/prompt-rule-displacement-measurement"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="規則を足すと、Claude が普段やっていることが消える ── 8規則と2規則で実測したプロンプトの規則の選び方 | Meetsource"><meta property="og:description" content="プロンプトや CLAUDE.md に規則を足しすぎると、モデルが自発的に行っていた完了条件の提示などの良い振る舞いが押しのけられます。架空題材3種・計75本の実測ログをもとに、指定しなくても守られる no-op 規則を削り、最小限の規則だけを選ぶ手順を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/prompt-rule-displacement-measurement"><meta property="og:image" content="https://www.meetsource.work/blog/prompt-rule-displacement-measurement-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-18T20:06:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="規則を足すと、Claude が普段やっていることが消える ── 8規則と2規則で実測したプロンプトの規則の選び方 | Meetsource"><meta name="twitter:description" content="プロンプトや CLAUDE.md に規則を足しすぎると、モデルが自発的に行っていた完了条件の提示などの良い振る舞いが押しのけられます。架空題材3種・計75本の実測ログをもとに、指定しなくても守られる no-op 規則を削り、最小限の規則だけを選ぶ手順を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/prompt-rule-displacement-measurement-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"規則を足すと、Claude が普段やっていることが消える ── 8規則と2規則で実測したプロンプトの規則の選び方","description":"プロンプトや CLAUDE.md に規則を足しすぎると、モデルが自発的に行っていた完了条件の提示などの良い振る舞いが押しのけられます。架空題材3種・計75本の実測ログをもとに、指定しなくても守られる no-op 規則を削り、最小限の規則だけを選ぶ手順を解説します。","datePublished":"2026-10-18T20:06:00.000Z","image":"https://www.meetsource.work/blog/prompt-rule-displacement-measurement-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/prompt-rule-displacement-measurement"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"プロンプトにルールを細かく書いた方が、AIの出力は正確になるのではないでしょうか？","acceptedAnswer":{"@type":"Answer","text":"結論から言うと、ルールを増やすほど出力が正確になるとは限りません。東京大学の研究（ManyIFEval）が示すように、制約ルールが増えるほど LLM の全指示同時遵守率は大幅に低下します。さらに、ルール過多はモデルが自律的に行っていた良い振る舞い（完了条件の提示など）を押しのけてしまうため、指示は「既定と比べて振る舞いが変わる最小限のもの」に絞る方が安定します。"}},{"@type":"Question","name":"どのルールが不要な「no-op 規則」なのか、どうやって見分ければよいですか？","acceptedAnswer":{"@type":"Answer","text":"結論から言うと、そのルールを外した状態で題材を3〜5回出力させ、自律的に守られているかを数えて確認します。例えば本実験では、「実施する・行うを避ける」という文体ルールは、指示なしでも全9本で守られていました。ルールを外しても結果が変わらないものは no-op（無駄な規則）と判断して削除できます。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-18T20:06:00.000Z" data-astro-cid-7jjqptxk> 2026.10.19 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#context-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#品質管理</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>規則を足すと、Claude が普段やっていることが消える ── 8規則と2規則で実測したプロンプトの規則の選び方</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/prompt-rule-displacement-measurement-hero.webp" alt="規則を足すと、Claude が普段やっていることが消える ── 8規則と2規則で実測したプロンプトの規則の選び方" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p><code>CLAUDE.md</code> やプロンプトに「守らせたいルール」を書き足していくと、なぜか以前より出力が雑になったり、本来書かれていたはずの「完了条件」や「前提の確認」が抜け落ちたりした経験はないでしょうか。多くの開発者が「AIに正確に動いてほしいから」とルールを足し続けますが、実はプロンプトに規則を足しすぎると、モデルが指示なしでも自発的に行っている良い振る舞いを「押しのけて」しまうことがあります。</p>
+<p>規則の押しのけ（Prompt Rule Displacement）とは、プロンプトに明示的な制約や指示を過剰に追加した結果、LLM がプロンプト指定なしの既定状態で自律的に行っていた望ましい振る舞いが出力されなくなる現象です。</p>
+<p>本記事では、架空の引き継ぎ題材3種を固定し、「規則なし」「8規則」「2規則」の各条件で <code>claude -p</code> に出力させた実測ログ（計75本）をもとに、規則過多による押しのけという現象を観測します。そして、プロンプトを「あり・なし」で並べて数え、何もしなくても守られる不要なルール（no-op 規則）を削ぎ落として最小限の規則だけを選ぶ実践手順を提示します。</p>
+<h2 id="検証環境と調査スコープ">検証環境と調査スコープ</h2>
+<p>調査の客観性と再現性を担保するため、実行環境・使用ツール・題材の境界を以下のように設定しました。</p>
+<ul>
+<li>実行環境: macOS（Apple Silicon）</li>
+<li>実行 CLI / モデル: <code>claude -p</code>（Claude Code CLI、当時のデフォルトモデル。モデル名・CLI バージョン・実行日は、本記事の元になった記録からは特定できません。作業ディレクトリのプロジェクト設定（<code>project</code> / <code>local</code> スコープの <code>CLAUDE.md</code>）の有無も未確認）</li>
+<li>実行オプション: <code>--disallowedTools 'Bash,Edit,Write,Read,WebFetch,WebSearch,Agent,Glob,Grep'</code>（ツール実行を遮断し、純粋なテキスト生成として比較）</li>
+<li>実験の題材: 架空の引き継ぎメモ3種（A: ログイン画面エラーのチケット、B: 画像 WebP 化の Taskwarrior タスク、C: 設定ファイル整理のサブエージェント委譲文）</li>
+</ul>
+<p>なお、本記事の調査スコープは「プロンプトにおける文の規則選定」に特化しています。英語の制限言語規格（ASD-STE100）自体の詳細仕様や日本語翻案の議論は本記事の対象外とし、手元の作業ディレクトリで作成した文の規則スキルを検証した一次ログに基づき分析を進めます。</p>
+<h2 id="プロンプト過多の病理とアテンション予算の限界">プロンプト過多の病理とアテンション予算の限界</h2>
+<p>なぜルールを足しすぎると出力が崩れてしまうのでしょうか。Anthropic の公式ドキュメントや最新の学術研究から、その背景理論を整理します。</p>
+<h3 id="公式が警告する過剰指定アンチパターン">公式が警告する過剰指定アンチパターン</h3>
+<p>Anthropic の公式ドキュメント「Best practices for Claude Code」では、典型的なアンチパターンとして「The over-specified CLAUDE.md（過剰に指定された CLAUDE.md）」を挙げています。ファイルが長すぎると、重要な規則がノイズに埋もれてしまい「モデルがルールの半分を無視する（ignores half of it because important rules get lost in the noise）」と明記されています。その解決策として提示されているのは「冷徹に削る（Ruthlessly prune）」ことであり、指示なしで最初から正しく行えているなら削除すべきだと勧告されています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>また、ドキュメント「How Claude remembers your project」では、<code>CLAUDE.md</code> の推奨サイズとして「1ファイルあたり200行以下（target under 200 lines per CLAUDE.md file）」を目標とすることが明記されています。200行を超えるような長いファイルは余計なコンテキストを消費するだけでなく、指示の遵守率（adherence）を低下させうると説明されています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h3 id="アテンション予算と指示数増加による急落カーブ">アテンション予算と指示数増加による急落カーブ</h3>
+<p>Anthropic の技術記事「Effective context engineering for AI agents」では、LLM の内部挙動として「アテンション予算（attention budget）」の概念が解説されています。LLM には有限のアテンション予算が存在し、コンテキストに新しいトークンが追加されるたびに予算が消費され、想起精度が低下する「コンテキストロット（context rot）」が発生します。そのため、システムプロンプトは硬直的な if-else ルールを詰め込むのではなく、適切な高度（right altitude）で設計すべきとされています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>指示が増えるほど守られにくくなる傾向を定量的に示したのが、東京大学の研究グループ（Keno Harada et al.）によるベンチマーク研究「ManyIFEval」です。10種類の主要 LLM を横断して評価した結果、プロンプトに与える指示の数が増えるにつれて、全指示の同時遵守率が一貫して大幅に低下することが示されています（これは「全指示の同時遵守率」の話で、本記事で見る「既定の良い振る舞いが消える」現象の直接の証拠ではありません）。論文が評価した Claude 系モデルの1つでも、指示数 <code>n = 1</code> のとき 95% だった遵守率が、<code>n = 8</code> で 62%、<code>n = 10</code> では 48% へ急落します。コード制約ベンチマーク（StyleMBPP）に至っては、制約数 <code>n = 6</code> で遵守率が 1% まで崩壊します<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>本記事では、手元で収集した出力ログを以下の2つの評価軸で検証します。</p>
+<ol>
+<li><strong>完了条件の出現</strong>: 出力テキスト内に <code>完了条件|完了の条件|完了とする|終わったと|Done</code> を含む件数。</li>
+<li><strong>no-op 規則の判別</strong>: 規則を与えなくても、モデルが自発的に満たしている不要なルールの有無。</li>
+</ol>
+<h2 id="3つの比較実験で観測された挙動と実測値">3つの比較実験で観測された挙動と実測値</h2>
+<p>手元の環境で実施した3つの実験（計75本）の生ログから、規則過多による押しのけ、既定動作の切り分け、そして2規則への絞り込みの効果を実証します。</p>
+<h3 id="第1回実験-8規則による完了条件の半減と-no-op-規則の判別">第1回実験: 8規則による「完了条件」の半減と no-op 規則の判別</h3>
+<p>第1回実験では、架空の題材3種（A: チケット、B: タスク、C: 委譲文）に対し、「規則なし（base: 9本）」と「8つの文の規則あり（rules: 9本）」の計18本を生成して比較しました。</p>
+<p>その結果、規則なしの <code>base</code> 条件では、完了条件が <strong>9本中9本（100%）</strong> すべてに出現していました。しかし、8規則を与えた <code>rules</code> 条件では、完了条件の出現が <strong>9本中4本（44.4%）</strong> へ激減しました。8つの規則を足したことで、規則なしでは9本すべてに出ていた「完了条件」が出なくなりました。8規則が出力の型を縛ったのか、出力そのものが短くなった（1本あたり平均 <code>846.3</code> 字から <code>633.0</code> 字）ためなのかは、この実験では切り分けていません。</p>
+<p>さらに、8規則の遵守状況を調べると重要な事実が判明しました。「実施する・行うを避ける」という文体規則について、避けるべき表現（<code>を実施|を行う|を行い|を行って|を行わ</code>）は、規則なしの <code>base</code> 条件（全9本）において出現回数が <strong>0回</strong> でした（規則ありの <code>rules</code> 条件では1回）。つまり、この規則はプロンプトで指示しなくても全9本で守られており、プロンプトに書く必要のない「no-op 規則」だったと判断できます。</p>
+<p>第1回実験で使用した並列実行スクリプト（<code>run.sh</code>）は以下の通りです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#EA76CB;font-style:italic">#!/bin/zsh</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">cd</span><span style="color:#E64553;font-style:italic"> ${0</span><span style="color:#179299">:</span><span style="color:#4C4F69">a</span><span style="color:#179299">:</span><span style="color:#4C4F69">h</span><span style="color:#E64553;font-style:italic">}</span></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#4C4F69"> m </span><span style="color:#8839EF">in</span><span style="color:#40A02B"> A</span><span style="color:#40A02B"> B</span><span style="color:#40A02B"> C</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span><span style="color:#8839EF"> for</span><span style="color:#4C4F69"> c </span><span style="color:#8839EF">in</span><span style="color:#40A02B"> base</span><span style="color:#40A02B"> rules</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span><span style="color:#8839EF"> for</span><span style="color:#4C4F69"> i </span><span style="color:#8839EF">in</span><span style="color:#40A02B"> 1</span><span style="color:#40A02B"> 2</span><span style="color:#40A02B"> 3</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span></span>
+<span class="line"><span style="color:#4C4F69">  p</span><span style="color:#179299">=</span><span style="color:#40A02B">"次のメモを、別の担当者が読んで、書き手に質問せずに作業できる文章に書き直してください。出力は書き直した本文だけにしてください。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#40A02B"> memo_</span><span style="color:#4C4F69">$m</span><span style="color:#40A02B">.txt</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#7C7F93">  [</span><span style="color:#4C4F69"> $c </span><span style="color:#179299">=</span><span style="color:#4C4F69"> rules </span><span style="color:#7C7F93">]</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#4C4F69"> p</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">$p</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#40A02B"> rules.txt</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#7C7F93">  (</span><span style="color:#D20F39;font-style:italic"> print</span><span style="color:#40A02B"> -r</span><span style="color:#40A02B"> --</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$p</span><span style="color:#40A02B">"</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> claude</span><span style="color:#40A02B"> -p</span><span style="color:#40A02B"> --disallowedTools</span><span style="color:#40A02B"> 'Bash,Edit,Write,Read,WebFetch,WebSearch,Agent,Glob,Grep'</span><span style="color:#179299"> ></span><span style="color:#40A02B"> out/</span><span style="color:#4C4F69">$m</span><span style="color:#40A02B">-</span><span style="color:#4C4F69">$c</span><span style="color:#40A02B">-</span><span style="color:#4C4F69">$i</span><span style="color:#40A02B">.md</span><span style="color:#179299"> 2></span><span style="color:#40A02B"> out/</span><span style="color:#4C4F69">$m</span><span style="color:#40A02B">-</span><span style="color:#4C4F69">$c</span><span style="color:#40A02B">-</span><span style="color:#4C4F69">$i</span><span style="color:#40A02B">.err</span><span style="color:#7C7F93"> )</span><span style="color:#7C7F93"> &#x26;</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">done</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> done</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> done</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">wait</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">ls</span><span style="color:#40A02B"> -la</span><span style="color:#40A02B"> out</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> head</span><span style="color:#40A02B"> -40</span></span>
+<span class="line"></span></code></pre>
+<p>上記スクリプトを実行し、生成された全18本の出力を集計した実行結果ログは以下の通りです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="console"><code><span class="line"><span style="color:#4C4F69">base 完了条件:        9</span></span>
+<span class="line"><span style="color:#4C4F69">base 報告内容:        3</span></span>
+<span class="line"><span style="color:#4C4F69">rules 完了条件:        4</span></span>
+<span class="line"><span style="color:#4C4F69">rules 報告内容:        5</span></span>
+<span class="line"><span style="color:#4C4F69">A-rules-1.md:11</span></span>
+<span class="line"><span style="color:#4C4F69">A-rules-2.md:6</span></span>
+<span class="line"><span style="color:#4C4F69">C-rules-2.md:0</span></span>
+<span class="line"><span style="color:#4C4F69">A-rules-3.md:7</span></span>
+<span class="line"><span style="color:#4C4F69">B-rules-3.md:0</span></span>
+<span class="line"><span style="color:#4C4F69">C-rules-1.md:0</span></span>
+<span class="line"><span style="color:#4C4F69">C-rules-3.md:0</span></span>
+<span class="line"><span style="color:#4C4F69">B-rules-2.md:0</span></span>
+<span class="line"><span style="color:#4C4F69">B-rules-1.md:5</span></span>
+<span class="line"></span></code></pre>
+<p>集計ログが示す通り、<code>base</code> では 9本中9本に出現していた完了条件が、<code>rules</code> では 4本に半減しています。</p>
+<h3 id="第2回実験-完了条件は設定ではなくモデルの既定の振る舞い">第2回実験: 完了条件は「設定」ではなくモデルの「既定の振る舞い」</h3>
+<p>ここで一つの疑問が生じます。「完了条件が出現していたのは、ローカル環境の <code>~/.claude/CLAUDE.md</code> などのユーザー設定にそうした指示が入っていたからではないか」という点です。</p>
+<p>これを切り分けるため、第2回実験では「依頼文の言い回し（strict: 質問せずに作業できる文章に / plain: チケットの本文に）」と「ユーザー設定の有無（user: 通常設定 / nouser: 設定除外）」の 2×2＝4条件×各3回＝計12本を生成しました。</p>
+<p>ユーザー設定の除外には、Claude Code CLI の <code>--setting-sources project,local</code> フラグを使用し、グローバルの個人設定（user スコープ）を完全に遮断しました<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>第2回実験の集計コマンドおよび実行結果ログは以下の通りです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="console"><code><span class="line"><span style="color:#4C4F69">plain-nouser-1.md            完了条件:1 着手前/確認事項:0 文字:443</span></span>
+<span class="line"><span style="color:#4C4F69">plain-nouser-2.md            完了条件:1 着手前/確認事項:0 文字:360</span></span>
+<span class="line"><span style="color:#4C4F69">plain-nouser-3.md            完了条件:1 着手前/確認事項:0 文字:352</span></span>
+<span class="line"><span style="color:#4C4F69">plain-user-1.md              完了条件:0 着手前/確認事項:0 文字:316</span></span>
+<span class="line"><span style="color:#4C4F69">plain-user-2.md              完了条件:1 着手前/確認事項:0 文字:480</span></span>
+<span class="line"><span style="color:#4C4F69">plain-user-3.md              完了条件:1 着手前/確認事項:0 文字:467</span></span>
+<span class="line"><span style="color:#4C4F69">strict-nouser-1.md           完了条件:1 着手前/確認事項:1 文字:848</span></span>
+<span class="line"><span style="color:#4C4F69">strict-nouser-2.md           完了条件:1 着手前/確認事項:0 文字:898</span></span>
+<span class="line"><span style="color:#4C4F69">strict-nouser-3.md           完了条件:1 着手前/確認事項:0 文字:938</span></span>
+<span class="line"><span style="color:#4C4F69">strict-user-1.md             完了条件:2 着手前/確認事項:0 文字:777</span></span>
+<span class="line"><span style="color:#4C4F69">strict-user-2.md             完了条件:1 着手前/確認事項:0 文字:828</span></span>
+<span class="line"><span style="color:#4C4F69">strict-user-3.md             完了条件:2 着手前/確認事項:1 文字:928</span></span>
+<span class="line"></span></code></pre>
+<p>集計結果から以下の2点が実証されました。</p>
+<ol>
+<li><strong>完了条件はモデル既定の振る舞い</strong>: グローバル設定を遮断した <code>nouser</code> 条件でも、<strong>6本中6本（100%）</strong> すべてで完了条件が出現しました（12本全体でも11本で出現）。完了条件の提示は、ユーザー設定ファイルによるものではなく、Claude がこの依頼文のもとで指示なしでも行う動作であることが確認されました（依頼文そのものが完了条件を誘発している可能性は、この実験では切り分けていません）。</li>
+<li><strong>依頼文の一言が持つ強いレバレッジ</strong>: 「書き手に質問せずに作業できる文章に」という一言を含めるだけで、出力文字数が平均 385〜421字（plain の2条件）から平均 844〜895字（strict の2条件）へと約2倍に伸びました。また、「着手前に確認すること」という構成要素は strict の6本中2本で見られ、plain の6本では見られませんでした。</li>
+</ol>
+<h3 id="第3回実験-2規則に絞ると完了条件は100維持され小細工の上乗せ効果は観測されなかった">第3回実験: 2規則に絞ると完了条件は100%維持され、小細工の上乗せ効果は観測されなかった</h3>
+<p>第1回実験と第2回実験の結果を受けて、「指示に規則を追加すると、たとえ規則が2つと少なくても、モデルが『その規則だけを守る』ことになり、完了条件が抜けてしまうのではないか」という懸念が持ち上がりました。</p>
+<p>そこで第3回実験では、no-op 規則等を除外して「主語の明示」と「条件を先に書く」の2規則に絞り込み、以下の4条件×題材3種×各3回＝計36本（これに条件Bの下書き9本を加えた45本。第1回の18本・第2回の12本と合わせて計75本）を生成して比較しました。</p>
+<ul>
+<li><strong>条件D（2規則そのまま）</strong>: 2つの規則をそのまま渡す。</li>
+<li><strong>条件A（前置き）</strong>: 「普段どおりに書いたうえで、次の2点を足してください」と前置きする。</li>
+<li><strong>条件B（下書き後修正）</strong>: 一度通常どおり下書きを出力させた後、2規則を適用して書き直させる。</li>
+<li><strong>条件C（完了条件明記）</strong>: 2規則に加え、「完了条件を書くこと」を明示的に指示する。</li>
+</ul>
+<p>第3回実験の実行スクリプト（<code>run3.sh</code>）は以下の通りです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#EA76CB;font-style:italic">#!/bin/zsh</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">cd</span><span style="color:#E64553;font-style:italic"> ${0</span><span style="color:#179299">:</span><span style="color:#4C4F69">a</span><span style="color:#179299">:</span><span style="color:#4C4F69">h</span><span style="color:#E64553;font-style:italic">}</span></span>
+<span class="line"><span style="color:#4C4F69">H</span><span style="color:#179299">=</span><span style="color:#40A02B">"次のメモを、別の担当者が読んで、書き手に質問せずに作業できる文章に書き直してください。出力は書き直した本文だけにしてください。"</span></span>
+<span class="line"><span style="color:#4C4F69">CL</span><span style="color:#179299">=</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">claude</span><span style="color:#40A02B"> -p</span><span style="color:#40A02B"> --disallowedTools</span><span style="color:#40A02B"> 'Bash,Edit,Write,Read,WebFetch,WebSearch,Agent,Glob,Grep'</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#4C4F69"> m </span><span style="color:#8839EF">in</span><span style="color:#40A02B"> A</span><span style="color:#40A02B"> B</span><span style="color:#40A02B"> C</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span><span style="color:#8839EF"> for</span><span style="color:#4C4F69"> i </span><span style="color:#8839EF">in</span><span style="color:#40A02B"> 1</span><span style="color:#40A02B"> 2</span><span style="color:#40A02B"> 3</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span></span>
+<span class="line"><span style="color:#4C4F69">  M</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#40A02B"> memo_</span><span style="color:#4C4F69">$m</span><span style="color:#40A02B">.txt</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">;</span><span style="color:#4C4F69"> R</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#40A02B"> rules2.txt</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#7C7F93">  (</span><span style="color:#D20F39;font-style:italic"> print</span><span style="color:#40A02B"> -r</span><span style="color:#40A02B"> --</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$H</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">$M</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">次の規則に従って書いてください。</span></span>
+<span class="line"><span style="color:#4C4F69">$R</span><span style="color:#40A02B">"</span><span style="color:#179299"> |</span><span style="color:#4C4F69"> $CL </span><span style="color:#179299">></span><span style="color:#40A02B"> out3/</span><span style="color:#4C4F69">$m</span><span style="color:#40A02B">-D-</span><span style="color:#4C4F69">$i</span><span style="color:#40A02B">.md</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#7C7F93"> )</span><span style="color:#7C7F93"> &#x26;</span></span>
+<span class="line"><span style="color:#7C7F93">  (</span><span style="color:#D20F39;font-style:italic"> print</span><span style="color:#40A02B"> -r</span><span style="color:#40A02B"> --</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$H</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">$M</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">普段どおりに書いたうえで、次の2点を足してください。</span></span>
+<span class="line"><span style="color:#4C4F69">$R</span><span style="color:#40A02B">"</span><span style="color:#179299"> |</span><span style="color:#4C4F69"> $CL </span><span style="color:#179299">></span><span style="color:#40A02B"> out3/</span><span style="color:#4C4F69">$m</span><span style="color:#40A02B">-A-</span><span style="color:#4C4F69">$i</span><span style="color:#40A02B">.md</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#7C7F93"> )</span><span style="color:#7C7F93"> &#x26;</span></span>
+<span class="line"><span style="color:#7C7F93">  (</span><span style="color:#D20F39;font-style:italic"> print</span><span style="color:#40A02B"> -r</span><span style="color:#40A02B"> --</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$H</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">$M</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">次の規則に従って書いてください。</span></span>
+<span class="line"><span style="color:#4C4F69">$R</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">完了条件を必ず含めてください。"</span><span style="color:#179299"> |</span><span style="color:#4C4F69"> $CL </span><span style="color:#179299">></span><span style="color:#40A02B"> out3/</span><span style="color:#4C4F69">$m</span><span style="color:#40A02B">-C-</span><span style="color:#4C4F69">$i</span><span style="color:#40A02B">.md</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#7C7F93"> )</span><span style="color:#7C7F93"> &#x26;</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">done</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> done</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">wait</span></span>
+<span class="line"></span></code></pre>
+<p>各条件の出力を集計した実行結果ログは以下の通りです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="console"><code><span class="line"><span style="color:#4C4F69">条件 | 完了条件(9本中) | 主語/本 | 条件先/本 | 条件後/本 | 字/本</span></span>
+<span class="line"><span style="color:#4C4F69">base(既存) | 9 /9 | 0.3 2.3 0.1 846.3</span></span>
+<span class="line"><span style="color:#4C4F69">rules8(既存) | 4 /9 | 9.6 3.6 0.0 633.0</span></span>
+<span class="line"><span style="color:#4C4F69">D 2規則 | 9 /9 | 4.3 4.1 0.0 749.2</span></span>
+<span class="line"><span style="color:#4C4F69">A 追加 | 8 /9 | 5.8 3.9 0.0 739.3</span></span>
+<span class="line"><span style="color:#4C4F69">B 下書き | 8 /9 | 0.1 2.9 0.0 824.6</span></span>
+<span class="line"><span style="color:#4C4F69">B 修正後 | 8 /9 | 5.1 3.1 0.0 865.9</span></span>
+<span class="line"><span style="color:#4C4F69">C 2規則+完了 | 9 /9 | 5.7 4.4 0.0 838.1</span></span>
+<span class="line"></span></code></pre>
+<p>実測の結果、2規則をそのまま渡した条件Dにおいて、完了条件は <strong>9本中9本（100%）</strong> すべてで維持されました。</p>
+<p>さらに、「普段どおりに書いたうえで」と前置きした条件A（8/9）や、2段階で下書きを修正させた条件B（8/9）といった小細工は、2規則をそのまま渡した結果（9/9）を上回りませんでした。各条件9本のため、小さな差は判別できません。</p>
+<h2 id="規則数と指示方法による出力品質の比較マトリクス">規則数と指示方法による出力品質の比較マトリクス</h2>
+<p>一連の比較実験を通じて得られた各条件の出力挙動を俯瞰すると、規則数は「少なければ少ないほど良い」という単純な話ではなく、モデルの既定動作を邪魔しない最小限の境界を見極めることが肝要であることが分かります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>条件</th><th>規則数</th><th>完了条件の出現率（各9本）</th><th>no-op 規則の扱い</th><th>プロンプトの保守性</th><th>総合評価・判定</th></tr></thead><tbody><tr><td><strong>規則なし (base)</strong></td><td>0</td><td><strong>9 / 9 (100%)</strong></td><td>規則なしでも自発的に満たす</td><td>最高（記述不要）</td><td>既定の良い振る舞いは最大だが、固有の文体統制はできない</td></tr><tr><td><strong>8規則 (rules8)</strong></td><td>8</td><td><strong>4 / 9 (44.4%)</strong></td><td>no-op 規則まで含めて過剰指定</td><td>最低（ノイズ化・肥大化）</td><td>❌ <strong>押しのけ発生</strong>。完了条件が半減し指示無視を招く</td></tr><tr><td><strong>2規則そのまま (条件D)</strong></td><td>2</td><td><strong>9 / 9 (100%)</strong></td><td>振る舞いが変わる規則のみに絞る</td><td>高（2行のみ）</td><td>⭕ <strong>本実験の範囲では推奨</strong>。既定動作を損なわずに文体を統制</td></tr><tr><td><strong>2規則＋前置き (条件A)</strong></td><td>2</td><td><strong>8 / 9 (88.9%)</strong></td><td>「普段どおりに書いたうえで」を追加</td><td>中（前置き指示の追加）</td><td>⚠️ <strong>上乗せ効果は観測されず</strong>。2規則そのまま（9/9）と差がなかった</td></tr><tr><td><strong>2規則＋下書き後修正 (条件B)</strong></td><td>2</td><td><strong>8 / 9 (88.9%)</strong></td><td>2段階生成で修正指示</td><td>低（2回生成でコスト2倍）</td><td>⚠️ <strong>上乗せ効果は観測されず</strong>。2段階の手順を踏んでも改善せずコスト増</td></tr><tr><td><strong>2規則＋完了条件明記 (条件C)</strong></td><td>2</td><td><strong>9 / 9 (100%)</strong></td><td>「完了条件を書け」と明示指示</td><td>中（指示の冗長化）</td><td>⚠️ <strong>上乗せ効果は観測されず</strong>。明示しなくても条件Dで9/9出ている</td></tr></tbody></table>
+<p>上表のとおり、2規則に絞り込んだ条件Dでは完了条件が9本中9本で維持されました。「普段どおりに書いて」と前置きする（条件A）、下書き後に直させる（条件B）、完了条件を念押し明記する（条件C）といった手当てを足しても、この実験（各9本・1モデル・3題材）では上乗せの効果は観測されませんでした。</p>
+<h2 id="既定の振る舞いを活かすプロンプト規則の選定ステップ">既定の振る舞いを活かすプロンプト規則の選定ステップ</h2>
+<p>手元の <code>CLAUDE.md</code> やシステムプロンプトから不要なルールを削り落とし、モデルの既定動作を最大限に活かすための実践的な3ステップを紹介します。</p>
+<h3 id="ステップ1-規則なしで数える">ステップ1: 「規則なし」で数える</h3>
+<p>まず、代表的なタスク題材を3つ程度固定し、ルールを一切入れないプレーンなプロンプトで複数回（3〜5回）出力させます。出力結果を観察し、指示しなくても自発的に満たされている要件（no-op 規則）を洗い出してプロンプトから除外します。</p>
+<h3 id="ステップ2-振る舞いが変わる規則だけに絞る">ステップ2: 「振る舞いが変わる規則」だけに絞る</h3>
+<p>指示を与えることによって初めて挙動が変わるコアな規則（主語の明示、条件の位置など）だけを2〜3個選定します。</p>
+<p>以下は本実験の直接の裏づけではなく、関連する経験則として共有されている知見です。GMOペパボでは、約2000行あった <code>CLAUDE.md</code> からモデルが既知の原則（SOLID や DRY など）を削ぎ落とし、3層構造（<code>CLAUDE.md</code> 150行、<code>rules/</code>、<code>skills/</code>）へ分割することで、起動時トークン消費を 114,847 から 19,232 へと 83% 削減した実績が報告されています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。また、ENECHANGE の開発者ブログでは「削除の判断に迷ったときは、『これを削除したらClaudeがミスをするだろうか？』と質問してみてください」という運用基準が提示されています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。Qiita でも R61 氏が「プロンプトは“書き続けるもの”ではなく“削り続けるもの”」として、エッジケース追記ループによる巨大化の弊害を指摘しています<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。さらに、ikuo00uk 氏の実運用の知見でも「禁止事項を10個以上並べると後半ほど無視されるため、最重要ルールは3つ以内に絞る」ことが推奨されています<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<h3 id="ステップ3-押しのけの有無をカウントする">ステップ3: 「押しのけ」の有無をカウントする</h3>
+<p>規則を追加した後の出力を並べて数え、以前のプレーンな状態で自発的に出力されていた良い要素（完了条件、前提確認、丁寧なステップ分けなど）が抜け落ちていないかを点検します。もし抜け落ち（押しのけ）が発生しているなら、規則数を減らすか、指示の表現をより抽象度の高い目的志向（「〜のために」）へ書き換えます（本実験では試していない対処案です）。</p>
+<p>以下は、本実験の結果を踏まえた最小限の文の規則ファイルの推奨構成例です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>1. 誰が行うのかが変わる箇所では、主語を書く。</span></span>
+<span class="line"><span>2. 条件があるときは、条件を指示より先に書く。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>指示はあれこれ細かく書き連ねるのではなく、モデルの自発的な良さを邪魔しない「振る舞いが変わる2行」に留めるのが最も安定します。</p>
+<h2 id="実測データの詳細と検証の限界">実測データの詳細と検証の限界</h2>
+<p>本記事の実測データから客観的に裏付けられた範囲（書けること）と、過度な一般化を避けるべき検証の限界（書けないこと）を誠実に明記します。</p>
+<h3 id="書けること">書けること</h3>
+<ul>
+<li>8規則を渡した条件下（9本中4本、44.4%）において、規則なし（9本中9本、100%）と比較して完了条件の出現率が半減したこと。</li>
+<li>振る舞いが変わる2規則に絞ってそのまま渡した条件下（条件D: 9本中9本、100%）において、完了条件が 100% 維持されたこと。</li>
+<li>完了条件の生成は、グローバル設定ファイルを排除しても 6本中6本（100%）で自発的に出力されるモデル既定の振る舞いであること。</li>
+</ul>
+<h3 id="書けないこと">書けないこと</h3>
+<ul>
+<li>各条件9本の比較なので、8/9 と 9/9 の差は偶然との区別がつかないこと。完了条件の判定は語句の一致（<code>完了条件|完了の条件|完了とする|終わったと|Done</code>）であり、言い換えられた完了条件や、語は出ていても実質が伴わないものは区別していないこと。</li>
+<li>8規則で完了条件が減った理由が、規則の数なのか、規則の内容が完了条件と競合したのか、出力が短くなったためなのか（切り分けていない）。2規則が残ったのが「数が少ないから」か「この2規則が競合しない内容だから」かも同じく未分離であること。</li>
+<li>実験は引き継ぎ文の書き直しという文書タスクの文体規則だけで、コーディング規約やテスト規則など他の種類の規則では未検証であること。</li>
+<li>規則数が 3〜7 個のどの境界値から押しのけが始まり、遵守率が崩れるのか（手元では未検証であり、今後の調査課題であること）。</li>
+<li>他社モデル（OpenAI や Google のモデル等）においても全く同一の既定動作や押しのけの比率が現れるかどうか（本実験は Claude による実測であり、モデルやタスク固有の閾値は未測定であること）。</li>
+</ul>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-プロンプトにルールを細かく書いた方がaiの出力は正確になるのではないでしょうか">Q. プロンプトにルールを細かく書いた方が、AIの出力は正確になるのではないでしょうか？</h3>
+<p><strong>A.</strong> 結論から言うと、ルールを増やすほど出力が正確になるとは限りません。東京大学の研究（ManyIFEval）が示すように、制約ルールが増えるほど LLM の全指示同時遵守率は大幅に低下します。さらに、ルール過多はモデルが自律的に行っていた良い振る舞い（完了条件の提示など）を押しのけてしまうため、指示は「既定と比べて振る舞いが変わる最小限のもの」に絞る方が安定します。</p>
+<h3 id="q-どのルールが不要なno-op-規則なのかどうやって見分ければよいですか">Q. どのルールが不要な「no-op 規則」なのか、どうやって見分ければよいですか？</h3>
+<p><strong>A.</strong> 結論から言うと、そのルールを外した状態で題材を3〜5回出力させ、自律的に守られているかを数えて確認します。例えば本実験では、「実施する・行うを避ける」という文体ルールは、指示なしでも全9本で守られていました。ルールを外しても結果が変わらないものは no-op（無駄な規則）と判断して削除できます。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本記事の実測から言えることは以下の通りです。</p>
+<ul>
+<li>実測では、8規則を足すと完了条件の出現が9本中9本から4本に減った（因果の説明は未検証。アテンション予算の消費は、公式資料が挙げる背景理論の1つです）。</li>
+<li>指示なしでも最初から自発的に守られている規則（no-op 規則）は、プロンプトから冷徹に削ぎ落とす。</li>
+<li>規則は「あり・なし」の出力を並べて数え、振る舞いが変わる最小限（この実験では2個）に絞った条件で、完了条件が9本中9本で維持された。</li>
+</ul>
+<p>自社の <code>CLAUDE.md</code> やスキル定義の肥大化・品質改善、エージェントパイプラインの標準化についてのご相談は、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://code.claude.com/docs/en/best-practices">Best practices for Claude Code</a> Claude Code Docs (Anthropic), 2026年10月確認。アンチパターン「The over-specified CLAUDE.md」（長すぎると重要な規則がノイズに埋もれ半分を無視する、L457）、解決策としての「冷徹に削る（Ruthlessly prune）」（L458）。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://code.claude.com/docs/en/memory">How Claude remembers your project</a> Claude Code Docs (Anthropic), 2026年9月確認。推奨サイズは1ファイルあたり200行以下（L78）、200行超過によるコンテキスト消費増と遵守率（adherence）低下（L78, L569）、@path インポートはコンテキスト削減にならない点（L78, L569）。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Effective context engineering for AI agents</a> Anthropic (Engineering), 2025年9月29日。有限のアテンション予算（attention budget）、コンテキストロット（context rot）の定義、システムプロンプトの適切な高度（right altitude）。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://arxiv.org/abs/2509.21051">When Instructions Multiply: Measuring and Estimating LLM Capabilities of Multiple Instructions Following</a> Keno Harada, Yudai Yamazaki, Masachika Taniguchi, Edison Marrese-Taylor, Takeshi Kojima, Yusuke Iwasawa, Yutaka Matsuo (The University of Tokyo), 2025年9月25日公開 (arXiv:2509.21051)。指示数 <code>n = 1〜10</code> で全指示遵守率が大幅に低下（ManyIFEval、Table 8）、個別指示遵守率とのギャップ（Table 9）、コード制約 StyleMBPP での急落（Table 11）。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://code.claude.com/docs/en/cli-reference">CLI reference</a> Claude Code Docs (Anthropic), 2026年10月確認。<code>--setting-sources</code> フラグの仕様（カンマ区切りで user, project, local を指定、L127）。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://zenn.dev/pepabo/articles/claude-code-rules-skills-split">CLAUDE.md の肥大化を 3 層構造で 83% 軽くした — 実測と試行錯誤の記録</a> GMOペパボ株式会社, 2026年4月21日。2000行の CLAUDE.md による起動時 114,847 トークン消費、既知原則削除や rules/skills 分割による 19,232 トークンへの 83% 削減実測値。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://tech.enechange.co.jp/entry/2026/03/24/102016">【Claude Code】CLAUDE.mdが肥大化する問題とその解決策</a> ENECHANGE株式会社 開発者ブログ (柿), 2026年3月24日。公式の200行制限引用と「これを削除したらClaudeがミスをするだろうか？」と問う運用基準。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://qiita.com/R61/items/41f06154898839872d95">プロンプトは”書き続けるもの”ではなく”削り続けるもの” ── システムプロンプト肥大化問題と対策</a> R61, 2026年3月7日。エッジケース追記ループによる巨大化の病理、認知過負荷と引き算のプロンプトエンジニアリング。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://www.ikuo00uk.dev/entry/claude-md-guide">CLAUDE.mdの育て方 — 半年間の実運用で見つけた設計パターン</a> ikuo00uk, 2026年4月18日。禁止事項を10個以上並べると後半ほど無視される実体験、最重要ルールを3つ以内に絞る設計。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

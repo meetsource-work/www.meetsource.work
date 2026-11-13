@@ -1,0 +1,263 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>curlで200 OKでもWebFetchでは読めないURL──検証スクリプトの層の違いと一次情報の判断基準 | Meetsource</title><meta name="description" content="curlでHTTP 200でも記事本文が読めない事例から、HTTP・本文・記事取得の3層を分けるURL検証と脚注採用の判断基準を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/curl-200-webfetch-402"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="curlで200 OKでもWebFetchでは読めないURL──検証スクリプトの層の違いと一次情報の判断基準 | Meetsource"><meta property="og:description" content="curlでHTTP 200でも記事本文が読めない事例から、HTTP・本文・記事取得の3層を分けるURL検証と脚注採用の判断基準を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/curl-200-webfetch-402"><meta property="og:image" content="https://www.meetsource.work/blog/curl-200-webfetch-402-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-23T10:34:46.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="curlで200 OKでもWebFetchでは読めないURL──検証スクリプトの層の違いと一次情報の判断基準 | Meetsource"><meta name="twitter:description" content="curlでHTTP 200でも記事本文が読めない事例から、HTTP・本文・記事取得の3層を分けるURL検証と脚注採用の判断基準を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/curl-200-webfetch-402-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"curlで200 OKでもWebFetchでは読めないURL──検証スクリプトの層の違いと一次情報の判断基準","description":"curlでHTTP 200でも記事本文が読めない事例から、HTTP・本文・記事取得の3層を分けるURL検証と脚注採用の判断基準を解説します。","datePublished":"2026-08-23T10:34:46.000Z","image":"https://www.meetsource.work/blog/curl-200-webfetch-402-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/curl-200-webfetch-402"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-23T10:34:46.000Z" data-astro-cid-7jjqptxk> 2026.08.23 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#soft-404</span><span class="tag" data-astro-cid-7jjqptxk>#url-verification</span><span class="tag" data-astro-cid-7jjqptxk>#shell-script</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>curlで200 OKでもWebFetchでは読めないURL──検証スクリプトの層の違いと一次情報の判断基準</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/curl-200-webfetch-402-hero.webp" alt="curlで200 OKでもWebFetchでは読めないURL──検証スクリプトの層の違いと一次情報の判断基準" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>URLの実在性を検証するとき、最初に確認するのはHTTPステータスコードです。<code>curl</code> で <code>200 OK</code> が返れば、検証スクリプトは成功と判定しがちです。</p>
+<p>しかし、記事の脚注に使うURLでは、HTTPリクエストが成功しただけでは足りません。保存された過去の執筆セッションには、curlベースのURL検証で <code>200</code> だったX.comのURLが、同じURLをWebFetchで取得した段階では <code>402 Payment Required</code> となり、本文を取得できなかった一例が残っています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。そのURLは、読める根拠として確認できなかったため、脚注から外されました。</p>
+<p>URL検証の合格とは、HTTP <code>200 OK</code> を受け取ることではありません。記事で使う取得層が、根拠となる本文を読み、記事の主張との対応まで確認できることです。</p>
+<p>この記事では、HTTPステータスを確認する段階を「HTTP層」、返されたデータと期待語を確認する段階を「本文層」、記事で実際に根拠本文を読む手段を「記事取得層」と呼びます。これは取得結果を整理するための呼び方です。</p>
+<h2 id="curlで200-okなのにwebfetchで読めないのはなぜか">curlで200 OKなのにWebFetchで読めないのはなぜか</h2>
+<p>保存された一つの事例を、確認できた事実だけに分けると次のようになります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>時点</th><th>取得層</th><th>記録された結果</th><th>判断できること</th></tr></thead><tbody><tr><td>過去のURL検証</td><td>curlベースの検証</td><td>X.comの投稿候補1件が <code>200</code></td><td>HTTP層では成功として記録された</td></tr><tr><td>同じ執筆セッション</td><td>WebFetch</td><td><code>402 Payment Required</code>、本文未取得</td><td>記事で読む本文は取得できなかった</td></tr><tr><td>編集判断</td><td>脚注の採否</td><td>取得不能候補を除外</td><td>読めない根拠を採用しなかった</td></tr></tbody></table>
+<p>ここから言えるのは、検証した取得層と、記事本文を読むための取得層で結果が一致しなかったことです。現在も同じ応答になることや、<code>402</code> の原因が支払い・認証・Bot対策のどれかまでは、この一例から判断できません。</p>
+<p>この切り分けが重要なのは、脚注の価値が「URLが応答したこと」ではなく、「読者が根拠をたどり、記事の主張を確かめられること」にあるからです。</p>
+<h2 id="http-200-okとは何を保証するのか">HTTP 200 OKとは何を保証するのか</h2>
+<p>HTTP <code>200 OK</code> は、リクエストが成功したことを示すステータスです。GETの成功レスポンスでは、対象リソースの現在の表現を返す意味を持ちます<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>ただし、ステータスコードと返された表現の内容は別の観測対象です。HTTPの表現はメタデータとデータから構成され、<code>Content-Type</code> はその表現のメディアタイプを示します。<code>Content-Type: text/html</code> であっても、それが期待する記事本文であることや、その本文が引用したい主張と一致することまでは示しません<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>リダイレクトも同じです。<code>curl -L</code> で最終的に <code>200</code> になった場合、入力URLが直接本文を返したのではなく、別のURLを経由した結果かもしれません<sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。入力URL、最終URL、リダイレクト数は分けて記録する必要があります。</p>
+<p>Google Searchの技術要件も、Googlebotがブロックされないこと、HTTP <code>200</code>、indexable contentを別々の条件として扱っています。これらを満たしても、インデックス登録は保証されません<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。また、Googleのクローラー向け説明では、<code>200</code> の応答でも空ページやエラー内容なら <code>soft 404</code> として扱われる場合があります<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。主コンテンツがほとんどないページや、レンダリング後にエラーを表示するページも、ステータスコードだけでは見落とすことがあります<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>したがって、HTTP <code>200 OK</code> とは「HTTPリクエストが成功した」という入口の合格です。引用したい本文が存在し、正しい内容で、記事で使う取得層から読めることまでは保証しません。</p>
+<h2 id="curlとブラウザーheadlesswebfetchの違い">curlとブラウザー・Headless・WebFetchの違い</h2>
+<p>同じURLでも、取得層によって送る情報、実行する処理、保持する状態が異なります。どれが優れているかではなく、どこまで観測できるかを比較します。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>取得層</th><th>主に確認できるもの</th><th>別途確認が必要なもの</th><th>記事での役割</th></tr></thead><tbody><tr><td>curlのHTTPリクエスト</td><td>ステータス、ヘッダー、本文、最終URL</td><td>JavaScript実行、ブラウザー信号、サービス固有の処理</td><td>HTTP層と本文層の計測</td></tr><tr><td>ブラウザー／Headless</td><td>JavaScript実行後のDOM、環境によってCookieやセッション</td><td>実行環境ごとの判定差、サービス固有の制限</td><td>レンダリング後の確認</td></tr><tr><td>WebFetchなど記事取得層</td><td>そのサービスが返した本文、取得エラー</td><td>curlや別ブラウザーと同じ本文かどうか</td><td>脚注を読む層の最終確認</td></tr><tr><td>編集上の採用判定</td><td>根拠本文と記事の主張の対応</td><td>取得不能の原因の断定</td><td>採用・未確認・代替の判断</td></tr></tbody></table>
+<p><img src="/blog/curl-200-webfetch-402-diagram-1.webp" alt="URL検証の三層モデル。HTTP応答、本文の内容確認、記事で根拠を読む取得層を左から右へ分け、最後に読めない分岐を警告色で示した図"></p>
+<p>User-Agentはリクエストを開始したソフトウェアを示す情報で、サーバーがレスポンスの調整に使うこともあります<sup><a href="#user-content-fn-2" id="user-content-fnref-2-4" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。しかし、User-Agent文字列をブラウザー風に変えるだけで、JavaScript、Cookie、セッション、ブラウザー信号まで再現できるわけではありません。MDNも、User-Agentによるブラウザー判定は偽装できるため信頼性が低いと説明しています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>Bot検出やチャレンジの仕組みを持つサービスでは、ヘッダー、セッションの特性、ブラウザー信号、JavaScriptなど複数の要素が判定に使われることがあります<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。Cloudflareの資料でも、チャレンジはクライアント側の処理やブラウザー信号を前提にし、目的URLの前にチャレンジページを置く仕組みが説明されています<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup><sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。これは取得層の違いを理解する一般的な背景であり、今回のX.comの <code>402</code> の原因を示すものではありません。</p>
+<p><code>402 Payment Required</code> についても、ステータスコードだけで支払いが必要だと判断してはいけません。RFC 9110では <code>402</code> は将来用途のために予約されているため、今回の記録から <code>402</code> の原因を認証や特定の制御方式と断定することはできません<sup><a href="#user-content-fn-2" id="user-content-fnref-2-5" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。確実に言えるのは、その取得層では本文を読めなかったという結果です。</p>
+<h2 id="出典urlを二段階で検収するやり方">出典URLを二段階で検収するやり方</h2>
+<p>脚注候補の検収は、次の二段階に分けます。</p>
+<ol>
+<li><strong>HTTP・本文層を確認する</strong>: ステータス、最終URL、ヘッダー、本文が意図した資料かを確認します。</li>
+<li><strong>記事取得層を確認する</strong>: 実際に脚注を読むWebFetch、ブラウザー、Headlessなどで、根拠本文を読み、記事の主張との対応を確認します。</li>
+</ol>
+<p><code>200</code> は第1段階の入口にすぎません。第2段階を通過して初めて、記事の出典として採用できます。下表の項目1〜4が第1段階（HTTP・本文層の確認）、項目5が第2段階（記事取得層の確認）に対応します。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>項目</th><th>確認内容</th><th>合格条件</th><th>不合格時の扱い</th></tr></thead><tbody><tr><td>1</td><td>HTTPステータス</td><td>想定した成功条件を満たす</td><td>未確認として保留</td></tr><tr><td>2</td><td>最終URL・リダイレクト</td><td>意図した記事・資料を指す</td><td>リダイレクト先を再確認</td></tr><tr><td>3</td><td>ヘッダー・Content-Type</td><td>メディアタイプや圧縮を記録し、想定外を検出できる</td><td>本文検証前に切り分ける</td></tr><tr><td>4</td><td>本文</td><td>空本文、エラー・チャレンジ兆候、期待する固有語を確認できる</td><td>未確認または代替出典へ降格</td></tr><tr><td>5</td><td>実際の記事取得層</td><td>根拠本文を読み、主張との対応を確認できる</td><td>脚注に採用しない</td></tr></tbody></table>
+<p>curl側の計測は、例えば次のように書けます。これはHTTP層と本文層を確認する設計例であり、今回のX.com URLを現在再計測した結果ではありません。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#4C4F69">tmp_dir</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">mktemp</span><span style="color:#40A02B"> -d</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">trap</span><span style="color:#40A02B"> 'rm -rf "$tmp_dir"'</span><span style="color:#40A02B"> EXIT</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">curl</span><span style="color:#40A02B"> -sS</span><span style="color:#40A02B"> -L</span><span style="color:#40A02B"> --compressed</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  -A</span><span style="color:#40A02B"> 'url-check/1.0'</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  -D</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$tmp_dir</span><span style="color:#40A02B">/headers"</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  -o</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$tmp_dir</span><span style="color:#40A02B">/body"</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  -w</span><span style="color:#40A02B"> 'status=%{http_code}\nfinal_url=%{url_effective}\ncontent_type=%{content_type}\nredirects=%{num_redirects}\nbytes=%{size_download}\n'</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#40A02B">  "</span><span style="color:#4C4F69">$url</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">rg</span><span style="color:#40A02B"> -n</span><span style="color:#40A02B"> '期待する見出しや固有語'</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$tmp_dir</span><span style="color:#40A02B">/body"</span></span>
+<span class="line"></span></code></pre>
+<p><code>-L</code> でリダイレクトを追跡し、<code>-D</code> でヘッダーを保存し、<code>-w</code> でステータスや最終URLなどの計測値を出力しています。<code>-I</code> は本文を取得しないHEADリクエストなので、本文の存在や期待語を確認する検証とは分けて考えます<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。</p>
+<p>ただし、この例で確認できるのはcurl側の結果までです。WebFetchやブラウザーで本文を読めることを証明するには、実際に記事で利用する取得層でも確認し、その結果を別に記録します。</p>
+<h2 id="脚注の出典urlを採用してよい条件とは何か">脚注の出典URLを採用してよい条件とは何か</h2>
+<p>出典URLについて、次の三つを分けて記録します。</p>
+<ul>
+<li><strong>存在する</strong>: URLへのリクエストが応答した。</li>
+<li><strong>本文を取得できる</strong>: 返されたデータに、空本文・エラー・チャレンジ画面ではなく、確認対象の本文がある。</li>
+<li><strong>根拠として読める</strong>: 記事で使う取得層から本文を読み、主張との対応を確認できる。</li>
+</ul>
+<p>HTTP検証だけが成功したURLは「HTTP確認済み・本文未確認」として採用を保留します。本文は取得できても、期待した主張との対応が不明なら脚注には採用しません。記事で使う取得層から本文と主張の対応まで確認できたものだけを、脚注候補に進めます。</p>
+<p>取得不能なURLについては、アクセス制限を回避する方向へ進むのではなく、取得不能だった事実と理由を記録し、代替の一次情報源を探します。HTTP <code>200</code> を返す <code>soft 404</code> など、ステータスコードだけの別の検証ミスについては、<a href="/blog/ai-agent-url-verification-traps">URL検証で起きた別の罠</a>でも扱っています。</p>
+<h2 id="url検証スクリプトに何を記録するのがよいか">URL検証スクリプトに何を記録するのがよいか</h2>
+<p>ステータスコードを捨てる必要はありません。合格判定の一項目として位置づけ、後から「どの層で何が見えたか」を追える形にします。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>分類</th><th>フィールド例</th><th>目的</th></tr></thead><tbody><tr><td>時間・入力</td><td><code>observed_at</code>, <code>input_url</code>, <code>method</code></td><td>いつ、何を、どのメソッドで見たかを固定</td></tr><tr><td>HTTP</td><td><code>curl_exit</code>, <code>status</code>, <code>final_url</code>, <code>redirects</code></td><td>通信結果とリダイレクト後の対象を分離</td></tr><tr><td>表現</td><td><code>content_type</code>, <code>content_encoding</code>, <code>bytes</code>, <code>body_hash</code></td><td>返ったデータの形式と量を記録</td></tr><tr><td>本文</td><td><code>empty</code>, <code>error_marker</code>, <code>challenge_marker</code>, <code>expected_term</code></td><td>soft errorやチャレンジ兆候を検出</td></tr><tr><td>取得層</td><td><code>fetch_layer</code>, <code>readable</code>, <code>extracted_chars</code>, <code>claim_match</code></td><td>記事で使う取得層の可読性を判断</td></tr><tr><td>判断</td><td><code>verdict</code>, <code>reason</code>, <code>alternative_source</code></td><td>採用・未確認・代替の経緯を残す</td></tr></tbody></table>
+<p>このフィールド設計は、HTTP仕様や各サービスの資料を組み合わせた実務上の提案です。すべてのサイトに共通する公式の合格規格ではありません。重要なのは、<code>200</code> だけを残すのではなく、最終URL、本文の兆候、取得層、主張との一致、採用理由を同じ検証記録に置くことです。</p>
+<h2 id="よくある疑問脚注urlの検証をどう考えるか">よくある疑問：脚注URLの検証をどう考えるか</h2>
+<h3 id="curlでhttp-200なのにwebfetchで読めないのはなぜか">curlでHTTP 200なのにWebFetchで読めないのはなぜか</h3>
+<p><strong>取得層が違うため、結果が一致しないことがあります。</strong> <code>200</code> はHTTPリクエストの成功を示しますが、WebFetch側の取得処理、JavaScript、Cookie、セッション、ブラウザー信号、サービス固有の制約まで同じとは限りません。今回の事例では差が記録されていますが、原因は確定していません。</p>
+<h3 id="http-200-okだけでurl検証してよいか">HTTP 200 OKだけでURL検証してよいか</h3>
+<p><strong>脚注の採用判定としては不十分です。</strong> 最終URL、Content-Type、本文の存在と期待語、記事で使う取得層による本文の可読性、そして主張との対応まで確認します。</p>
+<h3 id="402-payment-requiredなら支払いが必要か">402 Payment Requiredなら支払いが必要か</h3>
+<p><strong>ステータスコードだけでは判断できません。</strong> <code>402</code> は将来用途のために予約されたコードなので、まずは本文取得不能として脚注採用を保留し、代替の一次情報源を探します。</p>
+<h2 id="まとめ200から本文可読性へ合格条件を更新する">まとめ：200から本文可読性へ合格条件を更新する</h2>
+<p><code>200 OK</code> はHTTP層の成功であり、記事の根拠本文が読めることとは別です。curl、ブラウザー、Headless、WebFetchは観測する層が違うため、記事の採用条件にする取得層を先に決めます。</p>
+<p>取得層の差の原因を推測するより、本文を読めない出典を <code>未確認</code> に降格し、代替出典へ切り替える方が編集上の判断を再現できます。自分の検証スクリプトにも、最終URL、ヘッダー、本文、取得層、検証時刻、採用理由を追加してみてください。</p>
+<p>検証スクリプトやAIを使った情報収集パイプラインの品質改善を検討している場合は、<a href="/#contact">コンタクトフォーム</a>から相談できます。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p>手元の一次計測記録、2026年8月23日検算済み。保存された過去の一事例について、curlベースのURL検証が <code>200</code>、同じURLのWebFetchが <code>402 Payment Required</code>、レスポンス本文未取得、取得不能候補を脚注から除外したことを確認できる。現在の再現性、レスポンスの詳細、<code>402</code> の原因、他SNSへの一般化は確認対象外。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-200-ok">HTTP Semantics RFC 9110</a> IETF、2022年6月、Standards Track。<code>200 OK</code> は §15.3.1、表現メタデータと表現データは §3.2、<code>Content-Type</code> は §8.3、リダイレクトは §15.4、<code>User-Agent</code> は §10.1.5、<code>402 Payment Required</code> は §15.5.3。この記事では各節の定義を要約しており、今回の取得結果やWebFetchの仕様を説明する資料ではありません。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-2-4" data-footnote-backref="" aria-label="Back to reference 2-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-2-5" data-footnote-backref="" aria-label="Back to reference 2-5" class="data-footnote-backref">↩<sup>5</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://developers.google.com/search/docs/essentials/technical">Google Search technical requirements</a> Google Search Central、2025年12月18日更新。Googlebotの到達、HTTP <code>200</code>、indexable contentを別条件として示す「Google Search technical requirements」節。条件を満たしてもインデックス登録は保証されないという注記も同ページにある。Google Searchの要件をWebFetchやURL検証全般の公式規格へ拡張していません。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://developers.google.com/crawling/docs/troubleshooting/http-status-codes">How HTTP Status Codes Affect Google’s Crawlers</a> Google Crawling Infrastructure、2026年2月4日更新。HTTP status codes節の <code>2xx</code> と <code>200 (success)</code> の説明、および空ページ・エラー内容が <code>soft 404</code> になり得る説明。Googleクローラーの処理をWebFetchの挙動と同一視していません。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://developers.google.com/search/docs/crawling-indexing/troubleshoot-crawling-errors">Troubleshoot Google Search Crawling Errors</a> Google Search Central、2025年12月18日更新。<code>See if any parts of your site are not crawled, but should be</code> 以下のクロールとインデックスの区別、およびページ可用性・レンダリングに関する説明。今回のX.com事例の原因を示す資料ではありません。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Browser_detection_using_the_user_agent">Browser detection using the user agent string</a> MDN Web Docs、2026年1月6日更新。User-Agentによるブラウザー判定の信頼性と偽装可能性を説明する「Why detecting browsers using the user agent string is unreliable」付近。User-Agent変更だけでブラウザーの状態を再現できるとは述べていません。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://developers.cloudflare.com/bots/concepts/bot-detection-engines/">Bot detection engines</a> Cloudflare、2026年5月5日更新。Bot Detection Enginesの説明とJavaScript detections節。User-Agentだけでなく、ヘッダー、セッション特性、ブラウザー信号、JavaScriptなど複数の検出要素を扱う背景として参照しています。対象URLがCloudflareを利用していたという根拠には使っていません。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://developers.cloudflare.com/cloudflare-challenges/concepts/how-challenges-work/">How Challenges work</a> Cloudflare、2026年7月6日更新。Available challenges節とチャレンジ種別の対応表。チャレンジがクライアント側の処理やブラウザー信号と関係する一般的な背景として参照しています。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/">Interstitial Challenge Pages</a> Cloudflare、2026年7月6日更新。Interstitial Challenge Pages節、特に目的URLの前に表示されるゲートと、JavaScriptでブラウザー信号を評価する説明。今回の <code>402</code> の原因を説明する資料ではありません。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://curl.se/docs/manpage.html">curl man page</a> curl project、ページ上の発行日・版の記載なし、2026年8月23日直接取得。<code>-I, --head</code>、<code>-L, --location</code>、<code>-D, --dump-header</code>、<code>-w, --write-out</code> の各オプション説明。本文を保存しながらヘッダー、最終URL、ステータス、サイズを記録する実装例の根拠として参照しています。実装例そのものは記事上の提案です。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

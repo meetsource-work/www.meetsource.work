@@ -1,0 +1,257 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>テスト並列化で 405 秒→175 秒にしたのに単独 43 秒のテストが 730 秒かかった理由 ── macOS の opendirectoryd / XProtect 競合と Git maintenance 抑止 | Meetsource</title><meta name="description" content="macOS で短命サブプロセスを多用するテストを並列化すると逆に遅くなる原因は、OS 共有デーモン競合と Git local transport 時の自動保守実行にあります。直列 405 秒から 175 秒への短縮後に単独 43.9 秒のテストが並列 730.9 秒へ劣化した実例をもとに、GIT_TEMPLATE_DIR による設定注入やシバン直指定、flock 排他で 217.95 秒へ復旧させた実践設計を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/parallel-test-macos-git-maintenance"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="テスト並列化で 405 秒→175 秒にしたのに単独 43 秒のテストが 730 秒かかった理由 ── macOS の opendirectoryd / XProtect 競合と Git maintenance 抑止 | Meetsource"><meta property="og:description" content="macOS で短命サブプロセスを多用するテストを並列化すると逆に遅くなる原因は、OS 共有デーモン競合と Git local transport 時の自動保守実行にあります。直列 405 秒から 175 秒への短縮後に単独 43.9 秒のテストが並列 730.9 秒へ劣化した実例をもとに、GIT_TEMPLATE_DIR による設定注入やシバン直指定、flock 排他で 217.95 秒へ復旧させた実践設計を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/parallel-test-macos-git-maintenance"><meta property="og:image" content="https://www.meetsource.work/blog/parallel-test-macos-git-maintenance-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-02T12:37:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="テスト並列化で 405 秒→175 秒にしたのに単独 43 秒のテストが 730 秒かかった理由 ── macOS の opendirectoryd / XProtect 競合と Git maintenance 抑止 | Meetsource"><meta name="twitter:description" content="macOS で短命サブプロセスを多用するテストを並列化すると逆に遅くなる原因は、OS 共有デーモン競合と Git local transport 時の自動保守実行にあります。直列 405 秒から 175 秒への短縮後に単独 43.9 秒のテストが並列 730.9 秒へ劣化した実例をもとに、GIT_TEMPLATE_DIR による設定注入やシバン直指定、flock 排他で 217.95 秒へ復旧させた実践設計を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/parallel-test-macos-git-maintenance-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"テスト並列化で 405 秒→175 秒にしたのに単独 43 秒のテストが 730 秒かかった理由 ── macOS の opendirectoryd / XProtect 競合と Git maintenance 抑止","description":"macOS で短命サブプロセスを多用するテストを並列化すると逆に遅くなる原因は、OS 共有デーモン競合と Git local transport 時の自動保守実行にあります。直列 405 秒から 175 秒への短縮後に単独 43.9 秒のテストが並列 730.9 秒へ劣化した実例をもとに、GIT_TEMPLATE_DIR による設定注入やシバン直指定、flock 排他で 217.95 秒へ復旧させた実践設計を解説します。","datePublished":"2026-11-02T12:37:00.000Z","image":"https://www.meetsource.work/blog/parallel-test-macos-git-maintenance-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/parallel-test-macos-git-maintenance"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"macOS 上で並列テストを実行すると CPU 使用率は低いのに極端に遅くなるのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"短命なサブプロセスの大量生成により、opendirectoryd や XProtect などの macOS 共有システムデーモンでプロセス生成時の認証・署名検証が集中し、プロセス待機が多発したためと推測されます。実測ログでも両デーモンが高負荷（opendirectoryd 103.1%、XProtect 37.2%）を記録しており、CPU 処理の飽和ではなく共有リソースの待機がボトルネックとなった強い示唆が得られています。"}},{"@type":"Question","name":"Git の環境変数 GIT_CONFIG_KEY_* では local clone や push 時の automatic maintenance を止められないのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"Git の local transport（ローカルディスク上の bare リポジトリとの同期）実行時に、子プロセスへ GIT_CONFIG_KEY_* などの環境変数が伝播せず脱落することが実機検証において確認されたためです。GIT_TEMPLATE_DIR を用いてリポジトリ初期設定（config）自体に maintenance.auto = false および receive.autoGC = false を注入することで、環境変数の脱落にかかわらず確実に自動保守を抑止できます。"}},{"@type":"Question","name":"大量の短命サブプロセスを呼ぶテストで flock 排他を行う際、なぜ unlink ではなく truncate を使うべきなのですか？","acceptedAnswer":{"@type":"Answer","text":"flock はファイルパスではなく inode に対してロックをかけるため、ロック保持中にファイルを削除（unlink）すると、待機中プロセスと新規実行プロセスが異なる inode を参照して排他が破壊されるためです。ファイル（inode）を保持したまま排他中に truncate() でメタデータを消去するのが安全な設計です。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-02T12:37:00.000Z" data-astro-cid-7jjqptxk> 2026.11.02 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#testing</span><span class="tag" data-astro-cid-7jjqptxk>#parallel-execution</span><span class="tag" data-astro-cid-7jjqptxk>#git</span><span class="tag" data-astro-cid-7jjqptxk>#macos</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>テスト並列化で 405 秒→175 秒にしたのに単独 43 秒のテストが 730 秒かかった理由 ── macOS の opendirectoryd / XProtect 競合と Git maintenance 抑止</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/parallel-test-macos-git-maintenance-hero.webp" alt="テスト並列化で 405 秒→175 秒にしたのに単独 43 秒のテストが 730 秒かかった理由 ── macOS の opendirectoryd / XProtect 競合と Git maintenance 抑止" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>テストスイートの実行時間が長大化すると、複数の CPU コアを活用してテストを並列実行し、全体の所要時間を線形に削るアプローチが第一選択となります。しかし、短命な外部プロセスを大量に生成する統合テスト環境では、思わぬ共有リソースの競合によって並列実行時の所要時間が単独実行の十数倍に跳ね上がる落とし穴が存在します。</p>
+<p>テスト並列化における共有リソース競合とは、テストスイートをプロセス並列で高速化する際、短命な外部サブプロセスを大量起動することで、CPU 使用率の飽和ではなく OS の共有デーモン（認証や署名検証など）やツールのバックグラウンド自動処理（Git の保守など）の排他待ちによって実行時間が極端に悪化する現象です。</p>
+<p>自作 AI エージェント基盤のリポジトリ（<code>nqounet/claude-skills</code>）において、テストスイートの実行時間を直列 405 秒から 10 並列 175 秒へ大幅に短縮した直後、不可解な性能劣化に見舞われました。単独実行ではわずか 43.9 秒で完了するテストクラスが、10 並列実行時には 730.9 秒（全体のクラス所要合計 5,772 秒）へ激しく劣化し、各プロセスの CPU 使用率は 0〜2% のまま「何かの待ち」でプロセスが詰まる状態に陥ったのです。</p>
+<p>本記事では、この性能劣化の原因となった macOS 固有の共有システムデーモン（<code>opendirectoryd</code> 103.1%、<code>XProtect</code> 37.2%）の競合と、Git の local transport（ローカルディスク上の同期）において環境変数 <code>GIT_CONFIG_KEY_*</code> が脱落してバックグラウンドの自動保守が走るメカニズムを解明します。さらに、<code>GIT_TEMPLATE_DIR</code> によるテンプレート設定注入、偽 CLI のシバン直指定、および <code>flock</code> による排他制御を導入し、安定した高速実行（217.95 秒）を取り戻すまでの実践設計を詳解します。</p>
+<h2 id="検証環境と調査スコープ">検証環境と調査スコープ</h2>
+<p>本記事における計測および検証は、以下のハードウェアおよびソフトウェア環境で実施しました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>項目</th><th>設定・バージョン</th></tr></thead><tbody><tr><td><strong>OS</strong></td><td>macOS Sequoia 15.3 (Apple Silicon M-series, 14 コア)</td></tr><tr><td><strong>言語・ランタイム</strong></td><td>Python 3.12 (<code>unittest</code>)</td></tr><tr><td><strong>バージョン管理</strong></td><td>Git 2.4x</td></tr><tr><td><strong>対象リポジトリ</strong></td><td><code>nqounet/claude-skills</code>（テスト実行スクリプト <code>scripts/run_tests.py</code>、および一時リポジトリを作成する <code>skills/pilot/scripts/test_pilot.py</code> 等）</td></tr><tr><td><strong>計測期間</strong></td><td>2026-10-27 〜 2026-10-29（コミット <code>531d0fc</code> 〜 <code>ffc97c0</code>）</td></tr></tbody></table>
+<p>本調査のスコープは、外部ツール（<code>git</code>、<code>task</code>、およびモック用の偽 CLI スクリプト）を短時間に大量に fork/exec する統合テスト環境です。メモリ内で完結する純粋なユニットテストとは異なり、ファイルシステムの作成・破棄、プロセスの起動オーバーヘッド、および OS レベルのセキュリティ・認証サブシステムの負荷が実行時間に色濃く現れる特性を持ちます。</p>
+<h2 id="並列化の前提とサブプロセス大量起動の構造">並列化の前提とサブプロセス大量起動の構造</h2>
+<p><code>nqounet/claude-skills</code> におけるテストスイート（<code>mise run test</code>）は、当初すべてのテストを 1 本ずつ順次実行しており、直列実行時の所要時間は合計 405 秒に達していました。</p>
+<p>その内訳を分析したところ、<code>skills/pilot/scripts/test_pilot.py</code> が 212 秒（151 本）、<code>skills/dispatch/scripts/test_dispatch.py</code> が 165 秒（199 本）を消費しており、この 2 つのスクリプトだけで全体の 93% を占めていました。</p>
+<p>テストクラス単位の実装を確認すると、各テストクラスは <code>setUp</code> メソッド内で <code>tempfile.TemporaryDirectory</code> による自前の作業ディレクトリ、独立した設定ファイル（<code>TASKRC</code>）、およびデータ領域（<code>TASKDATA</code>）を生成し、環境変数や作業ディレクトリの共有を避ける設計になっていました。そのため、テストクラス単位で別プロセス（<code>python3 &#x3C;file> &#x3C;Class></code>）に分割すれば、相互に干渉することなく安全に並列実行できる構造でした。</p>
+<p>そこで、テストクラスを別プロセスとして 10 並列で実行する仕組みを導入したところ、直列 405 秒から wall-time 175 秒（コミット <code>531d0fc</code> 時点で 66 ジョブ全成功、wall-time 176 秒）へと約 57% の短縮を達成しました。</p>
+<p>しかし、プロファイリング（cProfile）によって実行時間の内訳をさらに調べると、所要時間の大半を占める <code>Launch</code> クラス（31 本）では、1 テストあたり約 30 回、全体で <code>git</code> が 423 回、<code>task</code> が 158 回、モック用の偽 Python CLI が 112 回、偽 <code>gh</code> が 23 回という、膨大な回数の外部サブプロセス呼び出しが発生していました。1 回あたりのサブプロセス起動にかかる時間は 100〜140ms 程度であり、短命な外部プロセスを高速に連打する構造になっていたのです。</p>
+<p>以下は、テストクラスを動的に列挙してプロセス並列で実行する基本骨格のコードです。</p>
+<p>引用元: nqounet/claude-skills コミット 531d0fc の scripts/run_tests.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>def main():</span></span>
+<span class="line"><span>    n = int(os.environ.get("RUN_TESTS_JOBS") or min(os.cpu_count() or 1, DEFAULT_JOBS_CAP))</span></span>
+<span class="line"><span>    all_jobs = list(jobs())</span></span>
+<span class="line"><span>    failed = []</span></span>
+<span class="line"><span>    with ThreadPoolExecutor(max_workers=max(n, 1)) as pool:</span></span>
+<span class="line"><span>        futures = [pool.submit(run_job, j) for j in all_jobs]</span></span>
+<span class="line"><span>        for f in as_completed(futures):</span></span>
+<span class="line"><span>            label, rc, sec, out = f.result()</span></span>
+<span class="line"><span>            # 出力はジョブ単位でまとめて出す（並列で行が混ざらないように）</span></span>
+<span class="line"><span>            print(f"=== {label}\n{out}=== {label} rc={rc} ({sec:.1f}s)", flush=True)</span></span>
+<span class="line"><span>            if rc != 0:</span></span>
+<span class="line"><span>                failed.append(label)</span></span>
+<span class="line"><span>    if failed:</span></span>
+<span class="line"><span>        print("FAILED: " + ", ".join(sorted(failed)), file=sys.stderr)</span></span>
+<span class="line"><span>        return 1</span></span>
+<span class="line"><span>    print("all tests passed")</span></span>
+<span class="line"><span>    return 0</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この実装により、各テストクラスが別プロセスとして並行して走り、独立した環境でテストを実行できるようになりました。しかし、この「短命サブプロセスの大量起動」こそが、後の深刻な性能劣化の引き金を引くことになります。</p>
+<h2 id="劣化の原因究明--2つのボトルネック">劣化の原因究明 ── 2つのボトルネック</h2>
+<p>10 並列化の導入によって 175 秒への短縮を果たしたのも束の間、実運用において極端な性能劣化が発生しました。</p>
+<p>複数の作業セッションが同時に <code>mise run test</code> を実行した際、単独実行（直列スイート内）では 100 秒で終わっていた <code>test_pilot.py::Launch</code> が 1,349 秒に悪化し、単独 2.2 秒の <code>test_float.py::DispatchedDrop</code> が 104 秒かかってタイムアウト失敗を引き起こしました。さらに、セッション間の同時実行を防ぐ排他制御（後述の <code>flock</code>）を導入した後も、マシン上で他セッションのテストプロセスが 0 本の状態で実行したにもかかわらず、単体で単独実行すればわずか 43.9 秒で終わる <code>Launch</code> クラスが、10 並列実行時には 730.9 秒（ジョブ全体のクラス所要合計 5,772 秒）へと跳ね上がりました。</p>
+<p>このとき、同時実行されているテストプロセスの CPU 使用率を計測すると、わずか 0〜2% にすぎず、14 コア環境での load average も約 5.5 に留まっていました。CPU 計算リソースが不足しているのではなく、プロセス群が「何かの待ち」でブロックされていることは明白でした。単独実行時の <code>Launch</code> クラスでも、子プロセスの実処理時間は約 29 秒（<code>git -C</code> 541 回で 12.1 秒、<code>gh</code> 113 回で 12.2 秒）であり、残りの大半は待機に費やされていたのです。</p>
+<p>調査を進めた結果、この極端な遅延は 2 つのボトルネックが重なり合って発生していることが判明しました。</p>
+<h3 id="ボトルネック-1-macos-共有デーモンopendirectoryd--xprotectの競合">ボトルネック 1: macOS 共有デーモン（opendirectoryd / XProtect）の競合</h3>
+<p>第 1 のボトルネックは、macOS のシステムセキュリティ・認証デーモンの競合です。</p>
+<p>テストプロセス群が一斉に短命サブプロセスを fork/exec することで、短時間に膨大なプロセスが生成される「プロセスストーム（process storm）」状態が発生していました。プロセスストーム発生時のシステムデーモンの負荷については、CoreGuard の調査でも短命プロセスの乱立によってセキュリティデーモンが CPU 180% に達する事例が報告されています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>実機でのプロセス監視において、macOS のディレクトリサービスデーモンである <code>opendirectoryd</code> が CPU 103.1%、マルウェア防御デーモンである <code>XProtect</code><sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup> が CPU 37.2% という高い CPU 使用率を記録していることが観測されました。macOS では、プロセスの実行時に Gatekeeper やランタイム保護機構<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> がバイナリ検証や署名チェックを行うほか、権限やアカウントの解決で <code>opendirectoryd</code> と頻繁に通信します。短命な外部プロセスが過密に起動されたことで、これらの OS 共有デーモンの処理待ちキューが滞留し、プロセス生成そのものが待機させられていたことが強く示唆されました。</p>
+<h3 id="ボトルネック-2-git-local-transport-における-git_config_key_-の脱落と自動保守">ボトルネック 2: Git local transport における GIT_CONFIG_KEY_* の脱落と自動保守</h3>
+<p>第 2 のボトルネックは、Git の内部挙動と環境変数の伝播にありました。</p>
+<p>テスト内では、一時ディレクトリ上に作成された Git リポジトリに対してローカル同期（clone や push）を頻繁に実行します。Git では、Git 2.31 より従来の <code>git gc</code> に代わるバックグラウンド保守機能として <code>git maintenance</code> が導入されました<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。また、<code>receive.autogc</code> の仕様により、データ受信（<code>git-push</code>）や参照更新の完了後にデフォルトで <code>git maintenance run --auto</code> がバックグラウンドで切り離されて自動実行されます<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>テスト実行時の不要なオーバーヘッドを抑えるため、スクリプト側で Git の環境変数 <code>GIT_CONFIG_KEY_*</code> および <code>GIT_CONFIG_COUNT</code> を用いて <code>maintenance.auto = false</code> や <code>receive.autoGC = false</code> を渡す設定を施していました。しかし、実機での検証過程において、Git の local transport（ファイルシステム上のパスを用いた clone や push）を実行する際、これらの環境変数が子プロセスに引き継がれず脱落することが観測されました。</p>
+<p>その結果、並列に走る大量のテストジョブがローカルリポジトリを操作するたびに、裏で <code>git maintenance</code> や <code>receive.autogc</code> が暗黙のうちに非同期で次々と起動していました。ツールの既定値は対話利用を想定して最適化されているため、短命サブプロセスを過密に連打する並列テスト環境では、意図しないバックグラウンド保守プロセスの増殖が激しいリソース競合を招いていたのです。</p>
+<h2 id="ボトルネックと対策の比較">ボトルネックと対策の比較</h2>
+<p>テスト並列化における極端な劣化は単一の要因ではなく、セッション間の多重実行、OS のプロセス生成境界、およびツール固有の暗黙動作という 3 つの異なるレイヤーで発生していました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>競合レイヤー</th><th>発生契機</th><th>主なボトルネックの所在</th><th>観測された兆候</th><th>採用した対策</th><th>適用スコープ</th></tr></thead><tbody><tr><td><strong>セッション間多重実行</strong></td><td>複数セッションが同時に <code>mise run test</code> を実行</td><td>同一マシンの CPU・ディスク・一時ディレクトリの飽和</td><td><code>Launch</code> 1,349 秒、他テストのタイムアウト失敗</td><td><code>/tmp/...lock</code> による <code>flock</code> 排他</td><td>マシン全域（ユーザー単位）</td></tr><tr><td><strong>OS 共有デーモン</strong></td><td>短命外部 CLI（git / Python / task）の短時間大量 fork/exec</td><td><code>opendirectoryd</code> / <code>XProtect</code> による認証・署名検証キュー</td><td><code>opendirectoryd</code> 103.1%、<code>XProtect</code> 37.2%、CPU 0〜2% 待ち</td><td>偽 CLI の <code>sys.executable</code> 直指定、hook コピー省略</td><td>テスト内偽スクリプト・Git 初期化</td></tr><tr><td><strong>Git 自動保守</strong></td><td>local transport による一時 repo への clone / push</td><td><code>GIT_CONFIG_*</code> 脱落に伴う <code>maintenance.auto</code> / <code>receive.autogc</code> の裏起動</td><td>単独セッション内でもジョブ同士が競合し 730.9 秒へ悪化</td><td><code>GIT_TEMPLATE_DIR</code> によるテンプレート設定注入</td><td>Git コマンド実行環境</td></tr></tbody></table>
+<p>上表が示すように、セッション間の排他制御だけでは単一実行内のジョブ同士の競合は解決せず、OS デーモン負荷の軽減と Git の内部挙動を抑止する設定注入を組み合わせて初めて安定した並列化が成立しました。</p>
+<h2 id="ベストプラクティスと推奨実装">ベストプラクティスと推奨実装</h2>
+<p>特定された 3 つのボトルネックを解消するため、テスト基盤に以下の 3 つの恒久的な対策を適用しました。</p>
+<h3 id="対策-1-git_template_dir-による最小テンプレート設定注入">対策 1: GIT_TEMPLATE_DIR による最小テンプレート設定注入</h3>
+<p>Git の local transport 実行時に環境変数が脱落する問題に対しては、環境変数経由の指定を諦め、リポジトリの初期設定そのものに抑止フラグを書き込むアプローチを採用しました。</p>
+<p>Git では、リポジトリ初期化時にテンプレートディレクトリの内容を展開する機能があり、環境変数 <code>GIT_TEMPLATE_DIR</code> でそのパスを指定できます<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。テスト実行の開始時に <code>tempfile.TemporaryDirectory</code> で一時ディレクトリを生成し、その直下の <code>config</code> ファイルに <code>[maintenance] auto = false</code> および <code>[receive] autoGC = false</code> を書き込んで <code>GIT_TEMPLATE_DIR</code> に指定しました。</p>
+<p>これにより、テスト内で実行されるすべての <code>git init</code> や <code>git clone</code> において、作成されるリポジトリ自体の設定ファイルに自動保守の無効化が直接注入されます。同時に、デフォルトテンプレートに含まれる 14 本のサンプル hook スクリプトのディスクコピーも省略され、ファイル I/O とプロセス生成の負担をさらに削減できます。</p>
+<p>以下は、<code>scripts/run_tests.py</code> におけるテンプレート設定注入の実装です。</p>
+<p>引用元: nqounet/claude-skills コミット 710e851 の scripts/run_tests.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>    with tempfile.TemporaryDirectory(prefix="claude-skills-git-template-") as template, \</span></span>
+<span class="line"><span>            ThreadPoolExecutor(max_workers=max(n, 1)) as pool:</span></span>
+<span class="line"><span>        # local transport は GIT_CONFIG_* を消すため、受信側の設定も repo に持たせる。</span></span>
+<span class="line"><span>        # サンプル hook 14 本のコピーと、ユーザーの init.templateDir への依存も省く。</span></span>
+<span class="line"><span>        with open(os.path.join(template, "config"), "w") as config:</span></span>
+<span class="line"><span>            config.write("[maintenance]\n\tauto = false\n[receive]\n\tautoGC = false\n")</span></span>
+<span class="line"><span>        env = test_environment()</span></span>
+<span class="line"><span>        env["GIT_TEMPLATE_DIR"] = template</span></span>
+<span class="line"><span>        futures = [pool.submit(run_job, j, env) for j in all_jobs]</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この設定により、local transport を経由した一時リポジトリの作成や push においても、バックグラウンド保守プロセスが起動しない状態を確実に保証できるようになりました。</p>
+<h3 id="対策-2-偽-cli-のシバン置換sysexecutable-直指定">対策 2: 偽 CLI のシバン置換（sys.executable 直指定）</h3>
+<p>OS 共有デーモンの負荷を軽減するため、テスト内で数百回起動されるモック用の偽 CLI スクリプト（偽 orca、偽 gh 等）のプロセス生成コストを削ぎ落としました。</p>
+<p>従来、これらのスクリプトのシバンには一般的な <code>#!/usr/bin/env python3</code> を指定していました。しかし、この記述ではスクリプトを 1 回起動するたびに <code>/usr/bin/env</code> プロセスが起動し、<code>PATH</code> 環境変数を走査して Python インタプリタを探索・解決するオーバーヘッドが発生します。</p>
+<p>そこで、テスト実行中の正規 Python インタプリタの絶対パスを取得できる <code>sys.executable</code><sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup> を用い、シバンを <code>"#!" + sys.executable</code> へ置換しました。</p>
+<p>以下は、<code>skills/pilot/scripts/test_pilot.py</code> におけるシバン置換の実装です。</p>
+<p>引用元: nqounet/claude-skills コミット 710e851 の skills/pilot/scripts/test_pilot.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># env の起動と PATH 探索を省き、テスト本体と同じ Python を直接起動する（#302）。</span></span>
+<span class="line"><span>FAKE_ORCA = "#!" + sys.executable + r'''</span></span>
+<span class="line"><span>import json, os, sys</span></span>
+<span class="line"><span>argv = sys.argv[1:]</span></span>
+<span class="line"><span>log = os.environ["FAKE_ORCA_LOG"]</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>中間プロセスである <code>env</code> の起動と <code>PATH</code> 探索を排除し、すでに起動しているテストプロセスと同一の Python バイナリを直接呼び出すことで、OS 共有デーモンに対する検証リクエストの頻度を低減させました。</p>
+<h3 id="対策-3-flock-排他制御と解放時-truncate-によるメタデータ消去">対策 3: flock 排他制御と解放時 truncate() によるメタデータ消去</h3>
+<p>複数セッションの同時実行による過大遅延を防ぐため、ユーザー単位のロックファイル <code>/tmp/claude-skills-tests-&#x3C;uid>.lock</code> に対する排他制御を導入しました。</p>
+<p>テスト実行の開始時に Python の標準ライブラリである <code>fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)</code> による排他を試み<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>、取得できない場合はロック保持者の PID やカレントディレクトリ（cwd）をロックファイルから読み出して表示し、待機状態であることを可視化します。</p>
+<p>ロック解放時の設計において重要な点は、<strong>ロックファイルを削除（<code>unlink</code>）しない</strong> ことです。UNIX における <code>flock</code> はファイルパスではなくファイルの実体である inode に対してロックを保持します。ロック保持中にファイルを削除してしまうと、後からロックを取得しようとした新規プロセスが新しい inode を作成してしまい、待機中プロセスと新規プロセスで参照する inode が分離して排他が破壊されます<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。</p>
+<p>そのため、ファイル（inode）は削除せずに残し、排他保持中に <code>truncate()</code> を呼び出して保持者メタデータのみを消去して解放する設計としました。</p>
+<p>以下は、<code>scripts/run_tests.py</code> におけるロック解放処理の実装です。</p>
+<p>引用元: nqounet/claude-skills コミット 8402300 / 92e8df5 の scripts/run_tests.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>            # 旧版は metadata を書かない。次の保持者に前回の PID/cwd を引き継がせない。</span></span>
+<span class="line"><span>            # truncate と flush は排他中に済ませ、ファイル自体（inode）は残す。</span></span>
+<span class="line"><span>            try:</span></span>
+<span class="line"><span>                lock.seek(0)</span></span>
+<span class="line"><span>                lock.truncate()</span></span>
+<span class="line"><span>                lock.flush()</span></span>
+<span class="line"><span>            finally:</span></span>
+<span class="line"><span>                fcntl.flock(lock, fcntl.LOCK_UN)</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この設計により、後続プロセスとの inode 分離を防ぎつつ、古い実行メタデータを確実に初期化できる堅牢な排他制御を実現しました。</p>
+<h2 id="実機ベンチマークと検証ログ">実機ベンチマークと検証ログ</h2>
+<p>対策を適用したテストスイートにおいて、実機でのベンチマーク測定と並列数の比較検証を実施しました。</p>
+<h3 id="対策適用前後の比較と並列数の検証">対策適用前後の比較と並列数の検証</h3>
+<p>テスト件数が 738 件に増加した状態において、対策適用前はテストスイート全体の wall-time が 279.43 秒に達していましたが、10 並列実行での所要時間は 217.95 秒（再実行時 217.4 秒、exit 0）へと回復し、約 61.5 秒の短縮が確認されました。</p>
+<p>続いて、最適な並列数を特定するため、単独実行において並列ワーカー数を 5、7、10 に変化させて測定を行いました。</p>
+<p>以下は、コミット <code>ffc97c0</code> に記録された実機ベンチマークの測定ログです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="console"><code><span class="line"><span style="color:#4C4F69">At 92e8df5, isolated one-run comparisons took 217.95s with ten workers, 224.01s with five, and 236.37s with seven. Restore the cap to ten and align README, CLAUDE and mise descriptions.</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">A same-code comparison retaining 626 unittest IDs shared with c041415d took 195.59s versus 217.95s for 738 current IDs. Job-duration totals were 1680.7s versus 1828.1s. This accounts for an observed 22.36s wall-time difference; the remaining 21.59s relative to the historical 174s is not isolated by this cohort comparison.</span></span>
+<span class="line"></span></code></pre>
+<p>測定結果は以下の通りでした。</p>
+<ul>
+<li><strong>5 並列</strong>: 224.01 秒</li>
+<li><strong>7 並列</strong>: 236.37 秒</li>
+<li><strong>10 並列</strong>: 217.95 秒</li>
+</ul>
+<p>7 並列よりも 10 並列のほうが優れたスループットを示したため、並列数の上限キャップを 10 に設定しました。</p>
+<h3 id="コホート比較による差分分析">コホート比較による差分分析</h3>
+<p>並列化導入当初（2026-10-27）に記録された 174 秒と比較すると、対策適用後の 217.95 秒は約 44 秒遅い状態でした。この差分の原因を切り分けるため、過去コミットと共通する 626 件の unittest ID だけを抽出した対照実行によるコホート比較を実施しました。</p>
+<ul>
+<li><strong>同一コード・共通 626 件の対照実行</strong>: 195.59 秒（ジョブ所要合計 1,680.7 秒）</li>
+<li><strong>同一コード・現在 738 件の全件実行</strong>: 217.95 秒（ジョブ所要合計 1,828.1 秒）</li>
+</ul>
+<p>共通 626 件と現在 738 件（112 件増）の差分である 22.36 秒は、テスト件数の増加に伴う純増分として明確に説明されました。一方、歴史的記録の 174 秒と共通件数対照実行（195.59 秒）との間に残る約 21.59 秒の残差については、コホート比較では分離されておらず、Python インタプリタ初期化コストやファイルシステムキャッシュ等の未分離の残差として客観的に記録されています。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-macos-上で並列テストを実行すると-cpu-使用率は低いのに極端に遅くなるのはなぜですか">Q. macOS 上で並列テストを実行すると CPU 使用率は低いのに極端に遅くなるのはなぜですか？</h3>
+<p><strong>A.</strong> 短命なサブプロセスの大量生成により、<code>opendirectoryd</code> や <code>XProtect</code> などの macOS 共有システムデーモンでプロセス生成時の認証・署名検証が集中し、プロセス待機が多発したためと推測されます。実測ログでも両デーモンが高負荷（<code>opendirectoryd</code> 103.1%、<code>XProtect</code> 37.2%）を記録しており、CPU 処理の飽和ではなく共有リソースの待機がボトルネックとなった強い示唆が得られています。</p>
+<h3 id="q-git-の環境変数-git_config_key_-では-local-clone-や-push-時の-automatic-maintenance-を止められないのはなぜですか">Q. Git の環境変数 GIT_CONFIG_KEY_* では local clone や push 時の automatic maintenance を止められないのはなぜですか？</h3>
+<p><strong>A.</strong> Git の local transport（ローカルディスク上の bare リポジトリとの同期）実行時に、子プロセスへ <code>GIT_CONFIG_KEY_*</code> などの環境変数が伝播せず脱落することが実機検証において確認されたためです。<code>GIT_TEMPLATE_DIR</code> を用いてリポジトリ初期設定（<code>config</code>）自体に <code>maintenance.auto = false</code> および <code>receive.autoGC = false</code> を注入することで、環境変数の脱落にかかわらず確実に自動保守を抑止できます。</p>
+<h3 id="q-大量の短命サブプロセスを呼ぶテストで-flock-排他を行う際なぜ-unlink-ではなく-truncate-を使うべきなのですか">Q. 大量の短命サブプロセスを呼ぶテストで flock 排他を行う際、なぜ unlink ではなく truncate を使うべきなのですか？</h3>
+<p><strong>A.</strong> <code>flock</code> はファイルパスではなく inode に対してロックをかけるため、ロック保持中にファイルを削除（<code>unlink</code>）すると、待機中プロセスと新規実行プロセスが異なる inode を参照して排他が破壊されるためです。ファイル（inode）を保持したまま排他中に <code>truncate()</code> でメタデータを消去するのが安全な設計です。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>短命サブプロセスを多用するテストスイートの並列化において、安定した高速実行を達成するための設計原則は以下の通りです。</p>
+<ul>
+<li><strong>OS 共有デーモンを意識したプロセス生成の最小化</strong>: 短命サブプロセスの連打は CPU ではなく OS 共有サービス（<code>opendirectoryd</code> / <code>XProtect</code>）の飽和を招くため、シバンのインタプリタ直指定や不要な hook コピーの省略によってプロセス生成オーバーヘッドを極小化する。</li>
+<li><strong>Git local transport の環境変数脱落への防護</strong>: Git のローカル同期処理は環境変数を伝播しない特性があるため、<code>GIT_TEMPLATE_DIR</code> によるテンプレート設定注入を用いて <code>maintenance.auto = false</code> および <code>receive.autoGC = false</code> をリポジトリ設定に直接書き込む。</li>
+<li><strong>アドバイザリロックにおける inode ライフサイクルの維持</strong>: <code>flock</code> による排他制御では、ロックファイルの削除（<code>unlink</code>）による inode 分離を避け、<code>truncate()</code> によるメタデータ初期化を採用して排他の完全性を維持する。</li>
+<li><strong>実測ベンチマークに基づく並列数の決定</strong>: 並列実行数は CPU コア数から機械的に決めるのではなく、サブプロセスの競合状況に応じた実機測定（5/7/10 並列等の比較）を行って最適な上限値を設定する。</li>
+</ul>
+<p>テストスイートの並列化・高速化やエージェント開発環境の自動化基盤設計について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://coreguard.app/insights/mac-fans-loud-app-idle-gatekeeper-cpu-storm/">What Is syspolicyd? Why It Hits 180% CPU on Your Mac</a> CoreGuard Insights, 2026-06-27 公開。短命プロセスの大量生成時に発生するプロセスストームとシステムデーモン高負荷の分析。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://support.apple.com/guide/security/protecting-against-malware-in-macos-sec469d47bd8/web">Protecting against malware in macOS</a> Apple Inc. (Apple Platform Security Guide) macOS における XProtect によるランタイムマルウェア防御アーキテクチャの解説。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-in-macos-sec5599b66df/web">Gatekeeper and runtime protection in macOS</a> Apple Inc. (Apple Platform Security Guide) macOS のコード実行時検証と Gatekeeper ランタイム保護機構の解説。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://github.blog/open-source/git/highlights-from-git-2-31/">Highlights from Git 2.31</a> Taylor Blau, The GitHub Blog, 2021-03-15 公開。git maintenance の導入とバックグラウンド保守の標準化背景。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://git-scm.com/docs/git-maintenance">Git - git-maintenance Documentation</a> Git Project (Git 2.4x Documentation) <code>maintenance.auto</code>、<code>maintenance.autoDetach</code>、<code>--auto</code> によるバックグラウンド自動保守の仕様。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://git-scm.com/docs/git-config">Git - git-config Documentation</a> Git Project (Git 2.4x Documentation) <code>receive.autogc</code>（データ受信時に <code>git maintenance run --auto</code> を実行する設定）の仕様。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://git-scm.com/docs/git-init">Git - git-init Documentation</a> Git Project (Git 2.4x Documentation) <code>$GIT_TEMPLATE_DIR</code> の適用優先順位とリポジトリ初期化時のテンプレート展開仕様。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://docs.python.org/3/library/sys.html">Python sys — System-specific parameters and functions</a> Python Software Foundation (Python 3.12 Documentation) <code>sys.executable</code>（実行中インタプリタの絶対パス文字列）の仕様。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://docs.python.org/3/library/fcntl.html">Python fcntl — The fcntl and ioctl system calls</a> Python Software Foundation (Python 3.12 Documentation) <code>fcntl.flock</code>、<code>LOCK_EX</code>、<code>LOCK_NB</code>、<code>LOCK_UN</code> による排他制御の仕様。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://stackoverflow.com/questions/2569562/why-you-shouldnt-unlink-a-file-while-holding-an-advisory-flock-lock">Why you shouldn’t unlink a file while holding an advisory flock lock</a> Stack Overflow コミュニティ（アクセス日: 2026-11-02）<code>flock</code> が inode に対してロックを保持するためファイル削除（unlink）で排他が破壊される理由の解説。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

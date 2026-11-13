@@ -1,0 +1,203 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>「消すな」と書いたコメントごと消える ── AIエージェントの自己参照的削除と外部テストによる防護 | Meetsource</title><meta name="description" content="AIエージェントにプロンプトやルールの刈り込みを任せると「消すな」と書いたHTMLコメントごと規約を削除する事故が起きます。自然言語防護の限界と、外部テストによる見出しアサーション設計を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/agent-self-deletion-external-assertion"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="「消すな」と書いたコメントごと消える ── AIエージェントの自己参照的削除と外部テストによる防護 | Meetsource"><meta property="og:description" content="AIエージェントにプロンプトやルールの刈り込みを任せると「消すな」と書いたHTMLコメントごと規約を削除する事故が起きます。自然言語防護の限界と、外部テストによる見出しアサーション設計を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/agent-self-deletion-external-assertion"><meta property="og:image" content="https://www.meetsource.work/blog/agent-self-deletion-external-assertion-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-24T16:30:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="「消すな」と書いたコメントごと消える ── AIエージェントの自己参照的削除と外部テストによる防護 | Meetsource"><meta name="twitter:description" content="AIエージェントにプロンプトやルールの刈り込みを任せると「消すな」と書いたHTMLコメントごと規約を削除する事故が起きます。自然言語防護の限界と、外部テストによる見出しアサーション設計を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/agent-self-deletion-external-assertion-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"「消すな」と書いたコメントごと消える ── AIエージェントの自己参照的削除と外部テストによる防護","description":"AIエージェントにプロンプトやルールの刈り込みを任せると「消すな」と書いたHTMLコメントごと規約を削除する事故が起きます。自然言語防護の限界と、外部テストによる見出しアサーション設計を解説します。","datePublished":"2026-08-24T16:30:00.000Z","image":"https://www.meetsource.work/blog/agent-self-deletion-external-assertion-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/agent-self-deletion-external-assertion"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"プロンプトや HTML コメントでの防護と、外部スクリプトによるテストの決定的な違いは何ですか？","acceptedAnswer":{"@type":"Answer","text":"保護指示が「削除対象のセクションと運命を共にするか否か」です。自然言語や HTML コメントはセクション削除時に一緒に消滅してしまいますが、外部スクリプトは対象ファイルの外側から機械的に検証するため、削除を決定論的に阻止できます。"}},{"@type":"Question","name":"見出し検査スクリプトはどのようなタイミングで実行すべきですか？","acceptedAnswer":{"@type":"Answer","text":"コミット前フック（pre-commit）および CI パイプラインの両方で実行するのが最も効果的です。これにより、エージェントが自律作業の中で誤って見出しを削ってしまった場合でも、コミットや PR 作成の段階で確実に検知・ブロックできます。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-24T16:30:00.000Z" data-astro-cid-7jjqptxk> 2026.08.25 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#agents-md</span><span class="tag" data-astro-cid-7jjqptxk>#context-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#testing</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>「消すな」と書いたコメントごと消える ── AIエージェントの自己参照的削除と外部テストによる防護</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/agent-self-deletion-external-assertion-hero.webp" alt="「消すな」と書いたコメントごと消える ── AIエージェントの自己参照的削除と外部テストによる防護" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>コンテキスト自己参照削除バグとは、AIコーディングエージェントにプロンプトやルールの刈り込みを自動委譲した際、不要箇所の判定ロジックがルールファイル自身に適用され、保護すべき規律や重要セクションごと自らを削ぎ落としてしまう現象です。</p>
+<p>Claude Code や Cursor、Gemini CLI などのコーディングエージェントを実務に導入する開発者が増えるにつれ、エージェントがセッション開始時に読み込む <code>AGENTS.md</code> や <code>CLAUDE.md</code> をスリムに保つ運用が定着してきました。エージェントの指示追従性を落とさないために「20〜30行のバジェットに収める」「不要な記述は刈り込む」というルールを課すことは極めて合理的です。</p>
+<p>しかし、この刈り込み作業自体をエージェントに任せた瞬間、予期せぬ事故が起きます。「不要な記述を削除せよ」「推測できるものは消せ」という指示を受けたエージェントが、自身を律するための「壊すと取り返しがつかない規律」や「権限」「絶対にやらないこと」といった重要セクションそのものを刈り込み対象と判断し、丸ごと削除してしまうのです。</p>
+<p>かつては「絶対に消してはいけないセクションには <code>&#x3C;!-- DO NOT DELETE --></code> のような HTML コメントを入れておけば安全だろう」と考えられていました。しかし、他社の事故報告<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>と自社での再現検証を通じて明らかになったのは、セクション内に書いた指示はセクションごと削除される際に一緒に消えてしまうという冷徹な事実でした。現在の私たちのスタンスは、「AI に対するプロンプト指示には常に守られないリスクがあることを前提とし、守る対象の外側に一覧を持って機械的なアサーション（外部テスト）で強制する」というものです。</p>
+<p>本記事では、自己参照削除の発生機序を解明し、なぜ自然言語や HTML コメントによるインライン防護が無力なのかを論理的に示します。その上で、自社の運用で実践している外部スクリプトによる決定論的な見出しアサーション設計パターンを解説します。</p>
+<h2 id="なぜ消すなという-html-コメントは無力なのか自己参照的削除の構造">なぜ「消すな」という HTML コメントは無力なのか：自己参照的削除の構造</h2>
+<h3 id="行数バジェットの圧力と刈り込みの動機">行数バジェットの圧力と刈り込みの動機</h3>
+<p>コーディングエージェントを運用する上で、指示ファイルの肥大化は重大な性能劣化を引き起こします。Anthropic の公式ベストプラクティスでも、<code>CLAUDE.md</code> に指示を詰め込みすぎるとエージェント全体の指示追従性が低下し、指示の半分が無視されるリスクがあると指摘されています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。また、プロンプトエンジニアリングのガイドラインでも、エージェント用の指示バジェットは20〜30行程度が目安とされ、不要になったルールやコードから推測可能な情報は積極的に刈り込む運用が提唱されています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>このように「ルールを可能な限り短く保つ」という強い最適化圧力が働く環境下では、エージェントは常にコンテキスト内の不要な記述を探して削減しようとします。</p>
+<h3 id="セクション単位の置換とインラインコメントの同時消滅">セクション単位の置換とインラインコメントの同時消滅</h3>
+<p>この削除圧力から特定の重要ルールを守るため、先行するテンプレート設計では以下のようなインライン HTML コメントによる保護が試みられていました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#FE640B">## Maintenance Notes</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">&#x3C;!-- This section is permanent. Do not delete. --></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#7C7F93">**</span><span style="color:#D20F39;font-weight:bold">Keep this file lean and current:</span><span style="color:#7C7F93">**</span></span>
+<span class="line"><span style="color:#179299">1.</span><span style="color:#4C4F69"> Remove placeholder sections once filled</span></span>
+<span class="line"><span style="color:#179299">2.</span><span style="color:#4C4F69"> CRITICAL: Keep total under 20-30 lines</span></span>
+<span class="line"><span style="color:#179299">3.</span><span style="color:#4C4F69"> Delete anything the agent can infer</span></span>
+<span class="line"></span></code></pre>
+<p>しかし、この防護策はエージェントのテキスト編集機序の前では機能しません。</p>
+<p>LLM は Markdown ファイルを編集する際、文章を1行ずつではなく「見出し＋配下の本文」というセクション単位のブロックとして認識し、置換や削除を行います。エージェントが「このセクションは古いため不要」「行数削減のために削るべき」と判断してセクション全体を削除対象のブロックとして選定した時点で、そのセクションの内部に書かれていた <code>&#x3C;!-- This section is permanent. Do not delete. --></code> という HTML コメントもろとも消去されます。</p>
+<p>AI に対するプロンプト指示には、常に「確率的に守られないかもしれない」というリスクが存在します。HumanLayer が「Claude is not a linter」と指摘するように<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>、エージェント自身にお願いする自然言語のガードレールは、削除圧力や推論バイアスがかかった状況では簡単に突破されてしまいます。</p>
+<p>自然言語指示、インラインコメント、外部テストスクリプトの3つの防護アプローチには、下表に示す通り決定的な耐性の違いがあります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>防護アプローチ</th><th>仕組み</th><th>性質</th><th>刈り込み圧力への耐性</th></tr></thead><tbody><tr><td>プロンプト指示</td><td>「消すな」「短くするな」と記述</td><td>確率的（お願い）</td><td>✕ セクション認識と推論バイアスで無視される</td></tr><tr><td>インライン HTML コメント</td><td><code>&#x3C;!-- Do not delete --></code> をセクション内に挿入</td><td>準構造化</td><td>✕ セクションごと削除される際に同時消滅</td></tr><tr><td>外部テストスクリプト</td><td>対象外のコードから見出しの存在をアサーション</td><td>決定論的（強制）</td><td>○ 削除時は exit 1 で CI・コミットをブロック</td></tr></tbody></table>
+<p>セクション自身が消去されるリスクに対しては、守る対象の内部にいくら注記を重ねても防護になりません。保護対象の外側に明確な検査境界を設ける外部テストスクリプトのみが、決定論的な抑止力を持ちます。</p>
+<h2 id="守る対象の外側に置く設計見出しアサーションの実践">守る対象の「外側」に置く設計：見出しアサーションの実践</h2>
+<p>「散文の戒めではなく機械が毎回測る」という設計思想に基づき、自社の運用基盤で実装している見出しアサーションの具体的なコードと仕組みを紹介します。</p>
+<h3 id="1-必須見出し一覧の外部定義">1. 必須見出し一覧の外部定義</h3>
+<p>まず、保護対象となる Markdown ファイル（<code>AGENTS.md</code><sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup> や <code>CLAUDE.md</code>）の外部にある検査スクリプト内に、絶対に消失してはならない必須見出しの辞書を定義します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># ファイル: scripts/check-headings.py</span></span>
+<span class="line"><span style="color:#40A02B">"""必須見出しの消失検査スクリプト。</span></span>
+<span class="line"><span style="color:#40A02B">守る対象のファイルの外側に一覧を持ち、機械的にアサーションを行う。</span></span>
+<span class="line"><span style="color:#40A02B">"""</span></span>
+<span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> sys</span></span>
+<span class="line"><span style="color:#8839EF">from</span><span style="color:#4C4F69"> pathlib </span><span style="color:#8839EF">import</span><span style="color:#4C4F69"> Path</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 検査対象ファイルと必須見出しの定義</span></span>
+<span class="line"><span style="color:#4C4F69">REQUIRED_HEADINGS</span><span style="color:#7C7F93">:</span><span style="color:#E64553;font-style:italic"> dict</span><span style="color:#7C7F93">[</span><span style="color:#FE640B;font-style:italic">str</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> list</span><span style="color:#7C7F93">[</span><span style="color:#FE640B;font-style:italic">str</span><span style="color:#7C7F93">]]</span><span style="color:#179299"> =</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#40A02B">    "AGENTS.md"</span><span style="color:#7C7F93">:</span><span style="color:#7C7F93"> [</span></span>
+<span class="line"><span style="color:#40A02B">        "壊すと取り返しがつかない規律"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#40A02B">        "権限"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#40A02B">        "絶対にやらない"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">    ],</span></span>
+<span class="line"><span style="color:#40A02B">    "CLAUDE.md"</span><span style="color:#7C7F93">:</span><span style="color:#7C7F93"> [</span></span>
+<span class="line"><span style="color:#40A02B">        "常時ロード予算"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#40A02B">        "ハブの所在"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#40A02B">        "機密境界"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#40A02B">        "日付・時刻"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">    ],</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span></code></pre>
+<p>この定義を <code>AGENTS.md</code> の中に置くのではなく、Python スクリプトとして分離することが最大のポイントです。エージェントが Markdown ファイルをどのように刈り込もうとも、Python コード側にハードコードされた定数リストは改変されません。</p>
+<h3 id="2-静的検査関数-check_headings-の実装">2. 静的検査関数 <code>check_headings()</code> の実装</h3>
+<p>次に、対象ファイルを走査して見出し行（<code>#</code> で始まる行）を抽出し、必須見出しが存在するかを検証する関数を実装します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># ファイル: scripts/check-headings.py</span></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> check_headings</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">base_dir</span><span style="color:#7C7F93">:</span><span style="color:#E64553"> Path</span><span style="color:#7C7F93">)</span><span style="color:#7C7F93"> -></span><span style="color:#FE640B;font-style:italic"> int</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#40A02B">    """REQUIRED_HEADINGS の見出しが消えていないか検査する。戻り値は欠落の件数。"""</span></span>
+<span class="line"><span style="color:#4C4F69">    missing </span><span style="color:#179299">=</span><span style="color:#FE640B"> 0</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> rel_path</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> headings </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> REQUIRED_HEADINGS</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">items</span><span style="color:#7C7F93">():</span></span>
+<span class="line"><span style="color:#4C4F69">        target </span><span style="color:#179299">=</span><span style="color:#4C4F69"> base_dir </span><span style="color:#179299">/</span><span style="color:#4C4F69"> rel_path</span></span>
+<span class="line"><span style="color:#8839EF">        if</span><span style="color:#8839EF"> not</span><span style="color:#4C4F69"> target</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">exists</span><span style="color:#7C7F93">():</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">            print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"WARN: ファイルが存在しません: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">rel_path</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> file</span><span style="color:#179299">=</span><span style="color:#4C4F69">sys</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">stderr</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">            missing </span><span style="color:#179299">+=</span><span style="color:#FE640B;font-style:italic"> len</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">headings</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">            continue</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">        text </span><span style="color:#179299">=</span><span style="color:#4C4F69"> target</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">read_text</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">encoding</span><span style="color:#179299">=</span><span style="color:#40A02B">"utf-8"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">        heads </span><span style="color:#179299">=</span><span style="color:#7C7F93"> [</span><span style="color:#4C4F69">line</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">lstrip</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"# "</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">strip</span><span style="color:#7C7F93">()</span><span style="color:#8839EF"> for</span><span style="color:#4C4F69"> line </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> text</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">splitlines</span><span style="color:#7C7F93">()</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> line</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">startswith</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"#"</span><span style="color:#7C7F93">)]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">        for</span><span style="color:#4C4F69"> h </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> headings</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">            if</span><span style="color:#8839EF"> not</span><span style="color:#FE640B;font-style:italic"> any</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">h </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> x </span><span style="color:#8839EF">for</span><span style="color:#4C4F69"> x </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> heads</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#4C4F69">                missing </span><span style="color:#179299">+=</span><span style="color:#FE640B"> 1</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">                print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"WARN: 見出しが消えている: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">rel_path</span><span style="color:#EA76CB">}</span><span style="color:#40A02B"> の「</span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">h</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">」"</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> file</span><span style="color:#179299">=</span><span style="color:#4C4F69">sys</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">stderr</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#4C4F69"> missing</span></span>
+<span class="line"></span></code></pre>
+<p>この関数を実行すると、必須見出しが1件でも欠落していた場合に標準エラー出力（stderr）へ警告を出力し、欠落件数を返します。CI やビルド時の検証モード（<code>--check</code>）では、<code>missing > 0</code> の場合に exit code 1 でプロセスを異常終了させ、不正なコミットやデプロイを機械的にブロックします。</p>
+<h3 id="3-検査自体の破損を防ぐ---selftest-アサーション">3. 検査自体の破損を防ぐ <code>--selftest</code> アサーション</h3>
+<p>テストコード自体が壊れていて常に「検査通過（欠落0件）」を返してしまっては意味がありません。そこで、スクリプト内に意図的な欠落を注入してテストロジックが正しく機能しているかを検証する <code>--selftest</code> 機能を内蔵します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># ファイル: scripts/check-headings.py</span></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> main</span><span style="color:#7C7F93">():</span></span>
+<span class="line"><span style="color:#4C4F69">    base_dir </span><span style="color:#179299">=</span><span style="color:#4C4F69"> Path</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">cwd</span><span style="color:#7C7F93">()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#40A02B"> "--selftest"</span><span style="color:#8839EF"> in</span><span style="color:#4C4F69"> sys</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">argv</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">        # 1. 現状のファイルで欠落がないことを確認</span></span>
+<span class="line"><span style="color:#8839EF">        assert</span><span style="color:#1E66F5"> check_headings</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">base_dir</span><span style="color:#7C7F93">)</span><span style="color:#179299"> ==</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "現状の見出しは揃っているはず"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">        # 2. 意図的に存在しない見出しを注入して欠落が1件検出されることをアサーション</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        REQUIRED_HEADINGS</span><span style="color:#7C7F93">[</span><span style="color:#40A02B">"</span><span style="color:#40A02B;font-style:italic">CLAUDE.md</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">]</span><span style="color:#179299"> =</span><span style="color:#7C7F93"> [</span><span style="color:#40A02B">"絶対に存在しないテスト用見出し"</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#8839EF">        assert</span><span style="color:#1E66F5"> check_headings</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">base_dir</span><span style="color:#7C7F93">)</span><span style="color:#179299"> ==</span><span style="color:#FE640B"> 1</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "欠落を検出できていない"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"selftest ok"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">        return</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">    missing </span><span style="color:#179299">=</span><span style="color:#1E66F5"> check_headings</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">base_dir</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#40A02B"> "--check"</span><span style="color:#8839EF"> in</span><span style="color:#4C4F69"> sys</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">argv</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">        if</span><span style="color:#4C4F69"> missing </span><span style="color:#179299">></span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">            print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"ERROR: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">missing</span><span style="color:#EA76CB">}</span><span style="color:#40A02B"> 件の必須見出しが欠落しています。"</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> file</span><span style="color:#179299">=</span><span style="color:#4C4F69">sys</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">stderr</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">            sys</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">exit</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">1</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"見出し検査: 正常"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">        return</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#4C4F69"> __name__ </span><span style="color:#179299">==</span><span style="color:#40A02B"> "__main__"</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#1E66F5">    main</span><span style="color:#7C7F93">()</span></span>
+<span class="line"></span></code></pre>
+<p>このスクリプトを手元で実行すると、以下のような出力を得られます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">$</span><span style="color:#40A02B"> python3</span><span style="color:#40A02B"> scripts/check-headings.py</span><span style="color:#40A02B"> --selftest</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">WARN:</span><span style="color:#40A02B"> 見出しが消えている:</span><span style="color:#40A02B"> CLAUDE.md</span><span style="color:#40A02B"> の「絶対に存在しないテスト用見出し」</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">selftest</span><span style="color:#40A02B"> ok</span></span>
+<span class="line"></span></code></pre>
+<p>正常時は欠落ゼロで終了し、テスト時には意図した警告を出して通過することを確認できます。このように「検査スクリプト自体の健全性を検証する仕組み」をセットで用意することで、偽陰性（見逃し）のリスクを確実に防ぐことができます。</p>
+<h2 id="外部見出しアサーションの適用限界と多層防御">外部見出しアサーションの適用限界と多層防御</h2>
+<h3 id="見出し検査の守備範囲と限界">見出し検査の守備範囲と限界</h3>
+<p>外部スクリプトによる見出しアサーションは強力ですが、万能ではありません。</p>
+<p>この仕組みが保証するのはあくまで「見出し（骨格・枠組み）が存在すること」であり、見出し配下にある文章の意味的な改変や、パラメータの書き換えまでを単体で完全に防ぐことはできません。今回の最小実装は行頭が <code>#</code> かどうかだけで見出しを判定しており、コードブロック内に <code>#</code> で始まるコメント行が含まれていると見出しと誤認する余地も残ります。運用に組み込む際は、対象ファイルの実際の構造に応じてコードフェンスの内外を判定する処理を加えるといった調整が必要です。</p>
+<p>しかし、「見出しそのものが消えてルールが存在しなくなる事故」と「見出し配下の表現が推敲されること」は、リスクの深刻度が全く異なります。骨格としての見出しさえ残っていれば、エージェントはセッション開始時に「ここに壊してはならない規律がある」というコンテキストを認識し続けることができます。</p>
+<p>さらに、<code>AGENTS.md</code> や <code>CLAUDE.md</code> を書き換えられるエージェントが検査スクリプト自身の <code>REQUIRED_HEADINGS</code> まで書き換えてしまえば、この防護は無力化されます。決定論的と言えるのは、エージェントの書き込みスコープを検査スクリプトの配置ディレクトリに及ばせない、あるいは検査スクリプトの変更だけは人間のレビューを必須にするといった前提が別途成立している場合に限られます。</p>
+<h3 id="多層防御のアーキテクチャ">多層防御のアーキテクチャ</h3>
+<p>安全なコンテキスト自動管理を実現するためには、単一の手法に依存せず、役割の異なるガードを重ねる多層防御が不可欠です。</p>
+<ol>
+<li><strong>第1層（骨格保護）</strong>: 外部スクリプト（<code>check_headings()</code>）による必須見出しアサーション。セクションの消失を exit code 1 で阻止。</li>
+<li><strong>第2層（容量監視）</strong>: <a href="/blog/context-budget-agents-md">コンテキスト予算の管理を取り上げた過去記事</a> で解説した行数上限の自動計測。肥大化を警告して刈り込みの契機を提供。</li>
+<li><strong>第3層（変更検証）</strong>: Git コミットフック（pre-commit）や CI パイプラインでの静的検証。自動化されたプルリクエストの安全性を担保。</li>
+</ol>
+<p>「プロンプトの指示をもっと強く強調すれば、外部スクリプトを使わなくても防げるのではないか？」という疑問を持つ方もいるかもしれません。しかし、LLM はどこまでいっても確率的に動作するモデルです。特に行数削減のような相反する目標（トレードオフ）が与えられている場合、どれほど強いプロンプトであっても無視されるリスクをゼロにはできません。守るべき不変条件は、プロンプトの外側の決定論的なコードに委ねるべきです。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>今後の LLM の進化によって、この前提がどのように変化し得るかも考えておく必要があります。</p>
+<p>将来的に AI モデルのコンテキストウィンドウがさらに拡大し、指示がどれほど長くなっても精度や追従性が一切落ちない「完全なアテンション機構」が実現すれば、行数を無理に削る動機そのものは薄れるかもしれません。</p>
+<p>しかし、エージェントにファイルの読み書きやリファクタリングの自律権限を委譲する以上、誤操作や推論ミスによる破壊的変更のリスクは残り続けます。AI に対するプロンプト指示には常に「守られないかもしれない」という不確実性が伴います。「エージェントに権限を渡す設計では、守るべきことを明示的に強制する実装が必要である」という原則は、モデルの性能が向上しても変わらないシステム設計の基本姿勢です。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-プロンプトや-html-コメントでの防護と外部スクリプトによるテストの決定的な違いは何ですか">Q: プロンプトや HTML コメントでの防護と、外部スクリプトによるテストの決定的な違いは何ですか？</h3>
+<p><strong>A</strong>: 保護指示が「削除対象のセクションと運命を共にするか否か」です。自然言語や HTML コメントはセクション削除時に一緒に消滅してしまいますが、外部スクリプトは対象ファイルの外側から機械的に検証するため、削除を決定論的に阻止できます。</p>
+<h3 id="q-見出し検査スクリプトはどのようなタイミングで実行すべきですか">Q: 見出し検査スクリプトはどのようなタイミングで実行すべきですか？</h3>
+<p><strong>A</strong>: コミット前フック（pre-commit）および CI パイプラインの両方で実行するのが最も効果的です。これにより、エージェントが自律作業の中で誤って見出しを削ってしまった場合でも、コミットや PR 作成の段階で確実に検知・ブロックできます。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本記事で解説したコンテキスト防護の要点は以下の通りです。</p>
+<ul>
+<li><strong>自己参照削除の発生</strong>: AIエージェントにコンテキスト削減やルールの刈り込みを命じると、ルール自身を削除対象と判断して消してしまう事故が起きる。</li>
+<li><strong>インライン防護の限界</strong>: セクション内に書いた「消すな」という HTML コメントやプロンプト指示は、セクションごと消滅するため防護壁として機能しない。</li>
+<li><strong>外部アサーションの実践</strong>: 規律の防護はプロンプト（散文の戒め）に頼らず、守る対象の外側に一覧を持ち、外部テスト（機械のアサーション）で毎回測る。</li>
+<li><strong>テスト自体の検証</strong>: 検査スクリプトの退行や偽陰性を防ぐため、意図的な欠落を注入して検出を確認する <code>--selftest</code> パターンを組み込む。</li>
+</ul>
+<p>AIエージェントの自律運用やガードレール設計、開発プロセスの標準化についてのご相談は、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://nyosegawa.com/posts/agents-md-generator/">AGENTS.mdを自動で育てる仕組みを作った</a> 逆瀬川ちゃん、2026年2月15日公開。20〜30行バジェットの提唱、自己参照的削除事故の報告、HTMLコメントによる保護の実例。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://code.claude.com/docs/en/best-practices">Best practices for Claude Code</a> Anthropic 公式ドキュメント、2026年アクセス。CLAUDE.md の行数肥大化による指示無視リスク、推測可能な情報の刈り込み推奨。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://www.humanlayer.dev/blog/writing-a-good-claude-md">Writing a good CLAUDE.md</a> HumanLayer 公式ブログ、2025年3月24日公開。「Claude is not a linter（機械的制約に頼るべき）」、コンテキストの最小化と不要ルールの削除指針。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://agents.md/">AGENTS.md</a> Agentic AI Foundation (Linux Foundation)、2026年アクセス。AIコーディングエージェント向け標準設定ファイル仕様。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

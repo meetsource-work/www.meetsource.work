@@ -1,0 +1,176 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>URL検証を全通過した脚注が、別の主張に付いていた ── 出典検証がすり抜ける層 | Meetsource</title><meta name="description" content="URLの死活や書誌情報の正しさを検証するだけでは、本文の主張と引用文献の対応誤り（誤帰属）は防げません。生成AIの引用精度74.5%の背景と、独立Verifierによる突合ゲートの設計を実測付きで解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/ai-agent-citation-misattribution"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="URL検証を全通過した脚注が、別の主張に付いていた ── 出典検証がすり抜ける層 | Meetsource"><meta property="og:description" content="URLの死活や書誌情報の正しさを検証するだけでは、本文の主張と引用文献の対応誤り（誤帰属）は防げません。生成AIの引用精度74.5%の背景と、独立Verifierによる突合ゲートの設計を実測付きで解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/ai-agent-citation-misattribution"><meta property="og:image" content="https://www.meetsource.work/blog/ai-agent-citation-misattribution-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-22T14:30:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="URL検証を全通過した脚注が、別の主張に付いていた ── 出典検証がすり抜ける層 | Meetsource"><meta name="twitter:description" content="URLの死活や書誌情報の正しさを検証するだけでは、本文の主張と引用文献の対応誤り（誤帰属）は防げません。生成AIの引用精度74.5%の背景と、独立Verifierによる突合ゲートの設計を実測付きで解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/ai-agent-citation-misattribution-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"URL検証を全通過した脚注が、別の主張に付いていた ── 出典検証がすり抜ける層","description":"URLの死活や書誌情報の正しさを検証するだけでは、本文の主張と引用文献の対応誤り（誤帰属）は防げません。生成AIの引用精度74.5%の背景と、独立Verifierによる突合ゲートの設計を実測付きで解説します。","datePublished":"2026-08-22T14:30:00.000Z","image":"https://www.meetsource.work/blog/ai-agent-citation-misattribution-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/ai-agent-citation-misattribution"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"URL実在チェックや書誌情報の確認だけではなぜ誤帰属を防げないのですか？","acceptedAnswer":{"@type":"Answer","text":"URL 疎通や書誌メタデータの検証は「文献データそのものが実在するか」という定義側しか見ておらず、本文中のどの文にどの脚注番号が付いているかという「対応関係」は検査スコープ外だからです。"}},{"@type":"Question","name":"執筆エージェント自身に「主張と引用が一致しているか」をチェックさせるのでは不十分ですか？","acceptedAnswer":{"@type":"Answer","text":"不十分です。同一モデル・同一セッション内で自己チェックさせると、生成時の文脈バイアスにより自分の誤りを追認しやすいため、執筆コンテキストから完全に切り離した独立サブエージェントに「文 ↔ 逐語記録」を突き合わせる必要があります。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-22T14:30:00.000Z" data-astro-cid-7jjqptxk> 2026.08.22 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#llm</span><span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#ファクトチェック</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>URL検証を全通過した脚注が、別の主張に付いていた ── 出典検証がすり抜ける層</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/ai-agent-citation-misattribution-hero.webp" alt="URL検証を全通過した脚注が、別の主張に付いていた ── 出典検証がすり抜ける層" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>引用の誤帰属（Citation Misattribution）とは、引用文献自体は Web 上に実在し、書誌情報も正確であるにもかかわらず、本文の特定の主張と引用先の内容が食い違っている状態のことです。</p>
+<p>AI エージェントに記事執筆やリサーチを委譲する現場では、ハルシネーション対策として品質ゲートの導入が進んでいます。<a href="/blog/agent-citation-verification">出典の検証可能性を扱った前作</a> で解説したリンク切れ（404）やドメイントップ化の排除、さらには著者名・発行年・該当ページまで確かめる書誌メタデータの粒度検証は、AI 生成コンテンツの信頼性を支える不可欠な防壁です。</p>
+<p>しかし、これらの検証ゲートをすべて最高スコアでパスした原稿の中に、深刻な引用エラーがそのまま潜り込んでいた事例がありました。</p>
+<p>本記事では、URL や書誌の正しさを検証する「定義側のゲート」では原理的に検出できない誤りの層（誤帰属）が生じる仕組みを整理し、本文の主張と一次記録を突き合わせる独立した検証ゲートの設計と運用実測値を解説します。</p>
+<h2 id="urlも生きていて書誌も正しい脚注がすり抜けた日">「URLも生きていて書誌も正しい脚注」がすり抜けた日</h2>
+<p>発端となったのは、当リポジトリで過去に実施した、レガシーコード改善に関する技術記事の草案レビューでした。</p>
+<p>その記事草案では、テストカバレッジの解釈について論じた段落で、Martin Fowler による「半分以下のカバレッジは問題の兆候である」という見解が引用されていました。ところが、その文の末尾に付いていた脚注を開くと、リンク先は Fowler の技術ブログではなく、Wikipedia の「Code coverage」の項目になっていました。</p>
+<p>驚くべきことに、この原稿は公開前の自動レビュー工程をすべてクリアしていました。</p>
+<ul>
+<li>脚注の URL は 200 OK で正常に応答している（実在するリンク）</li>
+<li>著者名・タイトル・発行日などの書誌情報も正しい粒度で記載されている</li>
+<li>「1文献1脚注」などの構造ルールにも完全に適合している</li>
+</ul>
+<p>なぜすり抜けてしまったのでしょうか。理由は単純で、既存の品質ゲートが <strong>「脚注定義ブロックそのものの正しさ（定義側）」</strong> しか見ていなかったからです。末尾の文献一覧にある Wikipedia の URL も書誌も実在する正しいデータであったため、定義側を検査するバリデータは満点の判定を下していました。</p>
+<p>本文中の「どの文」に「どの脚注番号」が結びついているかという <strong>対応関係（マッピング）</strong> を検査する目が存在しなかったため、全く別の主張に付いた誤帰属がそのまま素通りしてしまったのです。</p>
+<h2 id="出典検証の死角-定義の正しさと対応の正しさの境界線">出典検証の死角: 「定義の正しさ」と「対応の正しさ」の境界線</h2>
+<p>この問題の本質は、出典に関する検証には直交する 2 つの層が存在するという点にあります。</p>
+<p><img src="/blog/ai-agent-citation-misattribution-two-layer-verification.webp" alt="2層の引用検証アーキテクチャ。第1層の定義側検証（URL死活・書誌メタデータ）をすり抜けた誤帰属を、第2層の独立した検証器（Verifier）が本文クレームと逐語ログの突合により検出する構造"></p>
+<h3 id="2-つの独立した検証層">2 つの独立した検証層</h3>
+<ol>
+<li>
+<p><strong>第1層: 定義側の検証（出典自体の健全性）</strong>
+引用文献が世の中に実在し、メタデータが正確かを検証します。近年提案された科学テキスト向けの引用検証フレームワーク（CiteCheck 等）<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> がこの領域にあたります。これが保証するのは「引用しようとしている文献が実在するか」です。</p>
+</li>
+<li>
+<p><strong>第2層: 対応関係の検証（Claim-to-Source Mapping）</strong>
+本文の 1 文 1 文が、紐づけられた参照文献の内容から論理的に導出（Entailment）できるかを検証します。自然言語生成における帰属基準（AIS: Attributable to Identified Sources）<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup> の領域です。これが保証するのは「その主張が本当にその文献に書かれているか」です。</p>
+</li>
+</ol>
+<p>どれほど第1層の検証を厳密に自動化しても、第2層の検証を組み込まない限り、誤帰属を止めることは原理的にできません。</p>
+<h3 id="なぜ-llm-は執筆時に引用を取り違えるのか">なぜ LLM は執筆時に引用を取り違えるのか</h3>
+<p>LLM が長文を執筆する際、同一セクション内に複数の参考文献（例: Fowler の記事と Wikipedia）が存在すると、コンテキスト内での参照番号の取り違えが生じやすいと考えられます。</p>
+<p>調査段階で正しい一次情報を取得していても、本文を生成して <code>[^N]</code> という参照記号を付与する瞬間に、直前・直後の文脈にある別の文献番号を割り当ててしまう現象です。</p>
+<h3 id="生成ai検索における引用精度の実態">生成AI検索における引用精度の実態</h3>
+<p>この誤帰属は、特定のモデルに限った現象ではありません。大規模言語モデルを用いた生成AI検索（Bing Chat, Perplexity 等）の引用精度を人手で検証した研究（Liu et al., 2023）<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> では、以下のデータが報告されています。</p>
+<ul>
+<li><strong>Citation Precision（引用適合率）: 平均 74.5%</strong>
+生成された回答に付与された引用のうち、実際にその文の主張を正しく裏付けていたのは約 4 分の 3 にすぎず、<strong>25.5% は無関係または主張を支持しない誤帰属</strong> でした。</li>
+<li><strong>Fully Supported（完全支持率）: 51.5%</strong>
+生成された文全体が引用文献によって完全に支持されている割合は、半数程度にとどまりました。</li>
+</ul>
+<p>インライン引用が整然と並んでいる文章は、人間にとっても AI にとっても信頼性が高く見えやすいという性質があります。しかし実際には、その 4 本に 1 本が「別の主張に付いた引用」であるという <strong>信頼性の見せかけ（Facade of Trustworthiness）</strong> <sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> の罠が存在します。</p>
+<h2 id="3-つの検証アプローチの比較">3 つの検証アプローチの比較</h2>
+<p>出典データの形式検証やプロンプト内での自己確認では誤帰属を防げず、独立した検証器による突き合わせが要ります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>アプローチ</th><th>主な検証対象</th><th>検出できる誤り</th><th>すり抜ける誤り</th><th>実行コスト</th></tr></thead><tbody><tr><td><strong>第1層: 出典側検証</strong>（URL死活 / 書誌粒度）</td><td>脚注定義ブロック（URL, DOI, 著者）</td><td>404 リンク切れ、架空の文献、メタデータ不備</td><td>本文主張との食い違い（誤帰属）</td><td>低（HTTPリクエスト / スクリプト走査）</td></tr><tr><td><strong>自己検証</strong>（同一モデル内の自己レビュー）</td><td>生成プロンプト内の回答と引用</td><td>明らかな論理破綻</td><td>執筆時と同一バイアスによる見落とし</td><td>低〜中（追加プロンプト）</td></tr><tr><td><strong>第2層: 独立 Verifier</strong>（クレーム突合）</td><td>本文クレーム ↔ 逐語記録の突き合わせ</td><td>誤帰属、根拠のない主張、脚注取り違え</td><td>（逐語記録自体の欠落）</td><td>中（独立サブエージェント / NLI）</td></tr></tbody></table>
+<p>出典側の検証（第1層）を終えた後、独立した検証器（第2層）で本文との対応関係を検査する「二段構え」のパイプライン設計が不可欠です。</p>
+<h2 id="解決策-独立-verifier-によるクレーム--逐語記録の突き合わせ">解決策: 独立 Verifier による「クレーム ↔ 逐語記録」の突き合わせ</h2>
+<p>誤帰属を確実に検出するためには、どのようなアーキテクチャが必要でしょうか。</p>
+<h3 id="前提-情報源別の逐語ログとは何か">前提: 「情報源別の逐語ログ」とは何か</h3>
+<p>このゲートは、調査フェーズが残す逐語ログを正本として動きます。突き合わせる相手が無ければ、後述の委任プロンプトだけを真似しても検証は成立しません。移植する際に最初に用意すべきはこちらです。</p>
+<p>当リポジトリでは、調査フェーズの成果物を次の 2 部構成で 1 ファイルに残しています。</p>
+<ol>
+<li><strong>情報源一覧</strong>: 通し番号・タイトル・URL・アクセス日・信頼度・実在確認（HTTP ステータス）の表</li>
+<li><strong>情報源別の抽出記録</strong>: 情報源ごとに、URL・記事のどのトピックに対応するか・原典から抽出した事実（逐語引用とその要約）を並べたブロック</li>
+</ol>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#DF8E1D">### 情報源 2: Evaluating Verifiability in Generative Search Engines (Liu et al., 2023)</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">URL</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">: https://arxiv.org/abs/2304.09848</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">対応セクション</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">: トピック 2</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">抽出した事実・データ</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">:</span></span>
+<span class="line"><span style="color:#179299">  -</span><span style="color:#4C4F69"> Citation Precision（引用適合率）: 提供された引用が実際に関連付けられた文の主張を支持している割合は平均 74.5%</span></span>
+<span class="line"></span></code></pre>
+<p>肝は <strong>情報源ごとに区切られていること</strong> です。抽出した事実を 1 本のメモに混ぜて書くと「どの記述がどの文献由来か」が失われ、対応関係の突き合わせが原理的にできなくなります。</p>
+<h3 id="なぜコンテキスト分離が必要なのか">なぜコンテキスト分離が必要なのか</h3>
+<p>ここで分離しているのはモデルではなく <strong>コンテキスト</strong> です。当リポジトリの検証ゲートは執筆と同じモデルを使っており、違うのは「執筆時の文脈を一切持たない状態で起動する」という一点だけです。</p>
+<p>執筆を行った同一セッション内で自己確認させる構成を採らなかったのは、執筆時のコンテキストウィンドウに残る文脈や推論過程に引きずられ、誤った紐付けを自分自身で正当化してしまう自己追認バイアスを避けるためです。同一セッションでの自己レビューとの検出率の差は対照実験で測っていないため、ここは実測ではなく設計上の判断です。</p>
+<p>実際に組み込んだのは、執筆コンテキストを持たない <strong>独立した検証器（Verifier サブエージェント）</strong> を起動し、<strong>「本文の各文（仮説）」</strong> と <strong>「調査フェーズで記録した情報源別の逐語ログ（前提）」</strong> だけを突き合わせる単機能の検証タスクを委任する構成です。突き合わせの発想そのもの（主張をクレーム単位へ分解し、引用元テキストから含意されるかを判定する）は、生成テキストの引用評価で確立している手法です<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<h3 id="照合ゲートの設計仕様">照合ゲートの設計仕様</h3>
+<p>当リポジトリのパイプラインでは、レビュー工程に以下の委任プロンプトを持つ独立検証ゲートを組み込みました。</p>
+<blockquote><p>執筆原稿（本文）中の <strong>全ての</strong> <code>[^N]</code> 参照について、その文が述べている主張が、参照先の脚注の文献に由来するかを調査記録の情報源別逐語ログと突き合わせてください。逐語をそのまま引いた箇所だけでなく、要約・翻訳・言い換えた文も対象です。<strong>不一致だけ</strong> を「本文の行番号 / 該当文 / 付いている脚注の文献 / 調査記録上で実際にその主張を記録している情報源（無ければ『該当なし』）」の形で列挙し、一致しているものは列挙しないでください。原稿は書き換えないでください。</p></blockquote>
+<h3 id="誤帰属が検出されたときの運用分岐">誤帰属が検出されたときの運用分岐</h3>
+<p>不一致が報告された場合、パイプラインの運用は以下の 2 つに分岐します。</p>
+<ol>
+<li><strong>パスA（現地修正）: 正しい文献が調査記録に存在する場合</strong>
+単なる番号の割り当てミスであるため、正しい文献への <code>[^N]</code> 付け替えと、本文初出順の再採番を行って即座に修正を完了します。</li>
+<li><strong>パスB（差し戻し）: 調査記録のどこにも主張の根拠がない場合</strong>
+これは引用の付け間違いではなく、<strong>「主張自体に裏付けがない創作（ハルシネーション）」</strong> です。出典の差し替えでは解決できないため、品質ゲートを停止して執筆工程へ差し戻します。</li>
+</ol>
+<h2 id="運用コストと実効性-全脚注突き合わせは実用に耐えるか">運用コストと実効性: 全脚注突き合わせは実用に耐えるか</h2>
+<p>全脚注を対象とした独立突き合わせゲートの導入で問題になるのは、実行コストと検出の実効性です。</p>
+<p>当リポジトリにおいて、13 箇所の脚注参照を持つ記事草案を対象に空撃ち（本番投入前の試験実行）で検証したときの実測値は以下のとおりです。</p>
+<ul>
+<li><strong>トークン消費</strong>: 53,885 トークン</li>
+<li><strong>所要時間</strong>: 約 73 秒</li>
+<li><strong>ツール使用回数</strong>: 3 回</li>
+<li><strong>誤検出（偽陽性）</strong>: <strong>0 件</strong></li>
+</ul>
+<h3 id="実際の検出実績">実際の検出実績</h3>
+<p>この検証では、テスト用に意図して仕込んだ 1 件の欠陥（Fowler の記述に Wikipedia 脚注を付けたもの）を正確に検出しただけでなく、過去の初回レビューを通過してしまっていた <strong>実際の誤帰属 4 件</strong> を追加検出しました。</p>
+<ul>
+<li><strong>行 22</strong>: 特性テストの「許可リスト／禁止リストの対比」に Fowler の脚注が付いていたが、調査記録上は Wikipedia の Characterization test 由来であった</li>
+<li><strong>行 24</strong>: 入出力例 <code>f(3.14) == 42</code> と人間判断に関する記述に Google Testing Blog の脚注が付いていたが、正しくは上記 Wikipedia 由来であった</li>
+<li><strong>行 85</strong>: テスト用ポートの自動起動・停止に関する記述に公式ドキュメント（POD）の脚注が付いていたが、正しくは公式ガイド（Guides::Testing）由来であった</li>
+<li><strong>行 144</strong>: 「HTML レポートで色分け表示される」という記述について、調査記録全体に該当する根拠が存在しなかった（パスBの差し戻し対象）</li>
+</ul>
+<p>1 記事の執筆に数十万トークンを要する現代の自動化パイプラインにおいて、約 5 万トークン・1 分強の独立検証を追加することは、公開後の信頼性リスクや人間の再レビュー負担を減らす、費用対効果の高い投資と言えます。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q1-url実在チェックや書誌情報の確認だけではなぜ誤帰属を防げないのですか">Q1: URL実在チェックや書誌情報の確認だけではなぜ誤帰属を防げないのですか？</h3>
+<p><strong>A1</strong>: URL 疎通や書誌メタデータの検証は「文献データそのものが実在するか」という定義側しか見ておらず、本文中のどの文にどの脚注番号が付いているかという「対応関係」は検査スコープ外だからです。</p>
+<h3 id="q2-執筆エージェント自身に主張と引用が一致しているかをチェックさせるのでは不十分ですか">Q2: 執筆エージェント自身に「主張と引用が一致しているか」をチェックさせるのでは不十分ですか？</h3>
+<p><strong>A2</strong>: 不十分です。同一モデル・同一セッション内で自己チェックさせると、生成時の文脈バイアスにより自分の誤りを追認しやすいため、執筆コンテキストから完全に切り離した独立サブエージェントに「文 ↔ 逐語記録」を突き合わせる必要があります。</p>
+<h2 id="まとめ-自社のレビューフローに主張対応ゲートを-1-本足す">まとめ: 自社のレビューフローに主張対応ゲートを 1 本足す</h2>
+<p>AI エージェントによる執筆や調査を実用化する鍵は、作業プロセスを以下の 3 段階に分離することです。</p>
+<ol>
+<li><strong>調査フェーズ</strong>: 出典の URL や書誌を確認し、<strong>情報源別の逐語記録（正本）</strong> を残す</li>
+<li><strong>執筆フェーズ</strong>: 逐語記録を基に本文を構成し、適切な位置に引用番号を付与する</li>
+<li><strong>検証フェーズ</strong>: 執筆とは別の独立した Verifier が、本文のクレームと逐語記録の対応を全件突き合わせる</li>
+</ol>
+<p>出典の検証を出典側（URL や書誌）だけで完結させず、本文の主張との結びつきまで確かめる検証ゲートを 1 本追加すること。これこそが、生成AIの「もっともらしさ」に惑わされず、真に検証可能な技術コンテンツを継続的に届けるための境界線となります。</p>
+<p>AI エージェントを活用した業務自動化や、生成コンテンツの品質保証パイプラインの設計・運用に関するご相談は、<a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://arxiv.org/abs/2605.27700">CiteCheck: Retrieval-Grounded Detection of LLM Citation Hallucinations in Scientific Text</a> Khashayar Khajavi, Shaghayegh Sadeghi, Rise Adhikari, Alexander Tessier. arXiv:2605.27700, 2026. 科学文献における書誌実在性・メタデータ整合性の検証フレームワーク。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://arxiv.org/abs/2112.12870">Measuring Attribution in Natural Language Generation Models</a> Hannah Rashkin, Vitaly Nikolaev, Matthew Lamm, Lora Aroyo, Michael Collins, Dipanjan Das, Slav Petrov, Gaurav Singh Tomar, Izhak Shafran, David Reitter. Computational Linguistics 2023. arXiv:2112.12870. AIS（Attributable to Identified Sources）の定義、Faithfulness と Attribution の区別。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://arxiv.org/abs/2304.09848">Evaluating Verifiability in Generative Search Engines</a> Nelson F. Liu, Tianyi Zhang, Percy Liang. Findings of EMNLP 2023, pp. 7001–7025. arXiv:2304.09848. Citation Precision 74.5%、Fully Supported 51.5% の実測値、Facade of Trustworthiness の指摘は pp. 7001–7004, Table 1。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://arxiv.org/abs/2305.14627">Enabling Large Language Models to Generate Text with Citations</a> Tianyu Gao, Howard Yen, Jiatong Yu, Danqi Chen. Proceedings of EMNLP 2023, pp. 6465–6488. arXiv:2305.14627. ALCE ベンチマーク、AutoAIS によるクレーム単位の含意（NLI）評価手法は pp. 6465–6468。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://arxiv.org/abs/2305.06311">Automatic Evaluation of Attribution by Large Language Models</a> Xiang Yue, Boshi Wang, Ziyi Yang, Huan Sun, Yu Su. Findings of EMNLP 2023, pp. 4615–4635. arXiv:2305.06311. サブクレーム分解と LLM/NLI による帰属関係自動評価手法は Section 3–4。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 
