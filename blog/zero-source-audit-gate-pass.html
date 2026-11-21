@@ -1,0 +1,300 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>出典ゼロの記録は、実在性監査ゲートの検査対象からすり抜ける ── 「空虚な真」を防ぐ品質ゲートの分母設計 | Meetsource</title><meta name="description" content="出典URLの実在性を検査する監査ゲートが、出典を1本も持たない記録を「違反0件」として合格させていた。論理学の「空虚な真（Vacuous Truth）」が引き起こすサイレントパスの構造と、pytestやJestの設計思想、等級から分母を捉えるフェイルセーフな品質ゲートの作り方を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/zero-source-audit-gate-pass"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="出典ゼロの記録は、実在性監査ゲートの検査対象からすり抜ける ── 「空虚な真」を防ぐ品質ゲートの分母設計 | Meetsource"><meta property="og:description" content="出典URLの実在性を検査する監査ゲートが、出典を1本も持たない記録を「違反0件」として合格させていた。論理学の「空虚な真（Vacuous Truth）」が引き起こすサイレントパスの構造と、pytestやJestの設計思想、等級から分母を捉えるフェイルセーフな品質ゲートの作り方を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/zero-source-audit-gate-pass"><meta property="og:image" content="https://www.meetsource.work/blog/zero-source-audit-gate-pass-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-11T10:00:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="出典ゼロの記録は、実在性監査ゲートの検査対象からすり抜ける ── 「空虚な真」を防ぐ品質ゲートの分母設計 | Meetsource"><meta name="twitter:description" content="出典URLの実在性を検査する監査ゲートが、出典を1本も持たない記録を「違反0件」として合格させていた。論理学の「空虚な真（Vacuous Truth）」が引き起こすサイレントパスの構造と、pytestやJestの設計思想、等級から分母を捉えるフェイルセーフな品質ゲートの作り方を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/zero-source-audit-gate-pass-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"出典ゼロの記録は、実在性監査ゲートの検査対象からすり抜ける ── 「空虚な真」を防ぐ品質ゲートの分母設計","description":"出典URLの実在性を検査する監査ゲートが、出典を1本も持たない記録を「違反0件」として合格させていた。論理学の「空虚な真（Vacuous Truth）」が引き起こすサイレントパスの構造と、pytestやJestの設計思想、等級から分母を捉えるフェイルセーフな品質ゲートの作り方を解説します。","datePublished":"2026-10-11T10:00:00.000Z","image":"https://www.meetsource.work/blog/zero-source-audit-gate-pass-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/zero-source-audit-gate-pass"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"自作リンターや CI スクリプトで「検査対象 0 件」を検知すべきなのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"検査対象が 0 件（空集合）のとき、「違反が見つからなければ合格」という素朴な判定ループは無条件に合格を返してしまう（空虚な真）ためです。ファイルパスの指定ミスや正規表現の誤り、あるいは検査対象の属性そのものが欠落している場合、重大な欠陥を抱えたデータがサイレントパスしてしまいます。"}},{"@type":"Question","name":"pytest がテスト未検出時に Exit code 5 を返す理由は何ですか？","acceptedAnswer":{"@type":"Answer","text":"テストが 1 件も収集されなかった状態は「テストスイートが正常に合格した」のではなく、設定ミスやテストファイル指定の誤りといった異常状態であると見なすためです。pytest は全テストが正常に収集されてパスした場合（Exit code 0）と、テストが収集されなかった場合（Exit code 5）を厳密に区別しています。"}},{"@type":"Question","name":"監査ゲートにおける「除外基準（Exclusion）」と「許可基準（Permission）」の違いは何ですか？","acceptedAnswer":{"@type":"Answer","text":"除外基準は「不正なもの（違反 URL など）があれば弾く」という判定であり、対象が 0 件のときに意図せぬ合格を引き起こします。一方、許可基準は「確定版なら検証済みの根拠を最低 1 つ持っていること」という適格条件を要求する判定であり、根拠が欠落している場合に安全側に倒れて確実に遮断（Fail-Safe Defaults）します。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-11T10:00:00.000Z" data-astro-cid-7jjqptxk> 2026.10.11 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span><span class="tag" data-astro-cid-7jjqptxk>#ci-cd</span><span class="tag" data-astro-cid-7jjqptxk>#linter</span><span class="tag" data-astro-cid-7jjqptxk>#testing</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>出典ゼロの記録は、実在性監査ゲートの検査対象からすり抜ける ── 「空虚な真」を防ぐ品質ゲートの分母設計</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/zero-source-audit-gate-pass-hero.webp" alt="出典ゼロの記録は、実在性監査ゲートの検査対象からすり抜ける ── 「空虚な真」を防ぐ品質ゲートの分母設計" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>品質ゲート（監査ゲート）とは、CI やビルドプロセスにおいて、ドキュメントやコードが規定の品質基準や完全性を満たしているかを機械的に判定・遮断する検収機構です。</p>
+<p>独自の監査スクリプトを組み始めたとき、多くの開発者は「違反が 0 件であれば、その成果物は健全であり合格である」という素朴な判定ループを疑いません。私自身も、ドキュメントに含まれる出典 URL の実在性を検証する監査ゲートを社内ナレッジハブに導入した際、確定版（stable）として管理されるドキュメントについて、台帳で検収されていない URL があれば警告してコミットを止める設計です。</p>
+<p>しかし導入直後の実測で、AI エージェントが作成した調査ドキュメントのうち、減衰率 30〜70% やインプレッション 1.5〜3 倍といった具体的な数値を多数並べたトピックが、出典 URL を 1 本も持たないまま監査ゲートを素通りし、確定版に留まっていたことが分かりました。</p>
+<p>URL を 2 本持っていた別の調査ドキュメントでは、存在しない捏造 URL 1 件が正しく警告・遮断されていました。それにもかかわらず、最も根拠の薄い「出典が一切存在しない記録」は、検査対象の URL が 0 件だったために警告 0 件となり、素通りしてしまいました。</p>
+<p>この失敗を通じて痛感したのは、「違反がなければ通す」という除外基準（Exclusion）が抱える構造的な脆さです。以下では、プログラミングや論理学において「0 件が合格してしまう」背後にある「空虚な真（Vacuous Truth）」のメカニズムを解明し、pytest や Jest といった既存テストツール、さらには古典的なセキュリティ原則に学びながら、根拠の等級の側から分母を定義するフェイルセーフな品質ゲートの設計論を考えます。</p>
+<h2 id="なぜ検査対象-0-件は合格してしまうのか空虚な真vacuous-truthの罠">なぜ「検査対象 0 件」は合格してしまうのか：空虚な真（Vacuous Truth）の罠</h2>
+<p>なぜ、最も根拠の薄い記録が監査ゲートに合格してしまったのでしょうか。その根本的な原因は、論理学における「空虚な真（Vacuous Truth）」と呼ばれる性質にあります。</p>
+<p>論理学において、全称命題 <code>∀x ∈ S, P(x)</code>（集合 <code>S</code> のすべての要素 <code>x</code> について条件 <code>P(x)</code> が成り立つ）は、条件付き命題 <code>∀x (x ∈ S → P(x))</code> と同値です。もし検査対象の集合 <code>S</code> が空集合（<code>∅</code>）であった場合、前提条件（<code>antecedent</code>）である <code>x ∈ S</code> が偽となるため、条件法（含意）の定義により命題全体は無条件に「真」となります <sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>日常会話の例で言えば、「この部屋にあるすべての携帯電話は電源が切れている」という命題は、部屋に携帯電話が 1 台も存在しないとき、論理学上は真となります <sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。同時に「この部屋にあるすべての携帯電話は電源が入っている」という命題も真になります。前提となる対象が存在しないとき、その対象に関する任意の全称主張は反証不可能になり、空虚な真として成立してしまうのです。</p>
+<h3 id="プログラミング言語における空虚な真の実装">プログラミング言語における空虚な真の実装</h3>
+<p>この論理学の挙動は、私たちが日常的に利用しているプログラミング言語の標準仕様にもそのまま反映されています。</p>
+<p>JavaScript / ECMAScript の <code>Array.prototype.every()</code> は、配列内のすべての要素が指定されたテスト関数を満たすかを判定します。MDN Web Docs にも明記されている通り、このメソッドに空配列を渡すと無条件に <code>true</code> を返します <sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="javascript"><code><span class="line"><span style="color:#4C4F69">[]</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">every</span><span style="color:#4C4F69">(</span><span style="color:#7C7F93">()</span><span style="color:#8839EF"> =></span><span style="color:#FE640B"> false</span><span style="color:#4C4F69">)</span><span style="color:#7C7F93">;</span><span style="color:#9CA0B0;font-style:italic"> // true</span></span>
+<span class="line"></span></code></pre>
+<p>MDN のドキュメントでは、これを「空集合のすべての要素が任意の条件を満たすことは、空虚な真（vacuously true）である」と説明しています <sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>Python の組み込み関数 <code>all()</code> も同様です。空のイテラブルを渡すと無条件に <code>True</code> を返します <sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。Python 公式ドキュメントに記載されている等価な実装コードを見ると、その理由がよく分かります <sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#8839EF">def</span><span style="color:#FE640B;font-style:italic"> all</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">iterable</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> element </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> iterable</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">        if</span><span style="color:#8839EF"> not</span><span style="color:#4C4F69"> element</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">            return</span><span style="color:#8839EF"> False</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#8839EF"> True</span></span>
+<span class="line"></span></code></pre>
+<p>走査対象の要素が存在しない場合、ループは一度も回らず、コードは直ちに最後の <code>return True</code> へ到達します。</p>
+<h3 id="自作監査スクリプトの素朴な判定ループ">自作監査スクリプトの素朴な判定ループ</h3>
+<p>問題は、自作リンターや品質ゲートを書く開発者の多くが、無意識のうちにこの <code>all()</code> と全く同じ構造の判定ループを書いてしまう点にあります。</p>
+<p>次のコードは、この判定構造を説明用に簡略化した例です（実際のゲートは台帳で検収済みかどうかを URL ごとに照合していました）。</p>
+<p>ファイル: <code>audit_topics_v1.py</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> re</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">URL_RE </span><span style="color:#179299">=</span><span style="color:#4C4F69"> re</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">compile</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">r</span><span style="color:#EA76CB">"</span><span style="color:#40A02B">https</span><span style="color:#179299">?</span><span style="color:#40A02B">://</span><span style="color:#7C7F93">[</span><span style="color:#179299">^</span><span style="color:#40A02B">\s()</span><span style="color:#7C7F93">]</span><span style="color:#179299">+</span><span style="color:#EA76CB">"</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> re</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">IGNORECASE</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">VERIFIED_URLS </span><span style="color:#179299">=</span><span style="color:#7C7F93"> {</span><span style="color:#40A02B">"https://example.com/verified"</span><span style="color:#7C7F93">}</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> check_unverified_urls</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">markdown_text</span><span style="color:#7C7F93">:</span><span style="color:#FE640B;font-style:italic"> str</span><span style="color:#7C7F93">)</span><span style="color:#7C7F93"> -></span><span style="color:#FE640B;font-style:italic"> int</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#40A02B">    """ドキュメント内の URL を走査し、未検証の URL 件数を返す"""</span></span>
+<span class="line"><span style="color:#4C4F69">    urls </span><span style="color:#179299">=</span><span style="color:#FE640B;font-style:italic"> set</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">URL_RE</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">findall</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">markdown_text</span><span style="color:#7C7F93">))</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # 抽出された URL の中に、検証済み台帳にないものがあれば違反とする</span></span>
+<span class="line"><span style="color:#4C4F69">    unverified </span><span style="color:#179299">=</span><span style="color:#7C7F93"> [</span><span style="color:#4C4F69">u </span><span style="color:#8839EF">for</span><span style="color:#4C4F69"> u </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> urls </span><span style="color:#8839EF">if</span><span style="color:#4C4F69"> u </span><span style="color:#8839EF">not</span><span style="color:#8839EF"> in</span><span style="color:#4C4F69"> VERIFIED_URLS</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#FE640B;font-style:italic"> len</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">unverified</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># テスト 1: 未検証 URL を含むドキュメント</span></span>
+<span class="line"><span style="color:#4C4F69">doc_with_unverified </span><span style="color:#179299">=</span><span style="color:#40A02B"> "参考: https://example.com/unverified"</span></span>
+<span class="line"><span style="color:#8839EF">assert</span><span style="color:#1E66F5"> check_unverified_urls</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">doc_with_unverified</span><span style="color:#7C7F93">)</span><span style="color:#179299"> ==</span><span style="color:#FE640B"> 1</span><span style="color:#9CA0B0;font-style:italic">  # 検出成功</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># テスト 2: 出典 URL を 1 本も持たないドキュメント</span></span>
+<span class="line"><span style="color:#4C4F69">doc_without_urls </span><span style="color:#179299">=</span><span style="color:#40A02B"> "具体的な数値: 減衰率は 50% です。"</span></span>
+<span class="line"><span style="color:#8839EF">assert</span><span style="color:#1E66F5"> check_unverified_urls</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">doc_without_urls</span><span style="color:#7C7F93">)</span><span style="color:#179299"> ==</span><span style="color:#FE640B"> 0</span><span style="color:#9CA0B0;font-style:italic">  # 違反 0 件で「合格」</span></span>
+<span class="line"></span></code></pre>
+<p>このコードでは、<code>URL_RE.findall(markdown_text)</code> が空リストを返すと、内包表記のループが 0 回で終了し、未検証リスト <code>unverified</code> も空になります。その結果、戻り値は <code>0</code>（違反なし）となり、監査ゲートは「健全なドキュメント」として通過させてしまいます。</p>
+<p>「怪しい URL が含まれていたら弾く」というチェックは、「URL が 1 本以上含まれている」という前提の上でしか機能しません。前提条件が崩れて検査対象がゼロになった瞬間、除外型の判定ループは静かに口を開け、最も根拠の薄いデータを素通りさせてしまうのです。</p>
+<h2 id="既存テストツールはどう防いでいるかフェイルセーフな分母設計">既存テストツールはどう防いでいるか：フェイルセーフな分母設計</h2>
+<p>検査対象が 0 件のときにサイレントパスしてしまう落とし穴は、自作スクリプトに限った話ではありません。成熟した既存のテストフレームワークやセキュリティ設計の歴史を振り返ると、先人たちがこの問題にいかに向き合ってきたかが分かります。</p>
+<h3 id="pytest-の-exit-code-5no-tests-collected">pytest の Exit code 5：No tests collected</h3>
+<p>Python の代表的なテストフレームワークである pytest は、実行結果に応じて厳密な終了コードを定義しています <sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>終了コード</th><th>定義（<code>pytest.ExitCode</code>）</th><th>意味</th></tr></thead><tbody><tr><td><code>Exit code 0</code></td><td><code>OK</code></td><td>すべてのテストが収集され、正常にパスした</td></tr><tr><td><code>Exit code 1</code></td><td><code>TESTS_FAILED</code></td><td>テストが実行されたが、一部が失敗した</td></tr><tr><td><code>Exit code 5</code></td><td><code>NO_TESTS_COLLECTED</code></td><td>テストが 1 件も収集されなかった</td></tr></tbody></table>
+<p>pytest において、終了コード 0 は単に「失敗したテストが 0 件だった」ことを意味しません。「すべてのテストが <strong>収集され（collected）</strong>、かつ成功した」ことこそが正常終了の条件です。</p>
+<p>もしテストファイルが 1 件も見つからなかったり、絞り込みでテストが 0 件になったりした場合、pytest は「失敗 0 件だから成功」とは見なさず、<code>Exit code 5</code> という専用の異常終了ステータスを返して CI を停止させます。分母がゼロである状態を明確な異常として扱う設計です。</p>
+<h3 id="jest-の---passwithnotests-によるオプトイン">Jest の <code>--passWithNoTests</code> によるオプトイン</h3>
+<p>JavaScript / TypeScript エコシステムのテストランナーである Jest も、同様の思想に基づいています <sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>Jest でテストファイルが 1 件も見つからなかった場合、デフォルトではテストスイートは <strong>合格になりません</strong>。テストが 0 件の状態でテストスイートを合格させたい場合、開発者は明示的に <code>--passWithNoTests</code> という CLI フラグを指定しなければなりません <sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>Jest のプルリクエスト #5127 は、テストが見つからなかったときに <code>--passWithNoTests</code> の使用を提案するメッセージを加える変更で、議論では「If you consider no tests matching your filters correct behavior, use the ‘—passWithNoTests’ option」という文面が示されています <sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。同じ PR は、<code>--findRelatedTests</code>・<code>--lastCommit</code>・<code>--onlyChanged</code> を指定したときに限り、テストが見つからなくてもエラーにしないよう改めました <sup><a href="#user-content-fn-6" id="user-content-fnref-6-3" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。0 件を正しい挙動と見なすかどうかは利用者に明示させ、0 件が正常に起こりうる文脈だけを例外にして、既定は失敗のまま残す設計だと私は読んでいます。</p>
+<h3 id="セキュリティ原則fail-safe-defaults安全側のデフォルト">セキュリティ原則：Fail-Safe Defaults（安全側のデフォルト）</h3>
+<p>この設計思想の根底にあるのが、1975 年に Jerome H. Saltzer と Michael D. Schroeder が提唱したセキュリティ設計の基本原則、<strong>Fail-Safe Defaults（安全側のデフォルト）</strong> です <sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>Saltzer らは論文の中で次のように述べています <sup><a href="#user-content-fn-7" id="user-content-fnref-7-2" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<blockquote><p>「アクセス決定は、除外（exclusion）ではなく許可（permission）に基づいて行われなければならない。……明示的な許可を与えるメカニズムの設計や実装に誤りがあった場合、アクセスを拒否する方向に失敗する傾向がある。これは即座に検知されるため安全である。一方で、明示的な除外を行うメカニズムに誤りがあった場合、アクセスを許可する方向に失敗する傾向があり、通常の運用では見過ごされてしまう。」</p></blockquote>
+<p>OWASP のセキュアコードレビューや認可（Authorization）チートシートでも、この原則は <strong>Deny by Default（デフォルト拒否）</strong> として強調されています <sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup><sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<p>監査ゲートの判定ロジックを、この原則に照らして対比してみましょう。</p>
+<p>品質ゲートの判定アプローチは、何を合格基準とするかによって空集合に対する耐性が決定的に異なります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>アプローチ</th><th>判定の基軸</th><th>0 件時の挙動</th><th>メリットと課題</th></tr></thead><tbody><tr><td><strong>除外基準（Exclusion）</strong></td><td>不正な URL や NG ワードが 0 件ならパス</td><td><strong>サイレントパスする（空虚な真）</strong></td><td>実装は容易だが、対象が欠落したときに重大な盲点となる</td></tr><tr><td><strong>単純件数アサート（Count）</strong></td><td>抽出された URL が 1 件以上存在すること</td><td>エラーで遮断できる</td><td>URL が不要な正当なドキュメントまで一律に拒絶してしまう</td></tr><tr><td><strong>許可基準（Permission）</strong></td><td>確定版なら検証済みの根拠等級を最低 1 つ保持</td><td><strong>確実に遮断（フェイルセーフ）</strong></td><td>ドキュメントの品質等級（ライフサイクル）の定義が必要</td></tr></tbody></table>
+<p>単に「URL を 1 件以上要求する」という単純な件数アサートを追加するだけでは、URL を必要としない概念説明などの正当なドキュメントまで巻き込んでしまいます。本質的な解決策は、ドキュメントのライフサイクル（確定版か下書きか）に応じた許可基準を設計することにあります。</p>
+<h2 id="処方箋url-の側からではなく等級の側から分母を定義する">処方箋：「URL の側」からではなく「等級の側」から分母を定義する</h2>
+<p>社内ナレッジハブでの失敗を経て私たちが辿り着いた結論は、<strong>「URL の実在検査」と「根拠の存在検査」は全く別の穴である</strong> という事実でした。</p>
+<p>URL の実在検査は、「URL が存在する」という前提の上でしか機能しません。したがって、この検査の分母は「ドキュメント内に含まれる URL の集合」です。一方で、「このドキュメントが確定版として十分な根拠を持っているか」を問う検査の分母は、「確定版（stable）を名乗るドキュメントそのもの」でなければなりません。</p>
+<h3 id="根拠の等級から分母を捕捉する修正実装">根拠の等級から分母を捕捉する修正実装</h3>
+<p>社内ナレッジハブでは、記録の本文に根拠の等級を書いています。<code>[実測]</code> と <code>[検証済]</code> は確かめた根拠、<code>[未検証]</code> はまだ確かめていない記述を表し、確定版（stable）は確かめた根拠を最低 1 つ持たねばならない、という約束です。</p>
+<p>そこで私たちは、監査スクリプトの分母設計を見直しました。URL の実在検査はそのまま残し、それとは独立に、確定版ドキュメントすべてを分母として、本文中に有効な根拠等級が含まれているかを検証する条件を追加したのです。次のコードは、実際の監査スクリプトから判定部分を抜き出して簡略化したものです。</p>
+<p>ファイル: <code>audit_topics_v2.py</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> sys</span></span>
+<span class="line"><span style="color:#8839EF">from</span><span style="color:#4C4F69"> pathlib </span><span style="color:#8839EF">import</span><span style="color:#4C4F69"> Path</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 根拠の等級。確定版（stable）は最低 1 つ「確かめた根拠」を持たねばならない</span></span>
+<span class="line"><span style="color:#4C4F69">GRADE_OK </span><span style="color:#179299">=</span><span style="color:#7C7F93"> (</span><span style="color:#40A02B">"[実測]"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "[検証済]"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> audit_document</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">file_path</span><span style="color:#7C7F93">:</span><span style="color:#E64553"> Path</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> text</span><span style="color:#7C7F93">:</span><span style="color:#FE640B;font-style:italic"> str</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> status</span><span style="color:#7C7F93">:</span><span style="color:#FE640B;font-style:italic"> str</span><span style="color:#7C7F93">)</span><span style="color:#7C7F93"> -></span><span style="color:#FE640B;font-style:italic"> bool</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#40A02B">    """確定版ドキュメントの品質基準を検証する"""</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> status </span><span style="color:#179299">!=</span><span style="color:#40A02B"> "stable"</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">        return</span><span style="color:#8839EF"> True</span><span style="color:#9CA0B0;font-style:italic">  # 下書き（draft）段階は強制しない</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # 【処方箋】URL の有無ではなく、確定版として有効な根拠等級を持つか検査する</span></span>
+<span class="line"><span style="color:#4C4F69">    has_valid_evidence </span><span style="color:#179299">=</span><span style="color:#FE640B;font-style:italic"> any</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">grade </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> text </span><span style="color:#8839EF">for</span><span style="color:#4C4F69"> grade </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> GRADE_OK</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#8839EF"> not</span><span style="color:#4C4F69"> has_valid_evidence</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#40A02B;font-style:italic">            f</span><span style="color:#40A02B">"WARN: stable なのに [実測]/[検証済] の根拠が1つも無い: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">file_path</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">name</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">            file</span><span style="color:#179299">=</span><span style="color:#4C4F69">sys</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">stderr</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">        )</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#40A02B">            "      確かめたものを等級付きで書くか、status: draft に落としてください"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">            file</span><span style="color:#179299">=</span><span style="color:#4C4F69">sys</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">stderr</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">        )</span></span>
+<span class="line"><span style="color:#8839EF">        return</span><span style="color:#8839EF"> False</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#8839EF"> True</span></span>
+<span class="line"></span></code></pre>
+<p>この修正により、「等級の記述が全くないドキュメント」だけでなく、「<code>[未検証]</code> の等級しか持たないドキュメント」も同一の条件で確実に捕捉できるようになりました。</p>
+<p>修正時点の確定版ドキュメント 5 件に対して実際の監査スクリプトを実行したところ、誤検出は 0 件でした（5 件という小規模な確認です）。そして、出典を持たない AI 生成トピックを一時的に確定版へ戻して実行すると、狙い通り <code>WARN: stable なのに [実測]/[検証済] の根拠が1つも無い</code> が検出されました。</p>
+<h3 id="違反が一度も観測されない状態の罠を防ぐセルフテスト">違反が一度も観測されない状態の罠を防ぐセルフテスト</h3>
+<p>しかし、ここで話は終わりません。違反が一度も観測されない状態にも、別の罠が潜んでいたからです。</p>
+<p>もし現行のリポジトリ内のすべてのファイルが正常（グリーン）だった場合、監査スクリプトの検査ロジック自体が typo や条件分岐のバグで無効化されていても、誰もそれに気づくことができません。全件合格している状態そのものが、テストの空振りを隠蔽してしまうのです。</p>
+<p>そこで私たちは、使い捨ての違反トピックを生成して監査ゲートの検査能力をテストするセルフテストを用意しました。次のコードは、上の 2 つの検査関数をそのまま呼び出す形に簡略化した例です。</p>
+<p>ファイル: <code>selftest_topics.py</code>（<code>audit_topics_v1.py</code>・<code>audit_topics_v2.py</code> と同じディレクトリに置き、<code>python3 selftest_topics.py</code> で実行）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> contextlib</span></span>
+<span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> io</span></span>
+<span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> tempfile</span></span>
+<span class="line"><span style="color:#8839EF">from</span><span style="color:#4C4F69"> pathlib </span><span style="color:#8839EF">import</span><span style="color:#4C4F69"> Path</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">from</span><span style="color:#4C4F69"> audit_topics_v1 </span><span style="color:#8839EF">import</span><span style="color:#4C4F69"> check_unverified_urls</span></span>
+<span class="line"><span style="color:#8839EF">from</span><span style="color:#4C4F69"> audit_topics_v2 </span><span style="color:#8839EF">import</span><span style="color:#4C4F69"> audit_document</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> run_audit_suite</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">topics_dir</span><span style="color:#7C7F93">:</span><span style="color:#E64553"> Path</span><span style="color:#7C7F93">)</span><span style="color:#7C7F93"> -></span><span style="color:#FE640B;font-style:italic"> int</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#40A02B">    """トピックごとにゲート本体の2条件（根拠の等級／未検収の出典）を検査し、違反件数を返す"""</span></span>
+<span class="line"><span style="color:#4C4F69">    warnings </span><span style="color:#179299">=</span><span style="color:#FE640B"> 0</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> p </span><span style="color:#8839EF">in</span><span style="color:#FE640B;font-style:italic"> sorted</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">topics_dir</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">glob</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"*.md"</span><span style="color:#7C7F93">)):</span></span>
+<span class="line"><span style="color:#4C4F69">        text </span><span style="color:#179299">=</span><span style="color:#4C4F69"> p</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">read_text</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">encoding</span><span style="color:#179299">=</span><span style="color:#40A02B">"utf-8"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">        status </span><span style="color:#179299">=</span><span style="color:#40A02B"> "stable"</span><span style="color:#8839EF"> if</span><span style="color:#40A02B"> "status: stable"</span><span style="color:#8839EF"> in</span><span style="color:#4C4F69"> text </span><span style="color:#8839EF">else</span><span style="color:#40A02B"> "draft"</span></span>
+<span class="line"><span style="color:#8839EF">        if</span><span style="color:#8839EF"> not</span><span style="color:#1E66F5"> audit_document</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">p</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> text</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> status</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#4C4F69">            warnings </span><span style="color:#179299">+=</span><span style="color:#FE640B"> 1</span></span>
+<span class="line"><span style="color:#8839EF">        elif</span><span style="color:#4C4F69"> status </span><span style="color:#179299">==</span><span style="color:#40A02B"> "stable"</span><span style="color:#8839EF"> and</span><span style="color:#1E66F5"> check_unverified_urls</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">text</span><span style="color:#7C7F93">)</span><span style="color:#179299"> ></span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">            warnings </span><span style="color:#179299">+=</span><span style="color:#FE640B"> 1</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#4C4F69"> warnings</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> selftest_topics</span><span style="color:#7C7F93">():</span></span>
+<span class="line"><span style="color:#40A02B">    """監査ゲートの検出ロジックが壊れていないかを、使い捨てのデータで検証する"""</span></span>
+<span class="line"><span style="color:#4C4F69">    cases </span><span style="color:#179299">=</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">        # 1. 等級なし（確定版なのに根拠なし） → 1 件検出されるべき</span></span>
+<span class="line"><span style="color:#40A02B">        "no-grade.md"</span><span style="color:#7C7F93">:</span><span style="color:#40A02B"> "---</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">status: stable</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">---</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">本文のみ。</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">        # 2. 未検証の怪しい URL を含む → 1 件検出されるべき</span></span>
+<span class="line"><span style="color:#40A02B">        "unverified-url.md"</span><span style="color:#7C7F93">:</span><span style="color:#40A02B"> "---</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">status: stable</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">---</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">`[検証済]`</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">https://example.invalid/bad</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">        # 3. 下書き段階 → 検出対象外（0 件）</span></span>
+<span class="line"><span style="color:#40A02B">        "draft.md"</span><span style="color:#7C7F93">:</span><span style="color:#40A02B"> "---</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">status: draft</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">---</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">本文のみ。</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">    with</span><span style="color:#4C4F69"> tempfile</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">TemporaryDirectory</span><span style="color:#7C7F93">()</span><span style="color:#8839EF"> as</span><span style="color:#4C4F69"> tmp_dir</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">        tmp_path </span><span style="color:#179299">=</span><span style="color:#1E66F5"> Path</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">tmp_dir</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">        for</span><span style="color:#4C4F69"> filename</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> body </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> cases</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">items</span><span style="color:#7C7F93">():</span></span>
+<span class="line"><span style="color:#7C7F93">            (</span><span style="color:#4C4F69">tmp_path </span><span style="color:#179299">/</span><span style="color:#4C4F69"> filename</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">write_text</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">body</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> encoding</span><span style="color:#179299">=</span><span style="color:#40A02B">"utf-8"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">        # 標準エラー出力を抑制して検査を実行</span></span>
+<span class="line"><span style="color:#8839EF">        with</span><span style="color:#4C4F69"> contextlib</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">redirect_stderr</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">io</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">StringIO</span><span style="color:#7C7F93">()):</span></span>
+<span class="line"><span style="color:#4C4F69">            detected_count </span><span style="color:#179299">=</span><span style="color:#1E66F5"> run_audit_suite</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">tmp_path</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">        # 使い捨てトピック 3 件中、想定通り違反 2 件が検出されることを assert</span></span>
+<span class="line"><span style="color:#8839EF">        assert</span><span style="color:#4C4F69"> detected_count </span><span style="color:#179299">==</span><span style="color:#FE640B"> 2</span><span style="color:#7C7F93">,</span><span style="color:#40A02B;font-style:italic"> f</span><span style="color:#40A02B">"2件検出するはずが </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">detected_count</span><span style="color:#EA76CB">}</span><span style="color:#40A02B"> 件でした"</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#4C4F69"> __name__ </span><span style="color:#179299">==</span><span style="color:#40A02B"> "__main__"</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#1E66F5">    selftest_topics</span><span style="color:#7C7F93">()</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">    print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"セルフテスト成功: 監査ゲートの検出機能は正常です。"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span></code></pre>
+<p>一時ディレクトリの中に、「等級なしの確定版」「未検証 URL を含む確定版」「対象外の下書き」という計 3 件のファイルを動的に作成し、想定通り 2 件の違反が検出されることを <code>assert</code> します。</p>
+<p>ゲート自身に違反データを踏ませて「正しくコケること」を毎回確かめることで、用意したケースについては、ゲートが空振りしてサイレントパスを生み出すメタな事故に気づけるようになりました。</p>
+<h2 id="メリットの裏にあるトレードオフと適用限界">メリットの裏にあるトレードオフと適用限界</h2>
+<p>許可基準に基づく分母設計は強力ですが、運用上のトレードオフや適用限界も存在します。</p>
+<h3 id="草案段階draftへの過剰拘束をどう避けるか">草案段階（draft）への過剰拘束をどう避けるか</h3>
+<p>あらゆるドキュメントに対して「検証済みの根拠がなければ保存もコミットも許さない」という厳格なゲートを設けると、開発者や執筆者の自由な思考やアイデアメモの作成が阻害されます。</p>
+<p>だからこそ、ドキュメントのライフサイクル設計が不可欠です。私たちは <code>status: draft</code>（下書き）と <code>status: stable</code>（確定版）を明確に区別し、厳しい許可基準は「確定版」に昇格させるタイミングでのみ発動するように設計しました。自由な記述を許す領域と、機械的な品質保証を課す領域の境界を明確にすることが重要です。</p>
+<h3 id="形式的タグ付けによるすり抜けのリスク">形式的タグ付けによるすり抜けのリスク</h3>
+<p>「<code>[検証済]</code> という文字列が含まれていれば合格」というルールだけを設けると、中身のないダミータグを形式的に貼り付けただけのドキュメントがすり抜ける新たなリスクが生まれます。</p>
+<p>したがって、単一のルールに頼るのではなく、多層防御を構築しなければなりません。「確定版としての等級を明示しているか」という許可基準の検査と、「記載された URL が台帳に登録された検証済みソースであるか」という実在性検査を組み合わせることで、形式的なすり抜けと空集合のすり抜けの両方を挟み撃ちにできます。</p>
+<h3 id="差分チェックにおける0-件の扱い">差分チェックにおける「0 件」の扱い</h3>
+<p>想定される反論として、「Git の差分コミットに対して走る CI では、変更ファイルが 0 件のケースもあるのではないか。それもエラーにすべきなのか？」というものがあります。</p>
+<p>Jest が <code>--passWithNoTests</code> を用意し、PR #5127 で <code>--onlyChanged</code> などの指定時を例外扱いにしたのも、この種の文脈があるからだと考えられます <sup><a href="#user-content-fn-6" id="user-content-fnref-6-4" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。PR でドキュメントやテストコードに変更がないビルドにおいて、テスト対象が 0 件になるのは正常な業務フローです。</p>
+<p>重要なのは、「空集合が正当な業務フローである文脈」と、「成果物の完全性を保証しなければならない文脈」を混同しないことです。成果物そのものが満たすべき品質基準を問うゲートにおいては、空集合を無条件に許容してはなりません。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>技術の進化によって、この設計論の前提はどう変わり得るでしょうか。</p>
+<h3 id="ai-による文章生成の高度化とハルシネーション">AI による文章生成の高度化とハルシネーション</h3>
+<p>LLM の進化に伴い、AI エージェントが生成するテキストはますます自然で説得力のあるものになっています。出典を一切持たない場合でも、もっともらしい業界用語や具体的な数値（「減衰率 30〜70%」など）を滑らかにでっち上げる（ハルシネーション）能力は日々向上しています。</p>
+<p>AI が調査やドキュメント作成を自律的に行う時代において、人間が文章を目視しただけで根拠の有無を見抜くことは極めて困難です。だからこそ、文章の「それっぽさ」に惑わされず、背後にある根拠や一次情報の存在を決定論的に検証する機械的な品質ゲートの重要性は、今後ますます高まります。</p>
+<h3 id="llm-as-a-judge-を導入した場合の死角">LLM-as-a-Judge を導入した場合の死角</h3>
+<p>将来的に、品質ゲートの判定ロジックそのものを LLM に委ねる「LLM-as-a-Judge」のアプローチを採用する場合でも、全く同じ罠が待ち構えています。</p>
+<p>LLM に対して「このドキュメントに不適切な記述や誤った情報が含まれていないか評価せよ」とプロンプトで指示すると、LLM もまた除外基準（Exclusion）で推論を行い、根拠のない記述を「特に問題は見当たらない」とスルーしてしまうおそれがあると私は考えています。</p>
+<p>LLM に監査を行わせる場合でも、「必須の一次情報リンクや検証済みフラグが本文中に明記されているか」を最初にチェックさせる許可型のプロンプト設計が不可欠です。基盤技術が正規表現からニューラルネットワークに変わろうとも、「分母をどこに置くか」という設計思想の本質は変わりません。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-自作リンターや-ci-スクリプトで検査対象-0-件を検知すべきなのはなぜですか">Q. 自作リンターや CI スクリプトで「検査対象 0 件」を検知すべきなのはなぜですか？</h3>
+<p><strong>A.</strong> 検査対象が 0 件（空集合）のとき、「違反が見つからなければ合格」という素朴な判定ループは無条件に合格を返してしまう（空虚な真）ためです。ファイルパスの指定ミスや正規表現の誤り、あるいは検査対象の属性そのものが欠落している場合、重大な欠陥を抱えたデータがサイレントパスしてしまいます。</p>
+<h3 id="q-pytest-がテスト未検出時に-exit-code-5-を返す理由は何ですか">Q. pytest がテスト未検出時に Exit code 5 を返す理由は何ですか？</h3>
+<p><strong>A.</strong> テストが 1 件も収集されなかった状態は「テストスイートが正常に合格した」のではなく、設定ミスやテストファイル指定の誤りといった異常状態であると見なすためです。pytest は全テストが正常に収集されてパスした場合（Exit code 0）と、テストが収集されなかった場合（Exit code 5）を厳密に区別しています。</p>
+<h3 id="q-監査ゲートにおける除外基準exclusionと許可基準permissionの違いは何ですか">Q. 監査ゲートにおける「除外基準（Exclusion）」と「許可基準（Permission）」の違いは何ですか？</h3>
+<p><strong>A.</strong> 除外基準は「不正なもの（違反 URL など）があれば弾く」という判定であり、対象が 0 件のときに意図せぬ合格を引き起こします。一方、許可基準は「確定版なら検証済みの根拠を最低 1 つ持っていること」という適格条件を要求する判定であり、根拠が欠落している場合に安全側に倒れて確実に遮断（Fail-Safe Defaults）します。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>自作リンターや品質ゲートを設計するにあたって、持ち帰るべき教訓を 3 つの命題として整理します。</p>
+<ol>
+<li><strong>「違反が 0 件」を「成果物が健全である」と同一視してはならない</strong>: 検査対象が空集合のとき、全称命題は無条件に真となります（空虚な真）。除外基準（Exclusion）で作られた判定ループは、最も根拠の薄いデータをサイレントパスさせます。</li>
+<li><strong>分母は「検査対象の側」ではなく「品質を保証したい成果物の側」から定義せよ</strong>: URL の実在検査は URL が存在することを前提とします。確定版（stable）を名乗るなら、ドキュメントそのものを分母として、検証済みの根拠が最低 1 つ存在することを要求してください。</li>
+<li><strong>品質ゲート自身に「意図的違反」のセルフテストを組み込め</strong>: pytest の Exit code 5 や Jest の <code>--passWithNoTests</code> が示すとおり、成熟したツールは対象 0 件を既定で合格にしません。自作ゲートにも、使い捨ての違反データを踏ませて想定件数の検出を <code>assert</code> するセルフテストを組み込んでください。全件グリーンの状態だけでは、検査ロジックが無効化されていても区別できません。</li>
+</ol>
+<p>AI エージェントの導入や開発パイプラインの品質保証、自作品質ゲート・CI 自動化プロセスの設計見直しに関するご相談・お問い合わせは <a href="/#contact">コンタクトフォーム</a> までお気軽にお寄せください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://en.wikipedia.org/wiki/Vacuous_truth">Vacuous truth</a> Wikimedia Foundation, 2026年確認。数学・論理学における空虚な真の定義（前提条件が偽であるため真となる全称命題）、および部屋の携帯電話の例文。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/every">Array.prototype.every()</a> MDN Web Docs (Mozilla), 2026年確認。空配列に対して <code>true</code> を返し、「vacuously true that all elements of the empty set satisfy any given condition」と定義されている仕様。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://docs.python.org/3/library/functions.html#all">Built-in Functions - all()</a> Python Software Foundation, 2026年確認。空のイテラブルに対して <code>True</code> を返す仕様、および <code>for element in iterable: if not element: return False; return True</code> という等価コードの実装構造。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://docs.pytest.org/en/stable/reference/exit-codes.html">Exit codes - pytest documentation</a> pytest-dev team, 2026年確認。<code>pytest.ExitCode</code> 列挙型の定義、および <code>Exit code 0</code>（全テスト収集・合格）と <code>Exit code 5</code>（テスト未収集）の仕様。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://jestjs.io/docs/cli#--passwithnotests">Jest CLI Options (—passWithNoTests)</a> Meta / Jest Open Source, 2026年確認。<code>--passWithNoTests</code> オプション（テストファイル未発見時に合格を許可）の仕様。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://github.com/jestjs/jest/pull/5127">Pull Request #5127: Add suggestion of using —passWithNoTests on no tests found</a> Jest GitHub Repository (emilgoldsmith et al.), 2018年1月マージ。テスト未発見時に <code>--passWithNoTests</code> の使用を提案するメッセージの議論（「If you consider no tests matching your filters correct behavior, use the ‘—passWithNoTests’ option」）と、<code>--findRelatedTests</code>・<code>--lastCommit</code>・<code>--onlyChanged</code> 指定時はテスト未発見でもエラーにしない変更。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-6-3" data-footnote-backref="" aria-label="Back to reference 6-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-6-4" data-footnote-backref="" aria-label="Back to reference 6-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://web.mit.edu/Saltzer/www/publications/protection/Basic.html">The Protection of Information in Computer Systems — I. Basic Principles of Information Protection</a> Jerome H. Saltzer, Michael D. Schroeder (MIT), 1975年 (<em>Proceedings of the IEEE</em>, Vol. 63, No. 9)。Section I.A.3「Design Principles」の b) における安全設計原則「Fail-safe defaults: Base access decisions on permission rather than exclusion」。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-7-2" data-footnote-backref="" aria-label="Back to reference 7-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://cheatsheetseries.owasp.org/cheatsheets/Secure_Code_Review_Cheat_Sheet.html#authorization">Secure Code Review Cheat Sheet</a> OWASP Foundation, 2026年確認。Authorization 観点における安全側のデフォルト原則「Fail-safe defaults: Default deny access policy」。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html#deny-by-default">Authorization Cheat Sheet</a> OWASP Foundation, 2026年確認。認可アーキテクチャの基本原則「Deny by Default」およびデフォルト拒否思想の推奨。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

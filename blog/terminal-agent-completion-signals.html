@@ -1,0 +1,188 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ラベルが進んだのにコミットが無い ── 端末越しの AI エージェント自動化で、完了を何で判定するか | Meetsource</title><meta name="description" content="端末越しの AI エージェント CLI 自動化では、Issue ラベルと画面の idle 表示という単一の信号に頼らず、ラベル変化・ターン終了・Git コミットの 3 点の組で完了を判定し、サブエージェント待ちの停止切り分けは本人への 1 回の催促に委ねる設計が有効です。実測ログと監視スクリプトの改修をもとに、設計判断とトレードオフを解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/terminal-agent-completion-signals"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="ラベルが進んだのにコミットが無い ── 端末越しの AI エージェント自動化で、完了を何で判定するか | Meetsource"><meta property="og:description" content="端末越しの AI エージェント CLI 自動化では、Issue ラベルと画面の idle 表示という単一の信号に頼らず、ラベル変化・ターン終了・Git コミットの 3 点の組で完了を判定し、サブエージェント待ちの停止切り分けは本人への 1 回の催促に委ねる設計が有効です。実測ログと監視スクリプトの改修をもとに、設計判断とトレードオフを解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/terminal-agent-completion-signals"><meta property="og:image" content="https://www.meetsource.work/blog/terminal-agent-completion-signals-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-19T18:02:33.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="ラベルが進んだのにコミットが無い ── 端末越しの AI エージェント自動化で、完了を何で判定するか | Meetsource"><meta name="twitter:description" content="端末越しの AI エージェント CLI 自動化では、Issue ラベルと画面の idle 表示という単一の信号に頼らず、ラベル変化・ターン終了・Git コミットの 3 点の組で完了を判定し、サブエージェント待ちの停止切り分けは本人への 1 回の催促に委ねる設計が有効です。実測ログと監視スクリプトの改修をもとに、設計判断とトレードオフを解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/terminal-agent-completion-signals-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"ラベルが進んだのにコミットが無い ── 端末越しの AI エージェント自動化で、完了を何で判定するか","description":"端末越しの AI エージェント CLI 自動化では、Issue ラベルと画面の idle 表示という単一の信号に頼らず、ラベル変化・ターン終了・Git コミットの 3 点の組で完了を判定し、サブエージェント待ちの停止切り分けは本人への 1 回の催促に委ねる設計が有効です。実測ログと監視スクリプトの改修をもとに、設計判断とトレードオフを解説します。","datePublished":"2026-11-19T18:02:33.000Z","image":"https://www.meetsource.work/blog/terminal-agent-completion-signals-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/terminal-agent-completion-signals"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"AI エージェント CLI を別の端末で順に回すとき、ステージの完了は何で判定すればよいですか？","acceptedAnswer":{"@type":"Answer","text":"1 つの信号ではなく、外部の状態（Issue のラベルなど）、ターン終了（入力待ちで実行中表示が無い）、成果物（当該ステージのコミットがあり、作業ツリーが空）の 3 点がそろったときを完了とします。筆者の環境ではラベルがコミットより先に進んだため、ラベルだけでは未コミットのまま次へ進むところでした。"}},{"@type":"Question","name":"AI エージェントの端末が idle 表示なのに、作業が終わっていないのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"idle は親エージェントの会話ターンが止まっていることを示すだけで、サブエージェントやバックグラウンドの作業を待っている状態も含むからです。待っているだけのこともあれば、待っている相手が止まっていることもあります。"}},{"@type":"Question","name":"AI エージェントがサブエージェントを待っているのか止まっているのか、外からどう見分けますか？","acceptedAnswer":{"@type":"Answer","text":"筆者の環境では、画面からは見分けられませんでした。閾値を上げても打ち切りが遅れるだけでした。実際には、状態を確認し、終わっていれば続け、失敗していれば再委任するようエージェントに 1 回促したところ、委任先は未実行のまま止まっていたと答えて再委任し、完走しました。この経験から、催促は 1 回に限り、2 回目も止まったら人間に渡す手順にしています。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-19T18:02:33.000Z" data-astro-cid-7jjqptxk> 2026.11.20 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#automation</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span><span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>ラベルが進んだのにコミットが無い ── 端末越しの AI エージェント自動化で、完了を何で判定するか</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/terminal-agent-completion-signals-hero.webp" alt="ラベルが進んだのにコミットが無い ── 端末越しの AI エージェント自動化で、完了を何で判定するか" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>GitHub Issue のラベルが期待どおりに貼り替わったため監視スクリプトが終了したにもかかわらず、端末画面をのぞき込むと、エージェントはまだ <code>git commit</code> を実行している最中でした。10 秒も待たずに次のステージを起動していたら、未コミットの変更を抱えたまま別端末が動き出すところでした。</p>
+<p>端末越しのエージェント自動化における完了判定とは、別の端末で動く AI エージェント CLI のステージが、成果物を残した状態で終わったことを、監督側が外から確かめる処理です。つまり「エージェントが手を止めた」ではなく「やるべきことが記録に残った」を確かめる処理です。</p>
+<p>筆者はこのブログの運営リポジトリ（非公開。以下、運営リポジトリ）で、企画から調査、設計、執筆、校閲までをステージごとに分けて自動実行する仕組みを動かしています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。監督役の Claude Code が、端末とワークツリーを統合する基盤である Orca（<code>orca terminal wait</code> / <code>orca terminal read</code> / <code>orca terminal send</code>）で新しい端末を開き、Antigravity CLI（<code>agy</code>）を起動してスキル名を送り、Python の監視スクリプト <code>stage.py</code> が GitHub Issues のラベルと端末画面を見張る構成です<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>2026 年 11 月 13 日（UTC）の自動化セッションの記録（以下、セッション記録）で、ある記事を企画から校閲まで順に回した際、単一信号による判定で 2 つの破綻に直面しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。1 つは Issue のラベルが <code>git commit</code> より先に進み、未コミットのまま次ステージへ先走りかけたこと。もう 1 つは、親エージェントがサブエージェントの完了を待つ間も入力欄が空いて <code>tui-idle</code>（Orca が入力欄が空いたと判定した状態）になり、待機と停止を画面から区別できなかったことです<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>そこで筆者は、完了判定を「ラベルの変化＋ターン終了＋コミットの確認」の 3 点の組に組み直し、<code>tui-idle</code> が続いたときは閾値を延ばすのではなくエージェント本人に状態を尋ねる催促を 1 回だけ送り、2 回目は人間に渡す運用に改めました。以下では、2 つの観測記録と改修したコードをもとに、そう組み直した理由と残ったトレードオフを述べます。</p>
+<h2 id="ラベルが進んだ時点で端末ではまだ-git-commit-が走っていた">ラベルが進んだ時点で、端末ではまだ git commit が走っていた</h2>
+<p>Issue のラベルは「ステージが終わった」ことではなく、「エージェントがラベルを付け替えた」ことしか示しません。運営リポジトリの企画ステージで使う手順書自体が、手順 9 でラベルの貼り替えを指示し、報告前のコミットを手順 11 に置いています。ラベルを状態の記録に使い、成果物は Git コミットで残す設計では、ラベルが先に進むのは手順どおりの動きです。</p>
+<p>なお、GitHub 自身も Issue のサイドバーにコーディングエージェントのセッション状態（<code>queued</code> / <code>working</code> / <code>waiting for review</code> / <code>completed</code>）を表示する仕組みを提供しており、Issue 上にはラベルとは別に作業の進み具合を表す状態が存在します<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>セッション記録にある企画ステージの自動実行では、14:31:23Z に作業を開始してから 2 分 24 秒後の 14:33:47Z に、ラベル一致を条件にしていた当時の作業用監視スクリプトが <code>exit code 0</code> で終了しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-5" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。ところが直後の 14:33:50Z に端末画面を確認すると、Issue ラベルはすでに期待どおり付いている一方で、画面の末尾では <code>git add</code> と <code>git commit</code> が実行中のままでした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-6" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>目的: ラベル一致で監視スクリプトが終了した直後の端末画面の状態を示します。</p>
+<p>引用元: 筆者の自動化セッションの記録（2026-11-13、UTC）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>labels: ['blog:planned'] OPEN</span></span>
+<span class="line"><span>...</span></span>
+<span class="line"><span>> /blog-plan #335</span></span>
+<span class="line"><span>● Bash(git add specs/blog-posts/ai-agent-false-positive-completion/ &#x26;&#x26; git add -u...) (ctrl+o to expand)</span></span>
+<span class="line"><span>⣟  Running command...</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この時点で監督は未コミットのまま次のステージを起動せず、直後の 14:33:56Z に作業用の <code>stage.py</code> をその場で修正し、14:33:59Z にターン終了とコミットの完了を確認してから次の調査ステージへ進みました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-7" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。つまり未コミットのまま先走ったのではなく、画面を確認したことで先走りかけたのを止めた形です。</p>
+<p>目的: ラベル一致の後もエージェントのターン終了まで待つよう組み直した監視ロジックを示します。</p>
+<p>引用元: 運営リポジトリの stage.py（後でスキルとしてまとめた版）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#8839EF">    if</span><span style="color:#7C7F93"> (</span><span style="color:#4C4F69">want </span><span style="color:#8839EF">and</span><span style="color:#4C4F69"> want </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> ls</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> or</span><span style="color:#4C4F69"> st </span><span style="color:#179299">==</span><span style="color:#40A02B"> "CLOSED"</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">        # agy はコミットより先にラベルを進める。ターン終了まで待つ</span></span>
+<span class="line"><span style="color:#8839EF">        for</span><span style="color:#4C4F69"> _ </span><span style="color:#8839EF">in</span><span style="color:#FE640B;font-style:italic"> range</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">5</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#1E66F5">            wait_idle</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">120000</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">            if</span><span style="color:#8839EF"> not</span><span style="color:#FE640B;font-style:italic"> any</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"Running"</span><span style="color:#8839EF"> in</span><span style="color:#4C4F69"> l </span><span style="color:#8839EF">for</span><span style="color:#4C4F69"> l </span><span style="color:#8839EF">in</span><span style="color:#1E66F5"> screen</span><span style="color:#7C7F93">()[</span><span style="color:#179299">-</span><span style="color:#FE640B">8</span><span style="color:#7C7F93">:]):</span></span>
+<span class="line"><span style="color:#8839EF">                break</span></span>
+<span class="line"><span style="color:#4C4F69">            time</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">sleep</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">20</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">        break</span></span>
+<span class="line"></span></code></pre>
+<p>ここで <code>wait_idle</code> は <code>orca terminal wait --for tui-idle</code> を呼ぶ関数、<code>screen()</code> は <code>orca terminal read --screen</code> で取得した画面末尾行を返す関数です。<code>"Running"</code> は <code>agy</code> の実行中表示に合わせた文字列であり、CLI が違えば変わります（後の章で再訪します）。ループで待つのは最大 5 回までで、<code>Running</code> が残っていてもループを抜けます。この待機だけでターン終了を保証するわけではなく、最終的な判定は後段のコミット確認に置いています。また、コード中の「agy はコミットより先にラベルを進める」というコメントは当時の監督側の理解であり、実態としては前述のとおり手順書の順序に由来する動きでした。</p>
+<p>後でスキルとしてまとめた運用手順（以下、運用手順）では、監視スクリプト終了後の完了条件として、<code>git log --oneline -1</code> に当該ステージのコミットが存在すること、および <code>git status --short</code> が空であることの確認までを明記しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-8" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h2 id="サブエージェントを待つ間も入力欄は空く閾値を上げても待機と停止は画面から区別できなかった">サブエージェントを待つ間も入力欄は空く：閾値を上げても、待機と停止は画面から区別できなかった</h2>
+<p><code>agy</code> は、親エージェントがサブエージェントの完了通知を待つ間もプロンプトの入力欄が空き、Orca からは <code>tui-idle</code> と判定されます<sup><a href="#user-content-fn-1" id="user-content-fnref-1-9" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。非同期の待ちで入力欄が空いて見える現象自体は、Monitor やバックグラウンドの Bash 実行を例に <a href="/blog/terminal-screen-scraping-self-reference">端末画面スクレイピングの記事</a> で扱ったため、ここでは繰り返しません。同記事で触れた催促は、待っていただけのエージェントへ不要な催促を送ってしまった側の事例でした。</p>
+<p>これに対し、同じ記事の校閲ステージ（15:13:25Z 開始）では逆の局面が起きました。当時の作業用スクリプトは、画面末尾 15 行が 2 回連続で変化しなければ <code>STALLED</code>（筆者の監視スクリプトが「画面が idle のまま変わらない」と判断して監視を打ち切るときの出力で、Orca の公式状態ではありません）を出して終了する作りでした。開始から 3 分 1 秒後の 15:16:26Z、監視スクリプトは 1 回目の <code>STALLED</code> で停止しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-10" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>目的: 1 回目の <code>STALLED</code> 出力時に端末画面へ出ていた待機メッセージを示します。</p>
+<p>引用元: 筆者の自動化セッションの記録（2026-11-13、UTC）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>STALLED (idle, screen unchanged)</span></span>
+<span class="line"><span>...</span></span>
+<span class="line"><span>  proofreader と reader-reviewer の校閲結果を待っています。</span></span>
+<span class="line"><span>  proofreader からの指摘（13件）を受領しました。引き続き reader-reviewer の完了を待っています。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>画面の末尾には、校閲用サブエージェントの完了を待っている旨が表示されていました。当時の監督は早すぎる打ち切りと判断し、15:16:40Z に作業用スクリプトを編集してラベル待ちステージの閾値を画面不変 10 回に引き上げ、15:16:43Z に同じ端末の再監視を始めました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-11" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>目的: ラベルを待つステージだけ画面不変の閾値を 10 回に引き上げた停止判定を示します。</p>
+<p>引用元: 運営リポジトリの stage.py（後でスキルとしてまとめた版）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#4C4F69">    cur </span><span style="color:#179299">=</span><span style="color:#1E66F5"> screen</span><span style="color:#7C7F93">()[</span><span style="color:#179299">-</span><span style="color:#FE640B">15</span><span style="color:#7C7F93">:]</span></span>
+<span class="line"><span style="color:#4C4F69">    still </span><span style="color:#179299">=</span><span style="color:#4C4F69"> still </span><span style="color:#179299">+</span><span style="color:#FE640B"> 1</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> cur </span><span style="color:#179299">==</span><span style="color:#4C4F69"> prev </span><span style="color:#8839EF">else</span><span style="color:#FE640B"> 0</span></span>
+<span class="line"><span style="color:#4C4F69">    prev </span><span style="color:#179299">=</span><span style="color:#4C4F69"> cur</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # agy はサブエージェント待ちでも idle になるので、ラベルのあるステージは長めに見る</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> still </span><span style="color:#179299">>=</span><span style="color:#7C7F93"> (</span><span style="color:#FE640B">10</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> want </span><span style="color:#8839EF">else</span><span style="color:#FE640B"> 2</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"STALLED (idle, screen unchanged)"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">        break</span></span>
+<span class="line"></span></code></pre>
+<p>この抜粋は、観測当日に閾値を 10 へ上げた後の形を取り込んだ運用版です。画面が <code>tui-idle</code> のままなら <code>wait_idle</code> はすぐ返るため、ループ 1 周の所要時間はほぼ抜粋外の <code>time.sleep(30)</code> に等しくなります。閾値 10 回は 5 分前後の猶予にすぎず、実際に再監視開始から 5 分 22 秒後（校閲ステージ開始から 8 分 40 秒後の 15:22:05Z）に再び <code>STALLED</code> で打ち切られました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-12" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>そこで開始から 8 分 50 秒後（15:22:15Z）、監督は <code>orca terminal send</code> を使って、状態を確認し、終わっていれば続け、失敗していれば再委任するようエージェントへ催促を 1 回送りました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-13" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。すると 40 秒後の画面には次の応答が出ました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-14" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>目的: 1 回の催促に対してエージェントが返した応答と再委任の記録を示します。</p>
+<p>引用元: 筆者の自動化セッションの記録（2026-11-13、UTC）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>● Agent(reader-reviewer: Reader and Structure Reviewer)(次のファイルを Read で読...) (ctrl+o to expand)</span></span>
+<span class="line"><span>  前回の reader-reviewer サブエージェントは未実行のまま停止していたため終了し、新たに reader-reviewer</span></span>
+<span class="line"><span>  を再委任しました。完了通知を待っています。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この再委任の後、催促から 4 分 56 秒後（校閲ステージ全体では 13 分 47 秒後の 15:27:12Z）にステージは完走しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-15" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>ここで見落とせないのは、1 回目の <code>STALLED</code>（開始 3 分 1 秒時点）で委任先がすでに止まっていたのか、それとも正常稼働中に閾値 2 回で早すぎる打ち切りをしたのかを、記録からは切り分けられない点です。委任先が未実行のまま止まっていたという点も、サブエージェント側の状態ログが残っているわけではなく、催促に対する親エージェント本人の申告によるものです。ただ、どちらの状態にあるかを画面の <code>tui-idle</code> は区別してくれません。そのため、閾値を 2 から 10 に上げても、待機と停止を見分ける手段にはなりませんでした。</p>
+<p>「画面の idle 表示は会話ターンの状態であって、タスク全体の完了ではない」という線引きは、tmux 上のエージェントを監視する他のツールでも共有されています。たとえば <code>tmux-agent-pulse</code> の README は、idle 表示は会話の状態を示すものであってプロジェクトの完了を示すものではないと明記し、内部の子エージェントを親ペインの一部として扱っています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。<code>tmux-ccm</code> もバージョン 0.13.0（2026 年 11 月 5 日）で、親のターン終了後にバックグラウンドエージェントが稼働する間、ウィンドウ表示が IDLE と BUSY の間で往復しないよう修正しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。また <code>Synapse</code> の README は、detached な tmux セッションではスピナーがアニメーションしないため、思考中のペインでも画面が 10 秒以上バイト単位で変化しないことがあり、静穏さだけでは思考中と完了を区別できないと指摘しています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>こうした理由から運用手順では、閾値を延ばし続けるのではなく、ラベルを待つステージで <code>STALLED</code> が出て画面末尾が「〜の完了を待っています」と出ているときは、エージェント本人へ 1 回だけ「完了通知が届いていない。状態を確認し、終わっていれば続行、失敗していれば再委任」と尋ねることにしました。2 回目も止まった場合は、画面末尾を添えて人間に判断を仰ぎます<sup><a href="#user-content-fn-1" id="user-content-fnref-1-16" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h2 id="3-つの信号が示すもの示さないもの">3 つの信号が示すもの・示さないもの</h2>
+<p>ラベルはラベルが変わったことを、<code>tui-idle</code> は入力欄が空いたことを、それぞれ正しく示していました。外れたのは、それを「ステージが終わった」「止まった」と読んだ側です。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>信号</th><th>示すもの</th><th>示さないもの</th><th>今回の観測</th></tr></thead><tbody><tr><td>Issue のラベル</td><td>エージェントがラベルを付け替えたこと</td><td>コミットが済んだこと</td><td>付け替えの時点で、端末ではまだ <code>git commit</code> が実行中だった</td></tr><tr><td>端末の <code>tui-idle</code>（入力欄が空いた）</td><td>親エージェントの会話ターンが止まっていること</td><td>サブエージェントを待っているのか、止まっているのか</td><td>閾値を 2 回から 10 回に上げても、本当の停止と区別できなかった。催促 1 回に対し、エージェントが委任先の停止を申告した</td></tr><tr><td><code>git log</code> / <code>git status --short</code></td><td>成果物が記録に残ったこと</td><td>エージェントのターンが終わったか</td><td>ラベル・ターン終了と組み合わせて完了条件にした</td></tr></tbody></table>
+<p>成果物を実物で確認する原則は、<a href="/blog/ai-agent-false-negative-completion">完了の偽陰性の記事</a> で「報告より実物を見る」として扱いました。今回の事例では、その実物確認が未着手を見落とす偽陰性だけでなく、ラベルがコミットより先に進む側の歯止めにもなっています。</p>
+<p>そこで監視から次ステージ起動までの完了条件は、次の組み合わせに組み直しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-17" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<ul>
+<li>期待した Issue ラベルが付いている（外部の状態）</li>
+<li><code>tui-idle</code> で、画面末尾 8 行に実行中表示（<code>agy</code> なら <code>Running</code>）が無い（ターン終了）</li>
+<li><code>git log --oneline -1</code> に当該ステージのコミットがあり、<code>git status --short</code> が空（成果物）</li>
+<li>ラベルを待つステージで画面不変の打ち切り（<code>STALLED</code>）が出て、画面末尾が「〜の完了を待っています」なら、エージェントに 1 回だけ状態を尋ね、2 回目は人間に渡す（停止の切り分け）</li>
+</ul>
+<h2 id="メリットの裏にあるトレードオフと適用限界">メリットの裏にあるトレードオフと適用限界</h2>
+<p>3 点の信号を組み合わせる設計にも、割り切りと限界が残っています。</p>
+<p>第 1 に、<strong><code>Running</code> 文字列によるターン終了判定は CLI 依存</strong> です。画面照合を完全に無くしたわけではなく、<code>agy</code> の実行中表示に合わせて <code>"Running"</code> を探しています。CLI ごとに実行中表示は異なるため、後の運用スクリプトでは <code>agy</code> に <code>"Running"</code>、Claude Code に <code>"esc to interrupt"</code> のように判定文字列を持ち分けています。対象 CLI の表示が変われば追随が要ります。</p>
+<p>第 2 に、<strong>観測の母数が小さい</strong> 点です。ラベルがコミットより先に進んだのを確認したのは企画ステージの 1 回だけで、全ステージのうちどの割合で起きるかは測っていません。待機と停止の取り違えも、校閲ステージの 1 回（<code>STALLED</code> 2 回）での観測です。組み直した完了条件と催促運用の長期的な成功率や停止率も、まだ計測していません<sup><a href="#user-content-fn-1" id="user-content-fnref-1-18" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>想定される反論についても、現時点の判断を整理しておきます。</p>
+<ul>
+<li><strong>「閾値をもっと上げればよいのでは」</strong>: 待機と停止を画面から区別できない以上、閾値を上げても打ち切りを遅らせるだけです。猶予を長くするほど、本当に委任先が止まっていたときの発見が遅れます。実際に閾値を 10 回へ上げた回でも、2 回目の発見は開始 8 分 40 秒後でした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-19" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+<li><strong>「催促は待機中のエージェントの邪魔にならないか」</strong>: 既存記事の事例では、待っていただけのエージェントへ催促を送っていました。今回の運用手順に書いた催促文は「完了通知が届いていない。状態を確認し、終わっていれば続行、失敗していれば再委任」と、待機中でもそのまま待ちを続けられる問い方にしています。それでも催促を自動で繰り返すと待機中の作業を邪魔する問題に戻るため、自動催促は 1 回に限りました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-20" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+<li><strong>「催促も自動化すれば人間は要らないのでは」</strong>: 2 回目の停止では画面末尾を添えて人間に渡す設計にしています。この設計で実際に何回人間に判断が渡ったかは計測していないため、人手介入の削減効果まではここでは主張できません。</li>
+</ul>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>監視側が端末画面を読まざるを得ないのは、エージェント CLI が端末の外へ状態を構造化して出していないからです。構造化イベントが取れる環境では、ターン終了やバックグラウンド待ちの判定は画面スクレイピングに頼らずに済みます。</p>
+<p>たとえば Claude Code の <code>Stop</code> フックの入力ペイロードには <code>background_tasks</code> 配列が含まれ、公式ドキュメントは「セッションが終わった」と「バックグラウンドの作業に起こされるのを待って一時停止している」をフック側で区別するためだと説明しています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。今回画面上で起きた待機と停止の取り違えは、この区別が TUI 画面へ出てこないことから生じています。</p>
+<p>また、Codex の <code>codex app-server</code> は JSON-RPC 2.0 で <code>turn/completed</code> 通知を送り、<code>status</code> として <code>completed</code> / <code>interrupted</code> / <code>failed</code> を返します<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。Gemini CLI もヘッドレス実行の <code>stream-json</code> 出力に <code>result</code> イベントを持ち、<code>status: 'success' | 'error'</code> で成否を返します<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。端末プロトコル側でも、プログラム自身が <code>idle</code> / <code>working</code> / <code>done</code> / <code>blocked</code> / <code>error</code> / <code>clear</code> といった状態をエスケープシーケンスで知らせる OSC 7501 が提案されています<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。ただし Claude Code の公式ドキュメントは、tmux の中では端末本体ではなく tmux の対応を確認するため <code>allow-passthrough</code> が効かず、利用する場合は tmux の外でセッションを起動するよう案内しています<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。</p>
+<p>それでも残る論点があります。構造化イベントへ移っても、<strong>ターンの終了と成果物の永続化（コミット）は別のイベント</strong> です。ラベルがコミットより先に進んだのと同じ構造は、「ターンは終わったがコミットはされていない」という形で残りえます。成果物を <code>git</code> で確かめる 3 点目の条件は、通知が構造化されても外せません。</p>
+<p>さらに、構造化イベントにも順序の罠はあります。Codex の Python SDK では、<code>turn/start</code> の RPC 応答が返る前に <code>turn/completed</code> 通知が到着するとルーターが破棄してしまい、完了待ちが止まる不具合が報告されています<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。</p>
+<p>今後、各 CLI の出力差を吸収するアダプターや、Orca のように端末とワークツリーを一体で扱う基盤が前提になれば、監視スクリプトが画面の文字列を読む部分は減っていくでしょう。ただし、期待した成果物がリポジトリに残ったかを確かめる責任は、引き続き監督側に残ります。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-ai-エージェント-cli-を別の端末で順に回すときステージの完了は何で判定すればよいですか">Q. AI エージェント CLI を別の端末で順に回すとき、ステージの完了は何で判定すればよいですか？</h3>
+<p><strong>A.</strong> 1 つの信号ではなく、外部の状態（Issue のラベルなど）、ターン終了（入力待ちで実行中表示が無い）、成果物（当該ステージのコミットがあり、作業ツリーが空）の 3 点がそろったときを完了とします。筆者の環境ではラベルがコミットより先に進んだため、ラベルだけでは未コミットのまま次へ進むところでした。</p>
+<h3 id="q-ai-エージェントの端末が-idle-表示なのに作業が終わっていないのはなぜですか">Q. AI エージェントの端末が idle 表示なのに、作業が終わっていないのはなぜですか？</h3>
+<p><strong>A.</strong> idle は親エージェントの会話ターンが止まっていることを示すだけで、サブエージェントやバックグラウンドの作業を待っている状態も含むからです。待っているだけのこともあれば、待っている相手が止まっていることもあります。</p>
+<h3 id="q-ai-エージェントがサブエージェントを待っているのか止まっているのか外からどう見分けますか">Q. AI エージェントがサブエージェントを待っているのか止まっているのか、外からどう見分けますか？</h3>
+<p><strong>A.</strong> 筆者の環境では、画面からは見分けられませんでした。閾値を上げても打ち切りが遅れるだけでした。実際には、状態を確認し、終わっていれば続け、失敗していれば再委任するようエージェントに 1 回促したところ、委任先は未実行のまま止まっていたと答えて再委任し、完走しました。この経験から、催促は 1 回に限り、2 回目も止まったら人間に渡す手順にしています。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li>Issue のラベルは「エージェントがラベルを付け替えた」ことしか示さない。筆者の環境では、ラベルが付いた時点で端末ではまだ <code>git commit</code> が実行中だった</li>
+<li>端末の idle 表示は、サブエージェントを待っているのか止まっているのかを区別しない。閾値を上げることは打ち切りを遅らせるだけで、区別の手段にはならない</li>
+<li>待機と停止の切り分けは、エージェント本人への 1 回の催促に置き、2 回目は人間に渡す</li>
+<li>完了は「ラベル＋ターン終了＋コミット」の 3 点の組で判定する。3 点目の成果物の確認は、構造化イベントに移っても外せない</li>
+</ul>
+<p>別端末・複数エージェントの自動化基盤の設計や、AI エージェントを組み込んだ開発プロセスの見直しについて、<a href="/#contact">コンタクトフォーム</a> からお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p>筆者の自動化セッションの記録（2026年11月13日 UTC）、およびこのブログの運営リポジトリ（非公開）の自動化スキル実装（2026年11月14日 JST）。記事冒頭の構成、企画ステージのラベル先行とターン終了待ちの経過・画面抜粋、校閲ステージの <code>STALLED</code> 発生時刻・催促と再委任の画面抜粋・完了時刻、監視スクリプトの抜粋コードと完了条件、観測が各 1 回で長期率が未計測である点の根拠。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-1-5" data-footnote-backref="" aria-label="Back to reference 1-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-1-6" data-footnote-backref="" aria-label="Back to reference 1-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-1-7" data-footnote-backref="" aria-label="Back to reference 1-7" class="data-footnote-backref">↩<sup>7</sup></a> <a href="#user-content-fnref-1-8" data-footnote-backref="" aria-label="Back to reference 1-8" class="data-footnote-backref">↩<sup>8</sup></a> <a href="#user-content-fnref-1-9" data-footnote-backref="" aria-label="Back to reference 1-9" class="data-footnote-backref">↩<sup>9</sup></a> <a href="#user-content-fnref-1-10" data-footnote-backref="" aria-label="Back to reference 1-10" class="data-footnote-backref">↩<sup>10</sup></a> <a href="#user-content-fnref-1-11" data-footnote-backref="" aria-label="Back to reference 1-11" class="data-footnote-backref">↩<sup>11</sup></a> <a href="#user-content-fnref-1-12" data-footnote-backref="" aria-label="Back to reference 1-12" class="data-footnote-backref">↩<sup>12</sup></a> <a href="#user-content-fnref-1-13" data-footnote-backref="" aria-label="Back to reference 1-13" class="data-footnote-backref">↩<sup>13</sup></a> <a href="#user-content-fnref-1-14" data-footnote-backref="" aria-label="Back to reference 1-14" class="data-footnote-backref">↩<sup>14</sup></a> <a href="#user-content-fnref-1-15" data-footnote-backref="" aria-label="Back to reference 1-15" class="data-footnote-backref">↩<sup>15</sup></a> <a href="#user-content-fnref-1-16" data-footnote-backref="" aria-label="Back to reference 1-16" class="data-footnote-backref">↩<sup>16</sup></a> <a href="#user-content-fnref-1-17" data-footnote-backref="" aria-label="Back to reference 1-17" class="data-footnote-backref">↩<sup>17</sup></a> <a href="#user-content-fnref-1-18" data-footnote-backref="" aria-label="Back to reference 1-18" class="data-footnote-backref">↩<sup>18</sup></a> <a href="#user-content-fnref-1-19" data-footnote-backref="" aria-label="Back to reference 1-19" class="data-footnote-backref">↩<sup>19</sup></a> <a href="#user-content-fnref-1-20" data-footnote-backref="" aria-label="Back to reference 1-20" class="data-footnote-backref">↩<sup>20</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://github.blog/changelog/2026-03-26-agent-activity-in-github-issues-and-projects/">Agent activity in GitHub Issues and Projects</a> Allison、GitHub Changelog、2026年3月26日。「Agent sessions under assignees in GitHub Issues」節に、Issue サイドバーへコーディングエージェントのセッション状態（<code>queued</code> / <code>working</code> / <code>waiting for review</code> / <code>completed</code>）を表示する記載。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://github.com/jerriclynsjohn/tmux-agent-pulse/blob/main/README.md">tmux-agent-pulse README</a> jerriclynsjohn、GitHub リポジトリ（2026年11月20日参照）。「Status meanings」節の「An idle indicator describes the conversation state, not the completeness of the user’s project.」の記述、および冒頭概要の内部子エージェントを親ペインの一部として扱う記述。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://github.com/yohasebe/tmux-ccm/blob/main/CHANGELOG.md">tmux-ccm CHANGELOG</a> yohasebe、GitHub リポジトリ（2026年11月20日参照）。「[0.13.0] - 2026-11-05」の「Fixed」節にある、親ターン終了後にバックグラウンドエージェントが稼働している間、IDLE と BUSY が往復しないようにした修正の記載。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://github.com/maulanasdqn/synapse/blob/develop/README.md">Synapse README</a> maulanasdqn、GitHub リポジトリ（2026年11月20日参照）。「The tmux transport」節にある、detached な tmux セッションではスピナーがアニメーションせず 10 秒以上バイト単位で画面が変化しないことがあり、静穏さだけでは思考中と完了を区別できないという記載。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://code.claude.com/docs/en/hooks">Hooks reference</a> Anthropic、Claude Code Docs（2026年10月2日参照）。「Stop」配下の「Stop input」節にある、<code>background_tasks</code> 配列が「セッション完了」と「バックグラウンド作業による再開待ちの一時停止」をフック側で区別するための入力である旨の説明。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://developers.openai.com/codex/app-server">Codex App Server</a> OpenAI（2026年11月20日参照）。「Protocol」節の JSON-RPC 2.0 双方向通信、および「Events」配下の「Turn events」節にある <code>turn/completed</code> 通知の <code>turn.status</code>（<code>completed</code> / <code>interrupted</code> / <code>failed</code>）の記載。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/output/types.ts">gemini-cli <code>packages/core/src/output/types.ts</code></a> Google、gemini-cli ソースコード（2026年11月20日参照）。<code>JsonStreamEventType</code>（<code>RESULT = 'result'</code> を含む 6 種）および <code>ResultEvent</code> の <code>status: 'success' | 'error'</code> 定義。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://mitchellh.com/writing/program-status-osc7501">A Terminal Protocol for Program Status (OSC 7501)</a> Mitchell Hashimoto、2026年10月6日。「The Program Status Protocol」節にある <code>state</code>（<code>idle</code> / <code>working</code> / <code>done</code> / <code>blocked</code> / <code>error</code>）および <code>clear</code> 状態の仕様解説。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://code.claude.com/docs/en/terminal-config">Terminal configuration</a> Anthropic、Claude Code Docs（2026年11月20日参照）。「See session status in your terminal」節の <code>tmux</code> 項目にある、tmux 内では端末本体ではなく tmux 側の対応を確認するため <code>allow-passthrough</code> が効かず、tmux の外で起動するよう案内している記載。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://github.com/openai/codex/issues/41078">openai/codex Issue #41078</a> openai/codex、2026年8月27日起票・2026年11月16日（UTC）クローズ。「Summary」および「Root cause」節にある、Python SDK で <code>turn/start</code> の応答より先に到着した <code>turn/completed</code> 通知をルーターが破棄し、完了待ちが無限ブロックする不具合報告。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

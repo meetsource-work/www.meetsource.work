@@ -1,0 +1,168 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>テストは通るのにアプリが起動直後に落ちた理由 ── SPM リソースバンドル欠落と存在確認 if のサイレント障害 | Meetsource</title><meta name="description" content="SPM でビルドした macOS アプリが Bundle.module の未検出でクラッシュする主因は、パッケージングスクリプト内の存在確認 if が未検出を素通りさせたことにあります。単体テスト通過とアプリ組み上がりの環境差異、および未検出時に即座に落とすフェイルファスト設計を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/spm-resource-bundle-silent-skip"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="テストは通るのにアプリが起動直後に落ちた理由 ── SPM リソースバンドル欠落と存在確認 if のサイレント障害 | Meetsource"><meta property="og:description" content="SPM でビルドした macOS アプリが Bundle.module の未検出でクラッシュする主因は、パッケージングスクリプト内の存在確認 if が未検出を素通りさせたことにあります。単体テスト通過とアプリ組み上がりの環境差異、および未検出時に即座に落とすフェイルファスト設計を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/spm-resource-bundle-silent-skip"><meta property="og:image" content="https://www.meetsource.work/blog/spm-resource-bundle-silent-skip-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-29T09:00:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="テストは通るのにアプリが起動直後に落ちた理由 ── SPM リソースバンドル欠落と存在確認 if のサイレント障害 | Meetsource"><meta name="twitter:description" content="SPM でビルドした macOS アプリが Bundle.module の未検出でクラッシュする主因は、パッケージングスクリプト内の存在確認 if が未検出を素通りさせたことにあります。単体テスト通過とアプリ組み上がりの環境差異、および未検出時に即座に落とすフェイルファスト設計を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/spm-resource-bundle-silent-skip-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"テストは通るのにアプリが起動直後に落ちた理由 ── SPM リソースバンドル欠落と存在確認 if のサイレント障害","description":"SPM でビルドした macOS アプリが Bundle.module の未検出でクラッシュする主因は、パッケージングスクリプト内の存在確認 if が未検出を素通りさせたことにあります。単体テスト通過とアプリ組み上がりの環境差異、および未検出時に即座に落とすフェイルファスト設計を解説します。","datePublished":"2026-10-29T09:00:00.000Z","image":"https://www.meetsource.work/blog/spm-resource-bundle-silent-skip-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/spm-resource-bundle-silent-skip"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"swift test が通っているのにアプリ起動時に Bundle.module でクラッシュするのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"単体テストが SwiftUI やリソースに依存していない場合、リソースバンドルが欠落していてもテストは成功します。アプリ起動時に初めて Bundle.module が Contents/Resources/ を探索し、未同梱のためクラッシュします。"}},{"@type":"Question","name":"シェルスクリプトに set -e を書いているのに if 文でスクリプトが止まらないのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"POSIX 仕様により、if や while に続くテスト式の実行中は set -e による停止が無効化されるためです。未検出時に即座に落とすには、else exit 1 を明示的に記述する必要があります。"}},{"@type":"Question","name":"Command Line Tools だけで SwiftUI を含む macOS アプリを swift build できますか？","acceptedAnswer":{"@type":"Answer","text":"できません。SwiftUI のマクロ展開（SwiftUIMacros）には Xcode 本体が必要です。CLT 単体では Unknown error parsing property list やマクロ未展開によるコンパイルエラーが発生します。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-29T09:00:00.000Z" data-astro-cid-7jjqptxk> 2026.10.29 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#swift</span><span class="tag" data-astro-cid-7jjqptxk>#spm</span><span class="tag" data-astro-cid-7jjqptxk>#macos</span><span class="tag" data-astro-cid-7jjqptxk>#shell-script</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>テストは通るのにアプリが起動直後に落ちた理由 ── SPM リソースバンドル欠落と存在確認 if のサイレント障害</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/spm-resource-bundle-silent-skip-hero.webp" alt="テストは通るのにアプリが起動直後に落ちた理由 ── SPM リソースバンドル欠落と存在確認 if のサイレント障害" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>フェイルファスト（Fail-Fast）設計とは、必須の前提条件や成果物の欠落を検知した時点で処理を即座に停止させ、後続のサイレントな障害を防ぐ設計思想です。CI や単体テストがすべて <strong>「緑（PASS）」</strong> に染まっていても、それは「テストが対象コードを検証できた」ことを意味するに過ぎず、「成果物たるアプリケーションが正しく組み上がって起動できる」ことの保証にはなりません。</p>
+<p>Swift Package Manager（SPM）で macOS デスクトップアプリケーション（SwiftUI）を開発し、シェルスクリプトで <code>.app</code> バンドルを組み立てていた際、単体テストをパスし、ビルドスクリプトも正常終了（exit 0）したにもかかわらず、生成されたアプリを起動した瞬間にクラッシュする問題に直面しました。特に、Claude Code などの AI エージェントにスクリプト作成やビルドタスクを委譲している開発現場では、エージェントが終了ステータス（exit 0）を盲信してサイレント障害を見落とすリスクが増大します。</p>
+<p>原因は、SPM のリソースバンドル命名変化に対して、スクリプト内の存在確認 <code>if [ -d ]</code> が未検出時に何もしなかったため、成果物の欠落が黙って隠蔽されていたことにありました。以下では、このサイレント障害の機序を解明するとともに、「見つからなければ何もしない」甘い条件分岐を排して即座に停止させるフェイルファスト化、および単体テスト通過とアプリ組み上がりの分離検証という教訓を整理します。</p>
+<h2 id="なぜ存在確認の-if-は失敗を隠蔽したのかspm-の命名仕様とサイレント障害">なぜ存在確認の if は失敗を隠蔽したのか：SPM の命名仕様とサイレント障害</h2>
+<h3 id="spm-におけるリソースバンドル生成仕様と命名規則">SPM におけるリソースバンドル生成仕様と命名規則</h3>
+<p>Swift Package Manager（SPM）で画像や設定ファイルなどのアセットを扱う場合、SE-0271（Package Manager Resources）<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> に従ってターゲットごとにリソースを宣言します。SPM はリソースを含むターゲットをビルドする際、Foundation スタイルのバンドルを自動的に生成します。このバンドルの命名規則は <code>&#x3C;PackageName>_&#x3C;TargetName>.bundle</code> の形式をとります。</p>
+<p>一方、macOS のデスクトップアプリケーション（<code>.app</code>）は、Apple のドキュメント<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup> で規定されているように、決まった階層構造（Bundle Structure）を持ちます。実行ファイル本体は <code>Contents/MacOS/</code> 配下に格納され、アセットや SPM が生成したリソースバンドルは <code>Contents/Resources/</code> 配下に配置されなければなりません。Swift コード内で <code>Bundle.module</code> を呼び出すと、実行時にこの <code>Contents/Resources/</code> 配下を探索してバンドルをロードします。</p>
+<p>SPM で macOS アプリを開発する場合、現行の SPM には <code>.app</code> バンドルを直接出力するコマンドが存在しないため、CI/CD パイプラインでのヘッドレス実行や自動化を目的として、Xcode のビルドシステムを使わずにシェルスクリプト（<code>build_app.sh</code>）を用いて <code>swift build</code> の出力物から <code>.app</code> ディレクトリを組み立てる手法がしばしば採られます。しかし、自作のパッケージングスクリプトでは、以下のようなコードでリソースを探索・コピーしていました。</p>
+<p>引用元: nqounet/saga コミット f1d5c3e~1:build_app.sh</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#4C4F69">SPM_RESOURCES</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">find</span><span style="color:#40A02B"> .build/release</span><span style="color:#40A02B"> -iname</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">${APP_NAME}</span><span style="color:#40A02B">_</span><span style="color:#4C4F69">${APP_NAME}</span><span style="color:#40A02B">.resources"</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> head</span><span style="color:#40A02B"> -n</span><span style="color:#FE640B"> 1</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#7C7F93"> [</span><span style="color:#179299"> -d</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">${SPM_RESOURCES}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> ];</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    echo</span><span style="color:#40A02B"> "==> Embedding resources..."</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">    cp</span><span style="color:#40A02B"> -R</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">${SPM_RESOURCES}</span><span style="color:#40A02B">/"</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">${APP_DIR}</span><span style="color:#40A02B">/Contents/Resources/"</span></span>
+<span class="line"><span style="color:#8839EF">fi</span></span>
+<span class="line"></span></code></pre>
+<p>このコードには2つの重大な乖離がありました。第一に、スクリプトは古い命名想定に基づいて <code>${APP_NAME}_${APP_NAME}.resources</code>（今回の例では <code>Saga_Saga.resources</code>）を探していましたが、実際の Swift ツールチェーンが出力していたのは <code>.build/out/Products/Release/SAGA_Saga.bundle</code>（Package 名 <code>SAGA</code> ＋ Target 名 <code>Saga</code> の <code>.bundle</code>）でした。第二に、<code>.build/release</code> はシンボリックリンクであり、末尾にスラッシュを付けない <code>find .build/release</code> ではリンク先が展開されず、探索対象から外れていました。</p>
+<h3 id="set--e-をすり抜ける-if---d--の罠と未検出時の素通り">set -e をすり抜ける if [ -d ] の罠と未検出時の素通り</h3>
+<p>シェルスクリプトの先頭に <code>set -e</code> を宣言していても、上記のコードはエラーで停止しませんでした。</p>
+<p>POSIX 仕様（IEEE Std 1003.1 §2.14）<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> において、<code>set -e</code> は <code>if</code> や <code>while</code>、<code>until</code> に続くテスト複合リストの実行中は無効化されると明記されています。したがって、<code>[ -d "${SPM_RESOURCES}" ]</code> が偽（空文字に対する判定で終了コード 1）を返しても、シェルはスクリプトの実行を中断しません。条件分岐の判定式におけるエラーが素通りする挙動は、シェルスクリプトの典型的な落とし穴の一つです<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>さらに、このスクリプトには <code>else</code> ブロックが存在しませんでした。そのため、必須のリソースバンドルが 1 件も見つからなかったにもかかわらず、スクリプトは何のエラーも警告も出力せず、そのまま次の行の処理へと素通りしてしまいました。</p>
+<p>その結果、生成された <code>Saga.app/Contents/Resources/</code> の中身は、アイコンファイル（<code>AppIcon.icns</code>）のみという不完全な状態になりました。</p>
+<p>引用元: 当リポジトリの一次計測ログ（hands-on-log.md §2）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Saga.app/Contents/Resources/:</span></span>
+<span class="line"><span>AppIcon.icns</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>それにもかかわらず、スクリプト全体としては正常終了（exit 0）し、コンソールには <strong>「Build Successful」</strong> と表示されたのです。必須成果物の欠落が、スクリプトの甘い存在確認によって完全に隠蔽されていました。</p>
+<h3 id="起動時クラッシュと-exit-1-によるフェイルファストへの転換">起動時クラッシュと exit 1 によるフェイルファストへの転換</h3>
+<p>リソースバンドルが欠落した <code>.app</code> は、外見上は正常なアプリケーションパッケージとして作成されます。しかし、これを実行した瞬間に問題が露見します。</p>
+<p>引用元: 当リポジトリの一次計測ログ（hands-on-log.md §3）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Saga/resource_bundle_accessor.swift:44: Fatal error: unable to find bundle named SAGA_Saga</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>アプリケーションの起動処理中に <code>Bundle.module</code> が初期化される際、<code>Contents/Resources/</code> 配下に <code>SAGA_Saga.bundle</code> が見つからないため、自動生成されたリソースアクセサ（<code>resource_bundle_accessor.swift</code>）が <code>Fatal error</code> を発生させ、ウィンドウすら表示されずに即座に異常終了しました。</p>
+<p>「見つかった場合だけコピーする」という <code>if [ -d ]</code> の防護的なコードは、オプショナルな設定ファイルやキャッシュの扱いとしては合理的であっても、欠落すれば起動すらできない必須成果物に対して適用すると、不一致や欠落という想定外の異常を検知できず、実行時の致命的なクラッシュへと問題を先送りしてしまいます。予防は想定した原因の空間に対して設計されますが、検収は結果の空間（必須成果物が確かに手元にあるか）に対して設計されなければなりません。</p>
+<p>この問題を解決するため、<code>build_app.sh</code> に対して以下の改修を行いました。</p>
+<p>引用元: nqounet/saga コミット f1d5c3e:build_app.sh 差分</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="diff"><code><span class="line"><span style="color:#7C7F93"><span style="user-select: none;">-</span></span><span style="color:#D20F39">SPM_RESOURCES=$(find .build/release -iname "${APP_NAME}_${APP_NAME}.resources" | head -n 1)</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">SPM_RESOURCES=$(find .build/release/ -maxdepth 1 -iname "*_${APP_NAME}.bundle" | head -n 1)</span></span>
+<span class="line"><span style="color:#4C4F69"> if [ -d "${SPM_RESOURCES}" ]; then</span></span>
+<span class="line"><span style="color:#4C4F69">     echo "==> Embedding resources..."</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">-</span></span><span style="color:#D20F39">    cp -R "${SPM_RESOURCES}/" "${APP_DIR}/Contents/Resources/"</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">    cp -R "${SPM_RESOURCES}" "${APP_DIR}/Contents/Resources/"</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">else</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">    echo "Error: SPM resource bundle not found (app would crash at launch)"</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">    exit 1</span></span>
+<span class="line"><span style="color:#4C4F69"> fi</span></span>
+<span class="line"></span></code></pre>
+<p>改修のポイントは2点です。</p>
+<ol>
+<li><strong>ワイルドカード探索とシンボリックリンク追跡</strong>: <code>find .build/release/</code> と末尾にスラッシュを付与してシンボリックリンクを確実に展開し、<code>*_${APP_NAME}.bundle</code> でパッケージ名の大文字・小文字の差異を吸収しました。</li>
+<li><strong>未検出時のフェイルファスト停止</strong>: <code>else</code> ブロックを設け、リソースバンドルが見つからない場合はエラーメッセージを STDERR に出力して即座に <code>exit 1</code> で終了させました。</li>
+</ol>
+<p>この改修により、万が一ツールチェーンの出力仕様やファイル名が再び変化したとしても、サイレントに壊れたアプリを生成することはなくなり、ビルド工程の段階で確実に失敗を検知できるようになりました。</p>
+<h2 id="テスト通過とアプリ組み上がりを同一視してはならない理由">テスト通過とアプリ組み上がりを同一視してはならない理由</h2>
+<h3 id="command-line-tools-と-xcode-の環境差異issue-10561">Command Line Tools と Xcode の環境差異（Issue #10561）</h3>
+<p>今回のトラブルで発見が遅れた背景には、「単体テストが通っているからビルド環境も正常であり、アプリも問題なく動くはずだ」という思い込みがありました。</p>
+<p>macOS 環境において、Command Line Tools（CLT）と Xcode の間には、開発者が意識しにくい環境差異が存在します。<code>xcode-select -p</code> が <code>/Library/Developer/CommandLineTools</code> を指している環境では、デフォルトの <code>swift build</code> は <code>xcbuild</code> の内部初期化エラー（<code>Unknown error parsing property list</code>）により即座に失敗します（SwiftPM Issue #10561）<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>このエラーを回避する手段として、ビルドシステムに <code>--build-system native</code> を指定すると、SwiftUI を使用しない単体テストは正常にビルド・実行され、すべて PASS します。</p>
+<p>しかし、同じ CLT 環境で SwiftUI を含むアプリ本体に対して <code>swift build -c release --build-system native</code> を実行すると、<code>cannot assign to property: 'self' is immutable</code> というコンパイルエラーが発生して停止します。CLT 単体の環境では、SwiftUI のマクロプラグイン（<code>SwiftUIMacros</code> の <code>StateMacro</code> など）が展開されないためです。</p>
+<p>現在、Swift プロジェクト全体として、Apple のビルドエンジンをベースとした新しい <code>Swift Build</code> への統合が進められており<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>、旧来の native ビルドシステムは非推奨化される方針です<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。最新の言語機能やマクロを活用するアプリケーション本体のビルドには、Command Line Tools だけでなく Xcode 本体の環境が不可欠です。</p>
+<p>将来的に <code>Swift Build</code> への統合が進めば、クロスプラットフォームや CLI 環境におけるビルド挙動の統一と環境差異の解消が期待されます。しかし過渡期にある現在においては、CI/CD やローカル環境で「どのツールチェーンが何を実行しているか」を前提条件として明示的に管理し、テストとアプリ本体の組み上がりを別々に検証するパイプライン設計が依然として不可欠です。</p>
+<h3 id="テストが保証するもの保証しないもの">テストが保証するもの、保証しないもの</h3>
+<p>テストが合格したという事実は、アプリが組み上がって起動できることの証明にはなりません。</p>
+<p>単体テストと、成果物のパッケージング・実起動検証の違いを整理すると以下のようになります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>比較項目</th><th>単体テスト（<code>swift test</code>）</th><th>アプリパッケージング・実起動</th></tr></thead><tbody><tr><td><strong>主たる検証対象</strong></td><td>コアロジック・アルゴリズム・関数の入出力</td><td>バイナリ・Info.plist・リソースバンドルの統合</td></tr><tr><td><strong>リソース参照の検証</strong></td><td>テスト対象が直接参照しない限り検証されない</td><td><code>Bundle.module</code> が <code>Contents/Resources/</code> を実際にロード</td></tr><tr><td><strong>ビルド環境要件</strong></td><td>CLT ＋ native 等で部分的に実行可能な場合がある</td><td>Xcode 本体（SwiftUIMacros 等のコンパイラプラグイン必須）</td></tr><tr><td><strong>検出できる失敗</strong></td><td>ロジックの計算誤り、アサーション失敗</td><td>バンドル未同梱、起動時クラッシュ、環境差異によるビルド失敗</td></tr></tbody></table>
+<p>検証対象と要求環境が異なるため、テスト通過とは別に、成果物の独立した検証ステップが必須となります。</p>
+<p>単体テストの責務は、純粋なビジネスロジックや関数の正しさを確かめることです。一方で、リソースバンドルが正しいパスに同梱されているか、マクロが展開されてアプリ全体がコンパイルできるか、そして OS 上でプロセスが正常に起動できるかといった問題は、パッケージング後の独立した成果物検証ステップでなければ検出できません。</p>
+<p>この環境制約とテストの限界は、のちにプロジェクトのエージェント向け開発ルールに明文化されました。</p>
+<p>引用元: nqounet/saga コミット 6db937b:.agents/AGENTS.md</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#FE640B">## Build</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#40A02B"> `swift build`</span><span style="color:#4C4F69"> が </span><span style="color:#40A02B">`Unknown error parsing property list`</span><span style="color:#4C4F69"> で失敗したら、まず </span><span style="color:#40A02B">`xcode-select -p`</span><span style="color:#4C4F69"> と </span><span style="color:#40A02B">`ls /Applications | grep Xcode`</span><span style="color:#4C4F69"> を確認する。Command Line Tools のみの環境では、SwiftUI を含むアプリ本体はビルドできない（</span><span style="color:#40A02B">`--build-system native`</span><span style="color:#4C4F69"> は SwiftUIMacros が無く通らない）。キャッシュ削除やビルドシステム切替を試さず、Xcode が必要と報告する。</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#4C4F69"> テストが </span><span style="color:#40A02B">`--build-system native`</span><span style="color:#4C4F69"> で通っても、アプリ本体がビルドできる根拠にはならない（テストは SwiftUI を使わない）。</span></span>
+<span class="line"></span></code></pre>
+<h2 id="ai-エージェントとの協業で守るべきフェイルファスト原則">AI エージェントとの協業で守るべきフェイルファスト原則</h2>
+<h3 id="エージェントも騙される甘い-ifをフェイルファストに改める">エージェントも騙される「甘い if」をフェイルファストに改める</h3>
+<p>近年の開発現場では、Claude Code などの AI コーディングエージェントにビルドタスクやパッケージングスクリプトの作成を委譲するケースが増加しています。</p>
+<p>しかし、AI エージェントにスクリプトを書かせると、筆者の実践環境（Claude Code 等）においても、処理の中断を避けて「気を利かせて <code>if</code> で囲む」コードを生成する傾向が観察されました。Google Shell Style Guide <sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup> でも規定されているように、エラー時は STDERR にメッセージを出力し、適切な非ゼロの終了ステータスで即座に処理を停止させることが原則です。</p>
+<p>もしスクリプトが存在確認の <code>if</code> でエラーを黙って素通りさせていると、AI エージェントも <code>exit 0</code> という終了ステータスを信じ込み、必須成果物が欠落していることに気づかずに「ビルド完了」と判断してしまいます。プロンプトで「注意深く確認してください」と念押しするだけでは不十分であり、スクリプト自体に決定論的なフェイルファスト停止機構（<code>else exit 1</code>）を埋め込んでおく必要があります。</p>
+<h3 id="環境制約を-agentsagentsmd-にコード化する">環境制約を .agents/AGENTS.md にコード化する</h3>
+<p>また、前述した Command Line Tools と Xcode の環境差異のように、外部環境に依存する前提条件は、リポジトリ内の規約ファイル（<code>.agents/AGENTS.md</code> など）にコードとして明文化しておくことが極めて有効です。</p>
+<p>前提条件がコード化されていないと、AI エージェントは <code>swift build</code> のエラーに遭遇した際、キャッシュ削除やビルドフラグの変更、無関係なファイルの書き換えといった無益な試行錯誤を繰り返し、コンテキストと時間を浪費してしまいます。前提環境と失敗時の停止ルールを明文化しておくことで、エージェントは無駄なリトライループに陥ることなく、適切な判断を下せるようになります。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-swift-test-が通っているのにアプリ起動時に-bundlemodule-でクラッシュするのはなぜですか">Q. swift test が通っているのにアプリ起動時に Bundle.module でクラッシュするのはなぜですか？</h3>
+<p><strong>A.</strong> 単体テストが SwiftUI やリソースに依存していない場合、リソースバンドルが欠落していてもテストは成功します。アプリ起動時に初めて <code>Bundle.module</code> が <code>Contents/Resources/</code> を探索し、未同梱のためクラッシュします。</p>
+<h3 id="q-シェルスクリプトに-set--e-を書いているのに-if-文でスクリプトが止まらないのはなぜですか">Q. シェルスクリプトに set -e を書いているのに if 文でスクリプトが止まらないのはなぜですか？</h3>
+<p><strong>A.</strong> POSIX 仕様により、<code>if</code> や <code>while</code> に続くテスト式の実行中は <code>set -e</code> による停止が無効化されるためです。未検出時に即座に落とすには、<code>else exit 1</code> を明示的に記述する必要があります。</p>
+<h3 id="q-command-line-tools-だけで-swiftui-を含む-macos-アプリを-swift-build-できますか">Q. Command Line Tools だけで SwiftUI を含む macOS アプリを swift build できますか？</h3>
+<p><strong>A.</strong> できません。SwiftUI のマクロ展開（SwiftUIMacros）には Xcode 本体が必要です。CLT 単体では <code>Unknown error parsing property list</code> やマクロ未展開によるコンパイルエラーが発生します。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>実務から得られた設計上の教訓は、以下の3点に集約されます。</p>
+<ul>
+<li><strong>必須成果物の存在確認には必ず <code>else exit 1</code> を置く</strong>: <code>if [ -d ]</code> 単体では未検出を素通りさせ、最も検出が困難なサイレント障害を引き起こします。</li>
+<li><strong>単体テスト通過とアプリ組み上がりを同一視しない</strong>: ロジックの検証と成果物のパッケージング・起動検証は、要求環境も検証範囲も異なる独立した確認です。</li>
+<li><strong>環境要件とフェイルファストをコード化する</strong>: AI エージェントとの協業では、プロンプト指示だけに頼るのではなく、スクリプト自体の決定論的停止と環境制約の明文化が品質を担保します。</li>
+</ul>
+<p>ビルドパイプラインのフェイルファスト設計や、AI エージェントと協業する開発環境の標準化について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://github.com/swiftlang/swift-evolution/blob/main/proposals/0271-package-manager-resources.md">Package Manager Resources (SE-0271)</a> Anders Bertelrud, Ankit Aggarwal 著、2020年2月。§Resources Bundle（Foundation スタイルバンドルの導出規定）、§Runtime Access to Resources Bundle（<code>Bundle.module</code> アクセサ仕様）、§Declaring Resources（<code>process</code> と <code>copy</code> の規則）。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://developer.apple.com/documentation/bundleresources/placing-content-in-a-bundle">Placing content in a bundle</a> Apple Developer Documentation。macOS アプリケーションバンドルの標準構造（<code>Contents/MacOS/</code>, <code>Contents/Resources/</code>）およびリソースバンドル配置要件（※要約レベル参照）。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html">POSIX Shell Command Language - 2.14 Special Built-In Utilities (set -e)</a> The Open Group / IEEE Std 1003.1-2017。§2.14 <code>set</code>（<code>if</code>、<code>while</code>、<code>until</code> に続くテスト式における <code>-e</code> の明示的無視仕様）。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://mywiki.wooledge.org/BashFAQ/105">BashFAQ/105: Why doesn’t set -e do what I expected?</a> Greg’s Wiki (Wooledge.org)。条件分岐と <code>set -e</code> の組み合わせによるエラー素通り現象と、明示的エラーハンドリング（<code>else exit 1</code>）の必要性。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://github.com/swiftlang/swift-package-manager/issues/10561">swift build fails on initialization with Unknown error parsing property list · Issue #10561</a> halostatue 報告、2026年9月20日。Command Line Tools 単体環境における xcbuild のプロパティリスト解析エラーと <code>--build-system native</code> 回避策の報告。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://www.swift.org/blog/the-next-chapter-in-swift-build-technologies/">The Next Chapter in Swift Build Technologies</a> Swift.org 公式ブログ、2025年2月1日。Swift Build オープンソース化と SwiftPM ビルドシステム統合の開始。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://forums.swift.org/t/swiftpm-on-swift-build-october-update/82889">SwiftPM on Swift Build - October Update</a> Swift Forums、2025年10月27日。レガシー native ビルドシステムの非推奨化方針とロードマップ。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://google.github.io/styleguide/shellguide.html">Google Shell Style Guide</a> Google Open Source Projects。§STDOUT vs STDERR（エラーの STDERR 出力規律）、§Checking Return Values（コマンド戻り値の確認と非ゼロ終了規律）。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

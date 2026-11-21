@@ -1,0 +1,266 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>mise の設定から外したツールが消えない理由：tracked-configs に残る古い git worktree の設定と整理手順 | Meetsource</title><meta name="description" content="mise の設定から外したツールが mise ls に残り mise prune でも消えない主な理由は、~/.local/state/mise/tracked-configs に記録された別の設定ファイルがその版を要求し続けているためです。古い git worktree が残る仕組みと参照元の逆引き、git worktree remove と mise prune の整理順序を実測記録と公式仕様から解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/mise-tracked-configs-stale-worktree"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="グローバル設定から消したのに mise ls に残るツールを追ったら、古い git worktree の config.toml 2 件に行き着いた"><meta property="og:description" content="tracked-configs に記録されていた 28 件の設定ファイルを逆引きすると、旧バックエンドの版を指定していたのは dotfiles の古い worktree 2 件だけでした。mise prune --configs でも記録が消えない仕組みと、参照元を特定して整理する手順をまとめています。"><meta property="og:url" content="https://www.meetsource.work/blog/mise-tracked-configs-stale-worktree"><meta property="og:image" content="https://www.meetsource.work/blog/mise-tracked-configs-stale-worktree-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-19T03:56:30.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="グローバル設定から消したのに mise ls に残るツールを追ったら、古い git worktree の config.toml 2 件に行き着いた"><meta name="twitter:description" content="tracked-configs に記録されていた 28 件の設定ファイルを逆引きすると、旧バックエンドの版を指定していたのは dotfiles の古い worktree 2 件だけでした。mise prune --configs でも記録が消えない仕組みと、参照元を特定して整理する手順をまとめています。"><meta name="twitter:image" content="https://www.meetsource.work/blog/mise-tracked-configs-stale-worktree-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"mise の設定から外したツールが消えない理由：tracked-configs に残る古い git worktree の設定と整理手順","description":"mise の設定から外したツールが mise ls に残り mise prune でも消えない主な理由は、~/.local/state/mise/tracked-configs に記録された別の設定ファイルがその版を要求し続けているためです。古い git worktree が残る仕組みと参照元の逆引き、git worktree remove と mise prune の整理順序を実測記録と公式仕様から解説します。","datePublished":"2026-11-19T03:56:30.000Z","image":"https://www.meetsource.work/blog/mise-tracked-configs-stale-worktree-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/mise-tracked-configs-stale-worktree"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"mise prune を実行しても、設定から外したツールの版が消えないのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"よくある原因は、別の設定ファイルがまだその版を指定していることです。mise prune は ~/.local/state/mise/tracked-configs と ~/.local/state/mise/tracked-stubs に記録されたどれからも選ばれていない版を削除するため、古い git worktree などに残った設定ファイルが指定している版は残ります。また、実行中のプロセスがその版から起動されている場合も保持されます。"}},{"@type":"Question","name":"mise prune --configs と git worktree prune は何が違いますか？","acceptedAnswer":{"@type":"Answer","text":"片付ける対象が異なります。mise prune --configs は実在しなくなった tracked / trusted / ignored の設定ファイルの記録を mise から忘却し、git worktree prune は $GIT_DIR/worktrees 配下で作業ディレクトリが失われた worktree の Git 側管理情報を掃除します。どちらもディレクトリが残っている worktree の設定ファイル自体は消さないため、worktree ごと消すには git worktree remove を使います。なお、git worktree prune は mise の状態ファイルには触れません。"}},{"@type":"Question","name":"どの設定ファイルがツールの版を保持しているかを調べるには？","acceptedAnswer":{"@type":"Answer","text":"mise ls --all-sources で、いま読み込んでいる設定だけでなく mise が見たことのあるすべての設定ファイルからの要求を表示できます。記録された設定ファイルの一覧を見たい場合は mise config ls --tracked-configs を使います。mise prune --dry-run は、削除予定の版ごとに同じツールの残る版とそれを要求しているファイルを示します。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-19T03:56:30.000Z" data-astro-cid-7jjqptxk> 2026.11.19 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#mise</span><span class="tag" data-astro-cid-7jjqptxk>#git-worktree</span><span class="tag" data-astro-cid-7jjqptxk>#cli</span><span class="tag" data-astro-cid-7jjqptxk>#運用自動化</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>mise の設定から外したツールが消えない理由：tracked-configs に残る古い git worktree の設定と整理手順</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/mise-tracked-configs-stale-worktree-hero.webp" alt="mise の設定から外したツールが消えない理由：tracked-configs に残る古い git worktree の設定と整理手順" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>mise（mise-en-place）の非推奨警告（<code>ubi</code> バックエンドは非推奨であり 2027.1.0 で削除予定）を受けて、グローバル設定 <code>~/.config/mise/config.toml</code> の <code>"ubi:joshrotenberg/adrs"</code> を <code>"github:joshrotenberg/adrs"</code> へ書き換えました。ところが <code>mise ls</code> を実行すると、<code>ubi:</code> 側の版が選択元なし（グレー表示）のまま残り、最後の 1 版 <code>0.11.0</code> が消えずに居座りました<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>mise の <code>tracked-configs</code> とは、mise がこれまでに読み込んだ設定ファイルを 1 件ずつ記録する <code>~/.local/state/mise/tracked-configs</code> 配下の一覧です。<code>mise prune</code> は、ここに記録された設定ファイルと、実行した tool stub を記録する <code>~/.local/state/mise/tracked-stubs</code> のどちらからも選ばれていないインストール済みの版を削除します<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。つまり、どこかに残った設定ファイルが「この版を使う」と書いている限り、その版は消えません。なお「参照元」は mise の公式用語ではなく、本記事では版を要求し続けている設定ファイルを指す言葉として使います。</p>
+<p><code>tracked-configs</code> を逆引きしたところ、<code>ubi:</code> 側の版を指定していたのは dotfiles リポジトリの古い git worktree 2 件にある、古いコミット時点の設定ファイル（<code>"ubi:joshrotenberg/adrs" = "0.11.0"</code>）だけでした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。公式仕様と照らすと、この 2 件の設定ファイルが <code>0.11.0</code> を残していたと読めます。さらに、worktree のディレクトリが残っている限りその設定ファイルは実在するため、<code>mise prune --configs</code> を実行しても記録から外れません<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>本記事では、実際の観測記録と公式仕様・ソースコードをもとに、参照元を逆引きするコマンド、不要な worktree を片付けてから <code>mise prune</code> を実行する順序、そして <code>git worktree prune</code> と <code>mise prune --configs</code> の守備範囲の違いを整理します。</p>
+<h2 id="観測の範囲と記録の残り方">観測の範囲と記録の残り方</h2>
+<p>本記事で扱う実測データは、2026-11-05 のセッション記録と 2026-11-19 時点の環境確認に基づいています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。記録に残っている範囲と、記録に残っていない範囲の境界は以下のとおりです。</p>
+<ul>
+<li><strong>2026-11-05 のセッション記録</strong>: Claude Code が実行した <code>mise ls</code>・<code>grep</code>・Python による逆引き・<code>git worktree list</code> のコマンドと出力<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></li>
+<li><strong>dotfiles リポジトリの git 履歴</strong>: 古い worktree が指していたコミットの <code>.config/mise/config.toml</code><sup><a href="#user-content-fn-1" id="user-content-fnref-1-5" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></li>
+<li><strong>2026-11-19 時点の環境確認</strong>: worktree の一覧、<code>tracked-configs</code> の件数、<code>mise ls</code> の表示<sup><a href="#user-content-fn-1" id="user-content-fnref-1-6" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></li>
+</ul>
+<p>一方で、<code>ubi:</code> 側の <code>0.12.1</code> と <code>0.13.0</code> を消したときのコマンド、および古い worktree を削除して <code>mise prune</code> を実行した手順と順序はセッション記録に残っておらず、当時の mise のバージョンも記録にありません<sup><a href="#user-content-fn-1" id="user-content-fnref-1-7" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。CLI や Git の境界の外で筆者が行った操作はログに入らないため、後半で示す整理手順は観測した事実と公式仕様を組み合わせて導いたものです。</p>
+<h2 id="mise-prune-が版を残す仕組みtracked-configs-と-configs">mise prune が版を残す仕組み：tracked-configs と —configs</h2>
+<p>mise は読み込んだ設定ファイルを <code>~/.local/state/mise/tracked-configs</code> に、実行した tool stub を <code>~/.local/state/mise/tracked-stubs</code> に記録し、<code>mise prune</code> はそのどちらからも選ばれていないインストール済みの版を削除します<sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。保存場所 <code>~/.local/state/mise</code> は環境変数 <code>MISE_STATE_DIR</code> または <code>XDG_STATE_HOME</code> で変更でき、trust の決定と tracked config のパスが置かれます<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p><code>mise prune</code> にはもう一つ、「もう存在しない」tracked / trusted / ignored の設定ファイルの記録を忘れる役割があります。<code>--configs</code> フラグはこの記録の忘却だけを行い、<code>--tools</code> フラグは未使用の版の削除だけを行います<sup><a href="#user-content-fn-2" id="user-content-fnref-2-4" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>実装（<code>src/config/tracking.rs</code>）を確認すると、<code>Tracker::track_in</code> は設定ファイルのパスを <code>hash_to_str</code> でハッシュ化した名前で、Unix ではシンボリックリンクとして記録します<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。<code>Tracker::clean_in</code> は各エントリのリンク先について <code>path.is_file()</code> を判定し、真なら保持して偽のときだけ削除します<sup><a href="#user-content-fn-3" id="user-content-fnref-3-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。したがって、古い worktree 内の設定ファイルがディスク上に実在する限り、記録は消えません。</p>
+<p>mise から見れば、古い worktree の設定ファイルも、いま使っている設定ファイルと同じ「実在する参照元」です。</p>
+<h2 id="何が起きたか設定から外した-ubi-版が-mise-ls-に残った">何が起きたか：設定から外した ubi 版が mise ls に残った</h2>
+<p>バックエンドを切り替えた直後と約 10 分後に観測された <code>mise ls</code> の出力を、事実と留保を切り分けて確認します。</p>
+<h3 id="書き換え直後ubi-側の-3-版が選択元なしで残った">書き換え直後：ubi 側の 3 版が選択元なしで残った</h3>
+<p><code>~/.config/mise/config.toml</code> を <code>"ubi:joshrotenberg/adrs"</code> から <code>"github:joshrotenberg/adrs"</code> へ書き換えた直後、Claude Code に <code>mise ls | grep -i adrs</code> を実行させて状態を確認しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-8" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>引用元: 筆者の環境で Claude Code が実行した mise ls の出力（2026-11-05 のセッション記録）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>github:joshrotenberg/adrs  0.12.1</span></span>
+<span class="line"><span>github:joshrotenberg/adrs  0.13.0                   ~/.config/mise/config.toml  0.13.0</span></span>
+<span class="line"><span>ubi:joshrotenberg/adrs     0.11.0</span></span>
+<span class="line"><span>ubi:joshrotenberg/adrs     0.12.1 (pruned in 15h)</span></span>
+<span class="line"><span>ubi:joshrotenberg/adrs     0.13.0</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>5 行のうち <code>github:joshrotenberg/adrs</code> の <code>0.13.0</code> だけが <code>~/.config/mise/config.toml</code> から選ばれており、<code>ubi:joshrotenberg/adrs</code> の 3 版（<code>0.11.0</code>・<code>0.12.1</code>・<code>0.13.0</code>）はいずれも選択元の列が空でした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-9" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。同じ時点で <code>command -v adrs</code> は <code>ubi</code> 側の <code>0.13.0</code> のバイナリ実体を指していましたが、その理由は記録から切り分けていません<sup><a href="#user-content-fn-1" id="user-content-fnref-1-10" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>なお <code>0.12.1</code> に付いている <code>(pruned in 15h)</code> は、<code>mise ls</code> の <code>pruning_label</code> 関数が <code>remove_after</code> までの残り時間を出力する書式と一致します<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。このラベルが <code>0.12.1</code> にだけ付いた内部判定理由は特定していません。</p>
+<h3 id="約-10-分後0110-の-1-版だけが残った">約 10 分後：0.11.0 の 1 版だけが残った</h3>
+<p>約 10 分後、再び Claude Code に <code>mise ls | grep -i adrs</code> を実行させると、出力は次の 3 行に変わっていました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-11" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>引用元: 同じセッションで約 10 分後に Claude Code が実行した mise ls の出力</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>github:joshrotenberg/adrs  0.12.1</span></span>
+<span class="line"><span>github:joshrotenberg/adrs  0.13.0                 ~/.config/mise/config.toml  0.13.0</span></span>
+<span class="line"><span>ubi:joshrotenberg/adrs     0.11.0</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><code>ubi:</code> 側は <code>0.11.0</code> の 1 版だけが残り、インストール先ディレクトリ内の <code>0</code> と <code>latest</code> のシンボリックリンクが <code>./0.11.0</code> へ張り直されていました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-12" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。この約 10 分の間に <code>0.12.1</code> と <code>0.13.0</code> を消したコマンドは、記録に残っていません<sup><a href="#user-content-fn-1" id="user-content-fnref-1-13" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h2 id="参照元を逆引きする古い-worktree-の-configtoml-が見つかった">参照元を逆引きする：古い worktree の config.toml が見つかった</h2>
+<p>残った <code>0.11.0</code> の参照元を突き止めるため、最初に Claude Code が <code>grep -rn 'adrs' ~/.tool-versions ~/.config/mise/conf.d ~/.local/state/mise</code> を実行しましたが、出力は空でした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-14" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。<code>tracked-configs</code> のエントリは設定ファイルのパスへのリンク（またはパス文字列）を持つだけで中身はリンク先にあるため<sup><a href="#user-content-fn-3" id="user-content-fnref-3-4" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>、参照元を調べるにはリンク先を開いて読む必要があります。</p>
+<p>2026-11-05 時点の <code>~/.local/state/mise/tracked-configs</code> にはハッシュ名のエントリが 28 件ありました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-15" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。Claude Code は <code>os.path.realpath</code> でリンク先を解決し、<code>adrs</code> を含む行を抽出する Python スクリプトを実行しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-16" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>引用元: 同じセッションで Claude Code が参照元を探すために実行したコマンド</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">python3</span><span style="color:#40A02B"> -</span><span style="color:#179299"> &#x3C;&#x3C;</span><span style="color:#40A02B">'EOF'</span></span>
+<span class="line"><span style="color:#40A02B">import os,glob</span></span>
+<span class="line"><span style="color:#40A02B">for f in glob.glob(os.path.expanduser('~/.local/state/mise/tracked-configs/*')):</span></span>
+<span class="line"><span style="color:#40A02B">    t=os.path.realpath(f)</span></span>
+<span class="line"><span style="color:#40A02B">    try:</span></span>
+<span class="line"><span style="color:#40A02B">        s=open(t).read()</span></span>
+<span class="line"><span style="color:#40A02B">    except Exception as e:</span></span>
+<span class="line"><span style="color:#40A02B">        continue</span></span>
+<span class="line"><span style="color:#40A02B">    if 'adrs' in s:</span></span>
+<span class="line"><span style="color:#40A02B">        for i,l in enumerate(s.splitlines(),1):</span></span>
+<span class="line"><span style="color:#40A02B">            if 'adrs' in l: print(t,i,l)</span></span>
+<span class="line"><span style="color:#40A02B">EOF</span></span>
+<span class="line"></span></code></pre>
+<p>生出力にはローカルのユーザー名や非公開リポジトリのパスが含まれるため、パスを一般化したうえでファイル単位に整理しました。出力 1 行を 1 件として集計すると、ユニークなパス 8 件から計 19 行が出力されていました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-17" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>設定ファイル（一般化）</th><th align="right">出力行数</th><th>指定</th></tr></thead><tbody><tr><td>dotfiles リポジトリの <code>.config/mise/config.toml</code>（同じパスが 2 回出力）</td><td align="right">2</td><td><code>"github:joshrotenberg/adrs" = "0.13.0"</code></td></tr><tr><td>古い worktree A の <code>.config/mise/config.toml</code> 9 行目</td><td align="right">1</td><td><code>"ubi:joshrotenberg/adrs" = "0.11.0"</code></td></tr><tr><td>古い worktree B の <code>.config/mise/config.toml</code> 9 行目</td><td align="right">1</td><td><code>"ubi:joshrotenberg/adrs" = "0.11.0"</code></td></tr><tr><td>他の設定ファイル 5 か所（各 3 行）</td><td align="right">15</td><td><code>"github:joshrotenberg/adrs" = "0.12.1"</code> ほかコメント行</td></tr><tr><td>合計</td><td align="right">19（ユニークなパス 8 件）</td><td></td></tr></tbody></table>
+<p>2026-11-05 時点の 28 件のうち、<code>ubi:</code> 側の版を要求していたのは古い worktree 2 件の設定ファイルだけでした。残った版 <code>0.11.0</code> は、その 2 件が指定していた版と一致します<sup><a href="#user-content-fn-1" id="user-content-fnref-1-18" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>このスクリプトは <code>glob</code> で <code>tracked-configs</code> 配下の全エントリを取得し、<code>os.path.realpath</code> でリンク先の実ファイルを開いて <code>adrs</code> を含む行番号と行内容を表示しています。</p>
+<p>さらに Claude Code が実行した <code>git worktree list</code> では、main を含む 4 件の worktree が見つかりました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-19" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。古い worktree A・B はリポジトリ内の <code>.claude/worktrees/</code> 配下にあり、どちらも未コミットの変更がなく、main に取り込まれていないコミットもありませんでした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-20" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>dotfiles リポジトリの git 履歴で A・B が指すコミットの <code>.config/mise/config.toml</code> 9 行目を確認すると <code>"ubi:joshrotenberg/adrs" = "0.11.0"</code> が実際に書かれていましたが、3 つ目の worktree C が指すコミットの同ファイルには <code>adrs</code> の記述がありませんでした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-21" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。worktree があるだけではツールは残らず、古い設定を持ったままの worktree が残っているときに参照元になります。</p>
+<p>前述の仕様と照らすと、<code>0.11.0</code> が残っていたのは、この 2 件の設定ファイルが実在し続けて <code>mise prune</code> の保持対象になっていたためと読めます（途中の操作記録がないため推測として留保します）。なお、git worktree は作業ディレクトリを分けても <code>.git</code> 配下の管理領域を共有する仕組みであり、linked worktree の共有境界の詳細は <a href="/blog/git-worktree-agent-isolation">git worktree の分離境界を整理した記事</a> で解説しています。</p>
+<h2 id="逆引きと片付けのコマンド比較">逆引きと片付けのコマンド比較</h2>
+<p>Python スクリプトを書かなくても、公式コマンドだけで参照元の確認と片付けができます。手段ごとの守備範囲を 2 つの表で整理します。</p>
+<h3 id="参照元を逆引きする手段">参照元を逆引きする手段</h3>
+<p>何も変えずに参照元を調べるなら、<code>mise ls --all-sources</code> で要求の出どころを見て、<code>mise prune --dry-run</code> で消える版と残す側のファイルを確かめます。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>手段</th><th>何が分かるか</th><th>根拠</th></tr></thead><tbody><tr><td><code>mise config ls --tracked-configs</code></td><td>mise がどのプロジェクトで読み込んだ設定ファイルも含めた一覧</td><td><code>mise config ls</code> 公式ドキュメント<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup></td></tr><tr><td><code>mise ls --all-sources</code></td><td>いま読み込んでいる設定だけでなく、mise が見たことのあるすべての設定ファイルからの要求</td><td><code>mise ls</code> 公式ドキュメント<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>・PR #8019<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup></td></tr><tr><td><code>mise prune --dry-run</code></td><td>削除される版の予測と、その理由。同じツールの別の版が残る場合は、残る版とそれを要求しているファイルが出る（例: <code>node is required at 20.19.5 by ~/src/app/mise.toml</code>）</td><td><code>mise prune</code> 公式ドキュメント<sup><a href="#user-content-fn-2" id="user-content-fnref-2-5" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>・<code>src/cli/prune.rs</code><sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup></td></tr></tbody></table>
+<p>削除対象の一覧だけを見たいときは <code>mise ls --prunable</code> を使います<sup><a href="#user-content-fn-2" id="user-content-fnref-2-6" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7-2" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>ただし <code>mise prune --dry-run</code> が残る版と要求元のファイルを出力するのは、実装上 <code>to_delete</code> に入った削除対象の版ごと（<code>explain_removal</code>）です<sup><a href="#user-content-fn-9" id="user-content-fnref-9-2" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。そのため、対象のツールに削除予定の版が 1 つもないときはこの説明も出力されません<sup><a href="#user-content-fn-9" id="user-content-fnref-9-3" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<p>なお <code>mise unuse &#x3C;tool>@&#x3C;version></code> も、他の tracked config や tool stub が版を必要とするときに保持しているファイルを表示しますが、設定ファイルを書き換えて prune まで実行する破壊的なコマンドのため<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>、参照元を調べるだけの用途には向きません。</p>
+<h3 id="片付けのコマンドと守備範囲">片付けのコマンドと守備範囲</h3>
+<p>worktree ごと片付けるのは <code>git worktree remove</code> で、<code>git worktree prune</code> と <code>mise prune --configs</code> はどちらも、ディレクトリが残っている worktree には効きません。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>コマンド</th><th>片付けるもの</th><th>古い worktree が残っているとき</th></tr></thead><tbody><tr><td><code>git worktree remove &#x3C;path></code></td><td>worktree のディレクトリとその Git 管理情報。未追跡ファイルや変更がある worktree は <code>--force</code> が要る<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup></td><td>設定ファイルごと消える<sup><a href="#user-content-fn-11" id="user-content-fnref-11-2" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup></td></tr><tr><td><code>git worktree prune</code></td><td><code>$GIT_DIR/worktrees</code> 配下の、不要になった worktree の Git 側管理情報<sup><a href="#user-content-fn-11" id="user-content-fnref-11-3" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup></td><td>対象外（ディレクトリが残っているため）<sup><a href="#user-content-fn-11" id="user-content-fnref-11-4" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。mise の状態ファイルにも触れない</td></tr><tr><td><code>mise prune --configs</code></td><td>実在しなくなった tracked / trusted / ignored 設定の記録<sup><a href="#user-content-fn-2" id="user-content-fnref-2-7" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup></td><td>設定ファイルが実在するので記録は残る<sup><a href="#user-content-fn-2" id="user-content-fnref-2-8" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-3" id="user-content-fnref-3-5" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup></td></tr><tr><td><code>mise prune</code>（<code>--tools</code> を含む）</td><td>どの tracked config・stub からも選ばれていない版<sup><a href="#user-content-fn-2" id="user-content-fnref-2-9" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup></td><td>古い設定が指定する版は残る<sup><a href="#user-content-fn-2" id="user-content-fnref-2-10" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup></td></tr></tbody></table>
+<p>順序は Git が先、mise が後になります。不要な worktree を消して設定ファイルがなくなってから <code>mise prune</code> を実行すると、記録の忘却と版の削除が 1 回で済みます<sup><a href="#user-content-fn-2" id="user-content-fnref-2-11" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h2 id="推奨手順worktree-を片付けてから-mise-prune-する">推奨手順：worktree を片付けてから mise prune する</h2>
+<p>2026-11-05 のセッションは、Claude Code が worktree A・B を <code>git worktree remove</code> で消し、<code>mise prune</code> を実行するコマンドを提案したところで終了しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-22" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。その後、2026-11-19 時点の環境を確認すると、worktree A・B、それらを指す <code>tracked-configs</code> のエントリ、<code>ubi:joshrotenberg/adrs</code> のインストール実体はいずれもなくなっており、<code>mise ls</code> に <code>ubi:</code> 側は表示されなくなっていました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-23" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。一方、古い設定を持たなかった worktree C とそのエントリは残っています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-24" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>どの順で作業したかの実行ログは残っていませんが、前述の仕様と比較表から導かれる整理手順を 1 本のコマンド列としてまとめます（以下は仕様に基づく推奨手順であり、筆者の環境で実行したログではありません）。<code>mise</code> と <code>git</code> が導入された環境で実行でき、<code>&#x3C;リポジトリ></code>・<code>&#x3C;古い worktree></code> および <code>main..HEAD</code> の <code>main</code>（既定ブランチ名）は手元の環境に合わせて置き換えてください。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 1. どの設定ファイルがその版を要求しているかを見る</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">mise</span><span style="color:#40A02B"> ls</span><span style="color:#40A02B"> --all-sources</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">mise</span><span style="color:#40A02B"> config</span><span style="color:#40A02B"> ls</span><span style="color:#40A02B"> --tracked-configs</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 2. 参照元になっている古い worktree を確認する</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">git</span><span style="color:#40A02B"> -C</span><span style="color:#179299"> &#x3C;</span><span style="color:#40A02B">リポジト</span><span style="color:#4C4F69">リ</span><span style="color:#179299">></span><span style="color:#40A02B"> worktree</span><span style="color:#40A02B"> list</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">git</span><span style="color:#40A02B"> -C</span><span style="color:#179299"> &#x3C;</span><span style="color:#40A02B">古い</span><span style="color:#40A02B"> worktre</span><span style="color:#4C4F69">e</span><span style="color:#179299">></span><span style="color:#40A02B"> status</span><span style="color:#40A02B"> -sb</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">git</span><span style="color:#40A02B"> -C</span><span style="color:#179299"> &#x3C;</span><span style="color:#40A02B">古い</span><span style="color:#40A02B"> worktre</span><span style="color:#4C4F69">e</span><span style="color:#179299">></span><span style="color:#40A02B"> log</span><span style="color:#40A02B"> main..HEAD</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 3. 不要な worktree を消す（設定ファイルごと消える）</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">git</span><span style="color:#40A02B"> -C</span><span style="color:#179299"> &#x3C;</span><span style="color:#40A02B">リポジト</span><span style="color:#4C4F69">リ</span><span style="color:#179299">></span><span style="color:#40A02B"> worktree</span><span style="color:#40A02B"> remove</span><span style="color:#179299"> &#x3C;</span><span style="color:#40A02B">古い</span><span style="color:#40A02B"> worktre</span><span style="color:#4C4F69">e</span><span style="color:#179299">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 4. 消える版を確かめてから prune する</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">mise</span><span style="color:#40A02B"> ls</span><span style="color:#40A02B"> --prunable</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">mise</span><span style="color:#40A02B"> prune</span><span style="color:#40A02B"> --dry-run</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">mise</span><span style="color:#40A02B"> prune</span></span>
+<span class="line"></span></code></pre>
+<p>段 1 では <code>mise ls --all-sources</code> と <code>mise config ls --tracked-configs</code> で参照元のファイルパスを特定します。段 2 では、対象の worktree に未コミットの変更（<code>status -sb</code>）や既定ブランチに取り込まれていないコミット（<code>log main..HEAD</code>）がないかを確かめます。段 3 で <code>git worktree remove</code> を実行して不要な worktree を設定ファイルごと削除し、最後に段 4 で <code>mise ls --prunable</code> と <code>mise prune --dry-run</code> により消える版を確かめてから <code>mise prune</code> を実行します。<code>git worktree prune</code> はディレクトリが残っている worktree には効かないため、この手順には含めません。</p>
+<h2 id="worktree-を量産する環境での注意">worktree を量産する環境での注意</h2>
+<p>コーディングエージェントの並列実行などで worktree を頻繁に作成する環境では、<code>tracked-configs</code> のエントリが増えやすくなります。消し忘れた worktree 内の設定ファイルは実在するため、<code>mise prune</code> を実行してもリンク切れの記録は消える一方で、生きている設定ファイルへの記録は残ります<sup><a href="#user-content-fn-2" id="user-content-fnref-2-12" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-3" id="user-content-fnref-3-6" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup><sup><a href="#user-content-fn-12" id="user-content-fnref-12" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。筆者の環境でも、<code>tracked-configs</code> のエントリ数は 2026-11-05 時点で 28 件、2026-11-19 時点で 48 件でした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-25" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>（2 時点間の操作履歴は記録にないため、増え方の内訳は特定していません）。</p>
+<p><code>tracked-configs</code> の件数が増大すると、全記録を読み込む <code>mise reshim</code> が件数 N に対して <code>O(N²·k)</code> で遅くなる問題が Issue #15202 で報告されていました<sup><a href="#user-content-fn-12" id="user-content-fnref-12-2" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。同 Issue のベンチマークでは、各設定約 30 ツール・N=2000 のときに <code>mise reshim</code> が 93.1 秒（macOS arm64）かかり、<code>MISE_IGNORED_CONFIG_PATHS</code> に一時ディレクトリを指定すると 0.15 秒まで短縮されています<sup><a href="#user-content-fn-12" id="user-content-fnref-12-3" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。この性能劣化は 2026-10-30 にマージされた PR #15203 で修正され、v2026.10.25 に含まれました<sup><a href="#user-content-fn-13" id="user-content-fnref-13" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup>。</p>
+<p>worktree の中でその設定ファイルを使わない運用であれば、<code>ignored_config_paths</code>（環境変数 <code>MISE_IGNORED_CONFIG_PATHS</code>）に作業ディレクトリのパスを指定し、mise が設定ファイルを読み込まないようにする選択肢があります<sup><a href="#user-content-fn-14" id="user-content-fnref-14" data-footnote-ref="" aria-describedby="footnote-label">14</a></sup>。ただし、<code>mise prune</code> と <code>mise ls --prunable</code> が従うのは環境変数と global / system の <code>miserc.toml</code> の指定だけであり、プロジェクトの <code>.miserc.toml</code> での指定は効きません<sup><a href="#user-content-fn-14" id="user-content-fnref-14-2" data-footnote-ref="" aria-describedby="footnote-label">14</a></sup>。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-mise-prune-を実行しても設定から外したツールの版が消えないのはなぜですか">Q. mise prune を実行しても、設定から外したツールの版が消えないのはなぜですか？</h3>
+<p><strong>A.</strong> よくある原因は、別の設定ファイルがまだその版を指定していることです。<code>mise prune</code> は <code>~/.local/state/mise/tracked-configs</code> と <code>~/.local/state/mise/tracked-stubs</code> に記録されたどれからも選ばれていない版を削除するため、古い git worktree などに残った設定ファイルが指定している版は残ります。また、実行中のプロセスがその版から起動されている場合も保持されます<sup><a href="#user-content-fn-2" id="user-content-fnref-2-13" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h3 id="q-mise-prune-configs-と-git-worktree-prune-は何が違いますか">Q. mise prune —configs と git worktree prune は何が違いますか？</h3>
+<p><strong>A.</strong> 片付ける対象が異なります。<code>mise prune --configs</code> は実在しなくなった tracked / trusted / ignored の設定ファイルの記録を mise から忘却し<sup><a href="#user-content-fn-2" id="user-content-fnref-2-14" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>、<code>git worktree prune</code> は <code>$GIT_DIR/worktrees</code> 配下で作業ディレクトリが失われた worktree の Git 側管理情報を掃除します<sup><a href="#user-content-fn-11" id="user-content-fnref-11-5" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。どちらもディレクトリが残っている worktree の設定ファイル自体は消さないため、worktree ごと消すには <code>git worktree remove</code> を使います<sup><a href="#user-content-fn-2" id="user-content-fnref-2-15" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-11" id="user-content-fnref-11-6" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。なお、<code>git worktree prune</code> は mise の状態ファイルには触れません。</p>
+<h3 id="q-どの設定ファイルがツールの版を保持しているかを調べるには">Q. どの設定ファイルがツールの版を保持しているかを調べるには？</h3>
+<p><strong>A.</strong> <code>mise ls --all-sources</code> で、いま読み込んでいる設定だけでなく mise が見たことのあるすべての設定ファイルからの要求を表示できます<sup><a href="#user-content-fn-7" id="user-content-fnref-7-3" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。記録された設定ファイルの一覧を見たい場合は <code>mise config ls --tracked-configs</code> を使います<sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。<code>mise prune --dry-run</code> は、削除予定の版ごとに同じツールの残る版とそれを要求しているファイルを示します<sup><a href="#user-content-fn-2" id="user-content-fnref-2-16" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-9" id="user-content-fnref-9-4" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li><code>mise prune</code> は <code>~/.local/state/mise/tracked-configs</code> と <code>~/.local/state/mise/tracked-stubs</code> に記録されたどれからも選ばれていない版を削除するため、設定から外した版が残るときは別の設定ファイルがまだ指定していないか（または実行中プロセスが使っていないか）を疑う。</li>
+<li>古い git worktree の設定ファイルも実在する限り参照元のままであり、<code>mise prune --configs</code> でも記録から外れない。</li>
+<li>参照元の逆引きは <code>mise ls --all-sources</code> と <code>mise config ls --tracked-configs</code> で行い、<code>mise prune --dry-run</code> で消える版と残す側のファイルを確かめる。</li>
+<li>片付けは <code>git worktree remove</code> で worktree を消してから <code>mise prune</code> を実行する。<code>git worktree prune</code> は Git 側の管理情報だけを扱い、mise の記録には触れない。</li>
+<li>worktree を量産する環境でその設定を使わない運用なら、環境変数 <code>MISE_IGNORED_CONFIG_PATHS</code>（または global / system の <code>miserc.toml</code>）で読み込み対象から外す選択肢がある。</li>
+</ul>
+<p>開発ツールチェーンの整備や、コーディングエージェントを並列で動かす開発環境の設計について、<a href="/#contact">コンタクトフォーム</a> からお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p>筆者の環境の記録（2026-11-05 の Claude Code セッション記録、dotfiles リポジトリの git 履歴、2026-11-19 の環境確認）。観測した <code>mise ls</code> の出力、<code>tracked-configs</code> の件数（2026-11-05 時点で 28 件、2026-11-19 時点で 48 件）、逆引き結果 19 行・8 パス、古い worktree 2 件の <code>.config/mise/config.toml</code> 9 行目を記録。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-1-5" data-footnote-backref="" aria-label="Back to reference 1-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-1-6" data-footnote-backref="" aria-label="Back to reference 1-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-1-7" data-footnote-backref="" aria-label="Back to reference 1-7" class="data-footnote-backref">↩<sup>7</sup></a> <a href="#user-content-fnref-1-8" data-footnote-backref="" aria-label="Back to reference 1-8" class="data-footnote-backref">↩<sup>8</sup></a> <a href="#user-content-fnref-1-9" data-footnote-backref="" aria-label="Back to reference 1-9" class="data-footnote-backref">↩<sup>9</sup></a> <a href="#user-content-fnref-1-10" data-footnote-backref="" aria-label="Back to reference 1-10" class="data-footnote-backref">↩<sup>10</sup></a> <a href="#user-content-fnref-1-11" data-footnote-backref="" aria-label="Back to reference 1-11" class="data-footnote-backref">↩<sup>11</sup></a> <a href="#user-content-fnref-1-12" data-footnote-backref="" aria-label="Back to reference 1-12" class="data-footnote-backref">↩<sup>12</sup></a> <a href="#user-content-fnref-1-13" data-footnote-backref="" aria-label="Back to reference 1-13" class="data-footnote-backref">↩<sup>13</sup></a> <a href="#user-content-fnref-1-14" data-footnote-backref="" aria-label="Back to reference 1-14" class="data-footnote-backref">↩<sup>14</sup></a> <a href="#user-content-fnref-1-15" data-footnote-backref="" aria-label="Back to reference 1-15" class="data-footnote-backref">↩<sup>15</sup></a> <a href="#user-content-fnref-1-16" data-footnote-backref="" aria-label="Back to reference 1-16" class="data-footnote-backref">↩<sup>16</sup></a> <a href="#user-content-fnref-1-17" data-footnote-backref="" aria-label="Back to reference 1-17" class="data-footnote-backref">↩<sup>17</sup></a> <a href="#user-content-fnref-1-18" data-footnote-backref="" aria-label="Back to reference 1-18" class="data-footnote-backref">↩<sup>18</sup></a> <a href="#user-content-fnref-1-19" data-footnote-backref="" aria-label="Back to reference 1-19" class="data-footnote-backref">↩<sup>19</sup></a> <a href="#user-content-fnref-1-20" data-footnote-backref="" aria-label="Back to reference 1-20" class="data-footnote-backref">↩<sup>20</sup></a> <a href="#user-content-fnref-1-21" data-footnote-backref="" aria-label="Back to reference 1-21" class="data-footnote-backref">↩<sup>21</sup></a> <a href="#user-content-fnref-1-22" data-footnote-backref="" aria-label="Back to reference 1-22" class="data-footnote-backref">↩<sup>22</sup></a> <a href="#user-content-fnref-1-23" data-footnote-backref="" aria-label="Back to reference 1-23" class="data-footnote-backref">↩<sup>23</sup></a> <a href="#user-content-fnref-1-24" data-footnote-backref="" aria-label="Back to reference 1-24" class="data-footnote-backref">↩<sup>24</sup></a> <a href="#user-content-fnref-1-25" data-footnote-backref="" aria-label="Back to reference 1-25" class="data-footnote-backref">↩<sup>25</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://mise.jdx.dev/cli/prune.html"><code>mise prune</code> | mise-en-place</a> mise 公式ドキュメント、2026-11-19 アクセス。<code>tracked-configs</code>・<code>tracked-stubs</code> への記録と未選択版の削除、存在しない設定の忘却、<code>--configs</code>・<code>--tools</code>・<code>--dry-run</code> の各フラグ、<code>mise ls --prunable</code> の案内、Examples「Preview what would be deleted and why」の出力例、実行中プロセスの版が保持される仕様（“Versions that a running process was started from are kept”）は冒頭・Arguments/Flags・Examples 節。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-2-4" data-footnote-backref="" aria-label="Back to reference 2-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-2-5" data-footnote-backref="" aria-label="Back to reference 2-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-2-6" data-footnote-backref="" aria-label="Back to reference 2-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-2-7" data-footnote-backref="" aria-label="Back to reference 2-7" class="data-footnote-backref">↩<sup>7</sup></a> <a href="#user-content-fnref-2-8" data-footnote-backref="" aria-label="Back to reference 2-8" class="data-footnote-backref">↩<sup>8</sup></a> <a href="#user-content-fnref-2-9" data-footnote-backref="" aria-label="Back to reference 2-9" class="data-footnote-backref">↩<sup>9</sup></a> <a href="#user-content-fnref-2-10" data-footnote-backref="" aria-label="Back to reference 2-10" class="data-footnote-backref">↩<sup>10</sup></a> <a href="#user-content-fnref-2-11" data-footnote-backref="" aria-label="Back to reference 2-11" class="data-footnote-backref">↩<sup>11</sup></a> <a href="#user-content-fnref-2-12" data-footnote-backref="" aria-label="Back to reference 2-12" class="data-footnote-backref">↩<sup>12</sup></a> <a href="#user-content-fnref-2-13" data-footnote-backref="" aria-label="Back to reference 2-13" class="data-footnote-backref">↩<sup>13</sup></a> <a href="#user-content-fnref-2-14" data-footnote-backref="" aria-label="Back to reference 2-14" class="data-footnote-backref">↩<sup>14</sup></a> <a href="#user-content-fnref-2-15" data-footnote-backref="" aria-label="Back to reference 2-15" class="data-footnote-backref">↩<sup>15</sup></a> <a href="#user-content-fnref-2-16" data-footnote-backref="" aria-label="Back to reference 2-16" class="data-footnote-backref">↩<sup>16</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://github.com/jdx/mise/blob/main/src/config/tracking.rs"><code>jdx/mise</code> <code>src/config/tracking.rs</code></a> jdx/mise リポジトリ（main ブランチ）、2026-11-19 アクセス。ハッシュ名・Unix シンボリックリンクによる記録は <code>Tracker::track_in</code>、<code>path.is_file()</code> が真なら保持し偽のときだけ削除する処理は <code>Tracker::clean_in</code>。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-3-3" data-footnote-backref="" aria-label="Back to reference 3-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-3-4" data-footnote-backref="" aria-label="Back to reference 3-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-3-5" data-footnote-backref="" aria-label="Back to reference 3-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-3-6" data-footnote-backref="" aria-label="Back to reference 3-6" class="data-footnote-backref">↩<sup>6</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://mise.jdx.dev/directories.html">Directories | mise-en-place</a> mise 公式ドキュメント、2026-11-19 アクセス。<code>~/.local/state/mise</code> に trust の決定と tracked config のパスが置かれること、および <code>MISE_STATE_DIR</code>・<code>XDG_STATE_HOME</code> による変更は Local state 行と説明文。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://github.com/jdx/mise/blob/main/src/cli/ls.rs"><code>jdx/mise</code> <code>src/cli/ls.rs</code></a> jdx/mise リポジトリ（main ブランチ）、2026-11-19 アクセス。<code>remove_after</code> の残り時間を <code>(pruned in {amount}{unit})</code> 書式で付ける実装は <code>pruning_label</code> 関数。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://mise.jdx.dev/cli/config/ls.html"><code>mise config ls</code> | mise-en-place</a> mise 公式ドキュメント、2026-11-19 アクセス。どのプロジェクトで読み込んだ設定ファイルも一覧表示する <code>--tracked-configs</code> の説明は Flags 節。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://mise.jdx.dev/cli/ls.html"><code>mise ls</code> | mise-en-place</a> mise 公式ドキュメント、2026-11-19 アクセス。読み込んだ設定だけでなく mise が見たすべての設定からの要求を表示する <code>--all-sources</code> と削除対象一覧の <code>--prunable</code> は Flags 節。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-7-2" data-footnote-backref="" aria-label="Back to reference 7-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-7-3" data-footnote-backref="" aria-label="Back to reference 7-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://github.com/jdx/mise/pull/8019"><code>jdx/mise</code> PR #8019</a> jdx/mise、2026-02-06 マージ（ページ表示の日付）。<code>mise ls</code> への <code>--all-sources</code> フラグ追加の経緯は PR 概要。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://github.com/jdx/mise/blob/main/src/cli/prune.rs"><code>jdx/mise</code> <code>src/cli/prune.rs</code></a> jdx/mise リポジトリ（main ブランチ）、2026-11-19 アクセス。<code>Prune::run</code> が <code>--dry-run</code> 時に <code>delete</code> を呼び、<code>to_delete</code> の各版に対して <code>explain_removal</code> が <code>"{style} is prunable: {short} is required at ..."</code> を出力する実装。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-9-2" data-footnote-backref="" aria-label="Back to reference 9-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-9-3" data-footnote-backref="" aria-label="Back to reference 9-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-9-4" data-footnote-backref="" aria-label="Back to reference 9-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://mise.jdx.dev/cli/unuse.html"><code>mise unuse</code> | mise-en-place</a> mise 公式ドキュメント、2026-11-19 アクセス。Effect が destructive であること、他の tracked config や tool stub が必要とする場合に保持しているファイルを示すことは冒頭の説明と概要文。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://git-scm.com/docs/git-worktree">Git - git-worktree Documentation</a> Git 公式ドキュメント、2026-11-19 アクセス。<code>remove</code>（ワーキングツリーと管理情報の削除、unclean な worktree への <code>--force</code>）および <code>prune</code>（<code>$GIT_DIR/worktrees</code> 配下の失われた worktree 情報の削除）は COMMANDS 節。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-11-2" data-footnote-backref="" aria-label="Back to reference 11-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-11-3" data-footnote-backref="" aria-label="Back to reference 11-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-11-4" data-footnote-backref="" aria-label="Back to reference 11-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-11-5" data-footnote-backref="" aria-label="Back to reference 11-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-11-6" data-footnote-backref="" aria-label="Back to reference 11-6" class="data-footnote-backref">↩<sup>6</sup></a></p>
+</li>
+<li id="user-content-fn-12">
+<p><a href="https://github.com/jdx/mise/issues/15202"><code>jdx/mise</code> Issue #15202</a> jdx/mise、2026-10-30 報告。<code>tracked-configs</code> 蓄積による <code>mise reshim</code> の <code>O(N²·k)</code> 劣化、macOS arm64・各設定約 30 ツール・N=2000 での 93.1 秒および <code>MISE_IGNORED_CONFIG_PATHS</code> 指定時の 0.15 秒は Summary・Results 表、<code>mise prune</code> がリンク切れのみ消し実在リンクは消さない点は Workaround 節。 <a href="#user-content-fnref-12" data-footnote-backref="" aria-label="Back to reference 12" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-12-2" data-footnote-backref="" aria-label="Back to reference 12-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-12-3" data-footnote-backref="" aria-label="Back to reference 12-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-13">
+<p><a href="https://github.com/jdx/mise/pull/15203"><code>jdx/mise</code> PR #15203</a> jdx/mise、2026-10-30 マージ、v2026.10.25 リリース。Issue #15202 の <code>mise reshim</code> 劣化修正は PR タイトルと参照リリース。 <a href="#user-content-fnref-13" data-footnote-backref="" aria-label="Back to reference 13" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-14">
+<p><a href="https://mise.jdx.dev/configuration/settings.html">Settings | mise-en-place</a> mise 公式ドキュメント、2026-11-19 アクセス。<code>ignored_config_paths</code>（<code>MISE_IGNORED_CONFIG_PATHS</code>）の仕様と、<code>mise prune</code>・<code>mise ls --prunable</code> が環境変数および global / system の <code>miserc.toml</code> だけに従う点は <code>ignored_config_paths</code> 節。 <a href="#user-content-fnref-14" data-footnote-backref="" aria-label="Back to reference 14" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-14-2" data-footnote-backref="" aria-label="Back to reference 14-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

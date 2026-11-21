@@ -1,0 +1,338 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Haiku を指定したのに費用の72%が Opus だった ── 子の claude -p に波及する advisor 設定と modelUsage 監査 | Meetsource</title><meta name="description" content="claude -p で安価な小型モデル（Haiku 5.5）を指定しても、親セッションの /advisor 設定が波及して上位モデル（Opus 5.5）が透過的に呼び出され、費用の7割超を占める逆転現象が起きることがあります。実測ログに基づき、指定外モデルの課金混入の解剖、無効化による対照実験、modelUsage の自動監査と実行環境の分離策を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/claude-p-advisor-opus-cost-leak"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="Haiku を指定したのに費用の72%が Opus だった ── 子の claude -p に波及する advisor 設定と modelUsage 監査 | Meetsource"><meta property="og:description" content="claude -p で安価な小型モデル（Haiku 5.5）を指定しても、親セッションの /advisor 設定が波及して上位モデル（Opus 5.5）が透過的に呼び出され、費用の7割超を占める逆転現象が起きることがあります。実測ログに基づき、指定外モデルの課金混入の解剖、無効化による対照実験、modelUsage の自動監査と実行環境の分離策を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/claude-p-advisor-opus-cost-leak"><meta property="og:image" content="https://www.meetsource.work/blog/claude-p-advisor-opus-cost-leak-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-08T11:00:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Haiku を指定したのに費用の72%が Opus だった ── 子の claude -p に波及する advisor 設定と modelUsage 監査 | Meetsource"><meta name="twitter:description" content="claude -p で安価な小型モデル（Haiku 5.5）を指定しても、親セッションの /advisor 設定が波及して上位モデル（Opus 5.5）が透過的に呼び出され、費用の7割超を占める逆転現象が起きることがあります。実測ログに基づき、指定外モデルの課金混入の解剖、無効化による対照実験、modelUsage の自動監査と実行環境の分離策を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/claude-p-advisor-opus-cost-leak-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Haiku を指定したのに費用の72%が Opus だった ── 子の claude -p に波及する advisor 設定と modelUsage 監査","description":"claude -p で安価な小型モデル（Haiku 5.5）を指定しても、親セッションの /advisor 設定が波及して上位モデル（Opus 5.5）が透過的に呼び出され、費用の7割超を占める逆転現象が起きることがあります。実測ログに基づき、指定外モデルの課金混入の解剖、無効化による対照実験、modelUsage の自動監査と実行環境の分離策を解説します。","datePublished":"2026-11-08T11:00:00.000Z","image":"https://www.meetsource.work/blog/claude-p-advisor-opus-cost-leak-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/claude-p-advisor-opus-cost-leak"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"claude -p --model claude-haiku-5-5 を指定したのに Opus の課金が発生するのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"親セッションで有効化されていた Advisor Tool（/advisor）の設定が子プロセスに引き継がれ、Executor である Haiku が作業中に上位モデルである Opus を Advisor として透過的に呼び出した公算が高いと考えられます。Claude Code では CLI 引数で指定したモデル以外の設定が親環境から波及することがあり、Advisor が呼び出されると会話履歴全体が Opus の入力トークンとして課金されます。"}},{"@type":"Question","name":"settings.json に advisor の記述がない場合でも、子プロセスに影響しますか？","acceptedAnswer":{"@type":"Answer","text":"影響する可能性が極めて高いことが、対照実験の結果から示唆されています。対話セッションで /advisor を操作した場合、設定ファイル（settings 系ファイル）に明示的な変更が記録されていない状態であっても、同一環境から起動された子の claude -p プロセスにその状態が引き継がれ、上位モデルの課金が発生または停止しました。"}},{"@type":"Question","name":"サブエージェントや claude -p の実行で意図しない上位モデルの課金混入を防ぐにはどうすればよいですか？","acceptedAnswer":{"@type":"Answer","text":"推奨される対策は、実行環境の分離と実行後のログ検収です。-p による子プロセス呼び出しを避け、orca terminal create 等を用いた独立した端末セッションでエージェントを起動することに加え、実行ログの modelUsage を機械的にパースして許可モデル以外のトークン消費を検知するアサーションを CI や運用ハーネスに組み込むことが有効です。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-08T11:00:00.000Z" data-astro-cid-7jjqptxk> 2026.11.08 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#ai-cost-optimization</span><span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#llm</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>Haiku を指定したのに費用の72%が Opus だった ── 子の claude -p に波及する advisor 設定と modelUsage 監査</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/claude-p-advisor-opus-cost-leak-hero.webp" alt="Haiku を指定したのに費用の72%が Opus だった ── 子の claude -p に波及する advisor 設定と modelUsage 監査" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>Claude Code の Advisor Tool（<code>/advisor</code>）とは、一次実行モデル（Executor）が自律作業を進める中で、方針策定や手詰まり時に上位モデル（Advisor）へ自動的に相談して知能ブーストを得るツール機能です。また <code>modelUsage</code> とは、Claude Code の実行ログにおいて、1回のセッションやコマンド実行内で実際に消費されたモデルごとの入力・出力・キャッシュ読み取りトークン数および Web 検索リクエスト回数等の内訳を示すデータ構造です。</p>
+<p>LLM を組み込んだサブエージェントや CLI による自動処理では、コスト最適化のために <code>claude -p --model claude-haiku-5-5</code> のように小型・安価なモデルを明示指定して実行することが一般的です。引数で安いモデルを指定している以上、請求や API 費用もそのモデルの単価で抑えられていると思い込み、実際の課金内訳を確認していない開発者は少なくありません。</p>
+<p>しかし、当ブログの運営リポジトリ（非公開）における実機検証において、Haiku 5.5 を指定して実行した Web 調査タスクの総費用（$0.4434）のうち、実に <strong>71.74%（$0.3181）</strong> が指定外の <code>claude-opus-5-5</code> による課金であり、同時に実行した Sonnet 5.5 指定（$0.2814）よりも Haiku 指定の方が高額になるという逆転現象が観測されました。</p>
+<p>その後の対照実験により、対話セッション側で有効化されていた <code>/advisor</code> の設定が、同一環境から起動された子の <code>claude -p</code> プロセスへ暗黙に波及していた公算が極めて高いと考えられます。設定ファイル（<code>settings.json</code> など）上に明記がない状態であっても、親セッションの実行時状態が子プロセスに引き継がれ、意図しない上位モデルの呼び出しとトークン課金を招くリスクが潜んでいます。</p>
+<p>本記事では、この逆転現象が発生した実測ログを <code>modelUsage</code> の内訳から解剖し、親セッションの <code>/advisor</code> 無効化による対照実験の結果を提示します。その上で、CLI 引数のモデル指定を過信せず、実行ログの <code>modelUsage</code> を機械的に監査するアサーションの導入と、独立した端末セッションによる実行環境の分離という実務的な対策指針を解説します。</p>
+<p>過去に <a href="/blog/subagent-small-model-verification">サブエージェントに小型モデルを指定した際の検証</a> や <a href="/blog/subagent-model-ranking-inversion">モデル比較における作業特性と順位逆転の検証</a> を扱いましたが、本記事ではモデル指定の前提そのものが親の設定継承によって崩れる経路と、その監査手法に焦点を当てます。</p>
+<h2 id="検証環境と調査スコープ">検証環境と調査スコープ</h2>
+<p>本記事で提示する実測データと検証結果は、当ブログの運営リポジトリ（非公開）における実機検証セッション（2026年11月6日実施）で記録された一次計測ログに基づく客観的事実です。</p>
+<h3 id="検証環境">検証環境</h3>
+<ul>
+<li><strong>機材・OS</strong>: Apple Silicon Mac（macOS）</li>
+<li><strong>実行ツール</strong>: Claude Code（非対話ヘッドレス実行フラグ <code>-p</code> を使用）</li>
+<li><strong>対象モデル</strong>:
+<ul>
+<li>Claude Haiku 5.5（モデル ID: <code>claude-haiku-5-5</code>）</li>
+<li>Claude Sonnet 5.5（モデル ID: <code>claude-sonnet-5-5</code>）</li>
+<li>Claude Opus 5.5（モデル ID: <code>claude-opus-5-5</code>）</li>
+</ul>
+</li>
+<li><strong>計測期間</strong>: 2026年11月6日（当ブログの運営リポジトリの検証セッション）</li>
+</ul>
+<h3 id="調査スコープ">調査スコープ</h3>
+<p>本調査は、以下の 3 つの検証ステップに沿って実施しました。</p>
+<ol>
+<li><strong>ステップ1（ベースライン計測）</strong>: 外部ツール呼び出しを行わない（<code>--tools ""</code>）テキスト抽出タスクにおける Haiku 5.5 と Sonnet 5.5 の単価比較。</li>
+<li><strong>ステップ2（逆転現象の観測）</strong>: Web 調査タスク（WebSearch および WebFetch ツールを使用）における Haiku 5.5 実行と、Opus 5.5 課金の混入内訳の解剖。</li>
+<li><strong>ステップ3（対照実験と検証）</strong>: 親セッションでの <code>/advisor</code> 無効化操作と、別タスクにおける並列再計測による Opus 課金消失の実証。</li>
+</ol>
+<h3 id="客観的事実と推測の境界">客観的事実と推測の境界</h3>
+<p>調査の透明性を保つため、一次計測ログから確実に言及できる事実と、推測・考察の境界を以下のように厳格に定義します。</p>
+<ul>
+<li><strong>書けること（観測された事実）</strong>:
+<ul>
+<li>テキスト抽出タスクにおいて、Haiku 5.5 は Sonnet 5.5 の約 1/14 の費用（$0.0147 と $0.204）で完了したこと。</li>
+<li>Web 調査タスクにおいて、Haiku 5.5 を指定した実行の総費用 $0.4434 のうち、$0.3181（71.74%）が <code>claude-opus-5-5</code> の課金であり、Sonnet 5.5 指定（$0.2814）を上回ったこと。</li>
+<li>親セッションで <code>/advisor</code> を無効化した後の対照実験において、Haiku 5.5 指定実行の総費用が $0.1244 へ低下し、<code>claude-opus-5-5</code> の課金が完全に消失（0件）したこと。</li>
+<li><code>~/.claude/settings.json</code> などの設定ファイル上に advisor の明示的な記述が見当たらない状態であったこと。</li>
+</ul>
+</li>
+<li><strong>書けないこと（推測・未検証事項）</strong>:
+<ul>
+<li>Opus 5.5 が起動された契機が、Haiku 5.5 の自発的な判断なのかプロンプト内の特定指示によるものかの完全な内部推論機序。</li>
+<li>Sonnet 指定実行で副次的に Haiku が呼ばれ、Haiku 指定実行で Opus が呼ばれた Claude Code 内部のモデルルーティングコード（非公開のため）。</li>
+<li>対照実験において、プロンプト差やセッション永続化設定差以外の要因が一切関与していないという数学的証明。</li>
+<li>親セッションから子プロセスへ設定が伝播した Claude Code 内部の具体的な実装コード。</li>
+</ul>
+</li>
+</ul>
+<h2 id="advisor-tool-の課金構造と設定の階層">Advisor Tool の課金構造と設定の階層</h2>
+<p>Claude Code や Anthropic API における Advisor Tool の仕組みと、会話履歴の転送に伴う課金構造について整理します。</p>
+<h3 id="advisor-strategy二刀流戦略の概要">Advisor Strategy（二刀流戦略）の概要</h3>
+<p>Anthropic は、タスクの大半を安価で高速な小型モデル（Executor: Sonnet や Haiku）が主導し、手詰まり時や重要局面でのみ大型モデル（Advisor: Opus）に助言を求める「Advisor Strategy」を提唱しています。Anthropic の公式ブログによると、BrowseComp ベンチマークにおいて Haiku + Opus Advisor の組み合わせは単体スコア（19.7%）の 2 倍以上となる 41.2% を記録し、Sonnet 単体比で 85% 低コストを達成したと発表されています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="api-仕様と透過呼び出しの機序">API 仕様と透過呼び出しの機序</h3>
+<p>Advisor Tool は、API レベルではベータ識別子 <code>advisor-tool-2026-03-01</code>、ツール型名 <code>advisor_20260301</code> として提供されています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>Executor が <code>advisor</code> ツールを呼び出す際、クライアントから送信される <code>server_tool_use</code> ブロックの <code>input</code> は常に空となります。これを受け取ったサーバー側は、これまでの会話トランスクリプト全体（システムプロンプト、ツール定義、過去のやり取り、ツールの実行結果、途中生成テキスト）を引用コンテキストとして Advisor モデルへ自動転送します<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>Advisor の応答は <code>advisor_tool_result</code> ブロックとして Executor へ返されますが、Advisor 側の思考ブロック（thinking）は破棄され、結論のみが Executor に渡されます<sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。また、仮に Advisor のサブ推論でエラーが生じた場合でも、API リクエスト全体は中断されず、Executor は助言なしでそのまま自律処理を続行する耐障害設計となっています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<h3 id="課金構造の落とし穴">課金構造の落とし穴</h3>
+<p>この「会話履歴全体の自動転送」こそが、意図しないコスト急増の主因となります。</p>
+<ol>
+<li><strong>トップレベル usage に現れない課金</strong>: Advisor の消費トークンは、レスポンスのトップレベルにある <code>usage</code> フィールドには合算されず、<code>usage.iterations</code> 配列内の <code>advisor_message</code> として別枠で記録されます<sup><a href="#user-content-fn-2" id="user-content-fnref-2-4" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。単純な usage 集計ロジックでは見落とされやすい構造です。</li>
+<li><strong>プロンプトキャッシュの既定無効</strong>: API 仕様上、Advisor 側のプロンプトキャッシュ設定 <code>caching</code> は既定で <code>null</code>（無効）となっています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-5" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。キャッシュが無効な状態では、Advisor を 1 回呼び出すたびに、それまでの全会話履歴が Advisor モデルの基本入力トークンとして満額課金されます。</li>
+<li><strong>圧倒的なモデル単価差</strong>: Anthropic の価格表によると、各モデルの基本単価は以下のとおりです<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。
+<ul>
+<li><strong>Claude Haiku 5.5</strong>: 入力 $0.10 / MTok（100K超は $0.50）、出力 $0.50 / MTok（100K超は $2.50）、キャッシュ読出 $0.01 / MTok（100K超は $0.05）</li>
+<li><strong>Claude Sonnet 5.5</strong>: 入力 $2.00 / MTok、出力 $10.00 / MTok、キャッシュ読出 $0.10 / MTok</li>
+<li><strong>Claude Opus 5.5</strong>: 入力 $4.00 / MTok、出力 $20.00 / MTok、キャッシュ読出 $0.20 / MTok</li>
+</ul>
+</li>
+</ol>
+<p>Opus 5.5 の入力単価は Haiku 5.5（100K以下）の 40 倍に達します。そのため、セッション後半でコンテキストが数十万トークンに膨らんだ段階で Advisor が 1 回でも呼び出されると、それだけで Haiku 数十回分の費用が一瞬で消費されることになります。将来の料金改定でドル額が変わる可能性もあるため、コスト管理においては金額だけでなく、各モデルが消費したトークン数とキャッシュ読み出しの有無を直接監査することが極めて重要です。</p>
+<h3 id="設定の階層とヘッドレス実行claude--pのリスク">設定の階層とヘッドレス実行（claude -p）のリスク</h3>
+<p>Claude Code の対話環境では、<code>/advisor</code> コマンドを実行することで Advisor として使用するモデルの選択や有効化・無効化の切り替えが可能です<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>しかし、設定ファイル（<code>settings.json</code> など）による明示的な管理と異なり<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>、対話セッション内で行った <code>/advisor</code> 設定のランタイム状態が、同一環境で実行されるスクリプトや子の <code>claude -p</code> プロセスに予期せず波及することがあります。CLI 引数で <code>--model claude-haiku-5-5</code> を指定していても、親のランタイム設定が引き継がれれば、Haiku がバックグラウンドで Opus Advisor を透過的に呼び出してしまうリスクが生じます。</p>
+<h2 id="実測1なぜ-haiku-指定が-sonnet-より高くなったのか--modelusage-の解剖">実測1：なぜ Haiku 指定が Sonnet より高くなったのか ── modelUsage の解剖</h2>
+<p>当ブログの運営リポジトリにおける一次計測ログから、この現象が実際に発生したセッションを解剖します<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<h3 id="ベースラインテキスト抽出タスクでの単価比較">ベースライン：テキスト抽出タスクでの単価比較</h3>
+<p>まず、ツール呼び出しを伴わない（<code>--tools ""</code>）原典キャッシュ 6 本（約 40KB）からのテキスト抽出タスク（企画A）において、Haiku 5.5 と Sonnet 5.5 を同一プロンプトで比較しました。</p>
+<ul>
+<li><strong>Haiku 5.5</strong>: 総費用 $0.0147（実行時間 70秒、事実抽出 60行、誤り 0件）</li>
+<li><strong>Sonnet 5.5</strong>: 総費用 $0.204（実行時間 51秒、事実抽出 96行）</li>
+</ul>
+<p>費用比は約 <strong>1:13.9（約 1/14）</strong> となり、ツールや Advisor が介入しない環境では、モデル単価の差どおりの大幅なコスト圧縮が確認できました。</p>
+<h3 id="web-調査タスクでの逆転現象">Web 調査タスクでの逆転現象</h3>
+<p>続いて、Web 検索ツール（WebSearch および WebFetch）を使用する調査プロンプトを <code>claude -p</code> で並列実行したところ、以下の結果となりました。</p>
+<ul>
+<li><strong>Haiku 5.5 指定</strong>: 総費用 <strong>$0.4434</strong>（実行時間 136秒、16ターン）</li>
+<li><strong>Sonnet 5.5 指定</strong>: 総費用 <strong>$0.2814</strong>（実行時間 44秒、7ターン）</li>
+</ul>
+<p>安価なはずの Haiku 5.5 を指定した実行が、Sonnet 5.5 指定の約 1.6 倍の費用を要するという完全な逆転現象が発生しました。</p>
+<h3 id="modelusage-の解剖">modelUsage の解剖</h3>
+<p>実行ログから <code>modelUsage</code> の詳細内訳を確認した結果が以下です。</p>
+<p>引用元: 当ブログの一次検証ログ（非公開）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>== claude-haiku-5-5</span></span>
+<span class="line"><span>claude-haiku-5-5 0.1253 196367 22601 322512 7</span></span>
+<span class="line"><span>claude-opus-5-5 0.3181 53418 5219 0 0</span></span>
+<span class="line"><span>== claude-sonnet-5-5</span></span>
+<span class="line"><span>claude-sonnet-5-5 0.2436 4 4574 42289 0</span></span>
+<span class="line"><span>claude-haiku-5-5 0.0378 45378 6532 0 3</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>ログの各行は「モデル名 金額 入力トークン 出力トークン キャッシュ読み取りトークン Web検索回数」を示しています。</p>
+<ul>
+<li><strong>Haiku 5.5 指定の実行（合計 $0.4434）</strong>:
+<ul>
+<li><code>claude-haiku-5-5</code>: <strong>$0.1253</strong>（入力: 196,367、出力: 22,601、キャッシュ読出: 322,512、Web検索: 7）</li>
+<li><code>claude-opus-5-5</code>: <strong>$0.3181</strong>（入力: 53,418、出力: 5,219、キャッシュ読出: 0、Web検索: 0）</li>
+<li><strong>Opus 5.5 の課金割合</strong>: $0.3181 を $0.4434 で割った <strong>71.74%（約72%）</strong></li>
+</ul>
+</li>
+<li><strong>Sonnet 5.5 指定の実行（合計 $0.2814）</strong>:
+<ul>
+<li><code>claude-sonnet-5-5</code>: <strong>$0.2436</strong>（入力: 4、出力: 4,574、キャッシュ読出: 42,289、Web検索: 0）</li>
+<li><code>claude-haiku-5-5</code>: <strong>$0.0378</strong>（入力: 45,378、出力: 6,532、キャッシュ読出: 0、Web検索: 3）</li>
+</ul>
+</li>
+</ul>
+<p>Haiku 5.5 自体の消費は $0.1253 に留まっていました。しかし、指定していないはずの <code>claude-opus-5-5</code> が呼び出され、キャッシュ読み出しが 0 トークンの状態で 53,418 トークンの入力を消費したことで $0.3181 が加算され、費用の 7 割超を占めていたことが判明しました。また、Sonnet 5.5 指定の実行でも Web 検索処理等に伴い副次的に Haiku が混入（$0.0378）していました。</p>
+<p>当時、親セッションで <code>/advisor</code> が有効化されていたことから、Web 調査中の思考や方針策定において Opus Advisor が自動呼び出しされた公算が高いと考えられます。</p>
+<h2 id="実測2advisor-無効化による対照実験と見えない設定波及">実測2：/advisor 無効化による対照実験と「見えない設定波及」</h2>
+<p>この課金混入の原因を検証するため、親セッションで <code>/advisor</code> を無効化した上で対照実験を実施しました<sup><a href="#user-content-fn-8" id="user-content-fnref-8-2" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<h3 id="対照実験の実施と結果">対照実験の実施と結果</h3>
+<p>まず、Claude Code の親セッション上で <code>/advisor</code> コマンドを実行し、<code>Advisor disabled</code> の状態へ切り替えました。その上で、別の調査プロンプト（企画B: 並列テスト調査タスク）を用いて <code>claude -p</code> による並列計測を行いました。</p>
+<ul>
+<li><strong>Haiku 5.5 指定実行</strong>:
+<ul>
+<li>総費用: <strong>$0.1244</strong>（実行時間 104秒、16ターン）</li>
+<li><code>modelUsage</code>: <code>claude-haiku-5-5</code> のみ（$0.1244、入力: 227,706、出力: 30,810、キャッシュ読出: 171,398、Web検索: 7）</li>
+<li><strong><code>claude-opus-5-5</code> の課金は 0 件となり完全に消失</strong></li>
+</ul>
+</li>
+<li><strong>Sonnet 5.5 指定実行</strong>:
+<ul>
+<li>総費用: <strong>$0.4208</strong>（実行時間 65秒、15ターン、Sonnet $0.3454 + Haiku $0.0754）</li>
+</ul>
+</li>
+</ul>
+<p>親環境で <code>/advisor</code> を無効化した結果、Haiku 5.5 指定実行における Opus 課金は完全に消え去り、費用は $0.1244 と Sonnet 5.5（$0.4208）の約 30% に収まりました。本来期待されていた単価抑制が正常に再現された形です。</p>
+<p>以下の比較表は、親セッションの <code>/advisor</code> 有効時（実測1）と無効化後（実測2・対照実験）における、<code>claude -p</code> 実行時のモデル別課金とトークン消費の内訳を対照したものです。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>実行条件</th><th>対象タスク</th><th>指定モデル</th><th>総費用</th><th>指定モデル課金</th><th>Opus 5.5 課金（比率）</th><th>Opus トークン（入 / 出）</th></tr></thead><tbody><tr><td>実測1（advisor 有効時）</td><td>企画A（本文抽出・調査）</td><td>Haiku 5.5</td><td><strong>$0.4434</strong></td><td>$0.1253</td><td><strong>$0.3181（71.74%）</strong></td><td>53,418 / 5,219</td></tr><tr><td>実測1（advisor 有効時）</td><td>企画A（本文抽出・調査）</td><td>Sonnet 5.5</td><td>$0.2814</td><td>$0.2436</td><td>$0.0000（0.00%）</td><td>0 / 0</td></tr><tr><td>実測2（advisor 無効化後）</td><td>企画B（並列テスト調査）</td><td>Haiku 5.5</td><td><strong>$0.1244</strong></td><td>$0.1244</td><td><strong>$0.0000（0.00%）</strong></td><td><strong>0 / 0（消失）</strong></td></tr><tr><td>実測2（advisor 無効化後）</td><td>企画B（並列テスト調査）</td><td>Sonnet 5.5</td><td>$0.4208</td><td>$0.3454</td><td>$0.0000（0.00%）</td><td>0 / 0</td></tr></tbody></table>
+<p>※実測1と実測2は対象企画の調査プロンプトが異なり、セッション永続化オプション（実測1は <code>--no-session-persistence</code> あり、実測2はなし）等の差を含むため、金額の絶対値比較ではなく各回における Haiku と Sonnet の相対比率および Opus 課金の有無に着目する必要があります。</p>
+<p>実測1では Haiku を指定したにもかかわらず費用の 7 割超を Opus が占めていましたが、親環境の <code>/advisor</code> を無効化した実測2では Opus 課金が完全に消失（0件）し、費用も Sonnet の約 30%（$0.1244）へ急減したことから、費用逆転の原因が親セッションからの advisor 波及であった公算が高いと考えられます。</p>
+<h3 id="見えない設定波及の観察事実">「見えない設定波及」の観察事実</h3>
+<p>この実験において最も注目すべきは、設定の波及経路です。</p>
+<p>検証セッション中に <code>~/.claude/settings.json</code>、<code>~/.claude/settings.local.json</code>、<code>.claude/settings*.json</code> などの設定ファイルを走査（<code>grep -rn -i advisor</code>）しましたが、ファイル上に advisor に関する明示的な記述は見当たりませんでした<sup><a href="#user-content-fn-8" id="user-content-fnref-8-3" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<p>にもかかわらず、対話セッション内での無効化操作が、同一環境から起動された子の <code>claude -p</code> プロセスに即座に反映され、Opus 課金が停止しました。この事実は、設定ファイルに永続化されていないメモリ上・セッション上のランタイム状態や環境変数が、子プロセスへ透過的に引き継がれていたことを示唆しています。</p>
+<p>親セッションの設定状態を意識せずに <code>claude -p</code> を実行すると、親のコンテキストが意図せず波及し、見えないコスト漏洩を招くリスクがあると言えます。</p>
+<h2 id="実務での対策modelusage-の自動監査と実行環境の分離">実務での対策：modelUsage の自動監査と実行環境の分離</h2>
+<p>親セッションからの予期せぬ設定波及やすり抜けを防ぐため、実務で導入すべき対策を解説します。</p>
+<h3 id="予防と検収の設計思想">予防と検収の設計思想</h3>
+<p>システム設計において、障害対策には「予防」と「検収」の 2 つの側面があります。</p>
+<ul>
+<li><strong>予防（原因の空間に対するアプローチ）</strong>: <code>/advisor</code> を無効化する、設定ファイルを確認する、プロンプトに禁止事項を書くなど。しかし、ツール内部の仕様変更や未把握の環境変数、セッション状態の引き継ぎなど、原因の空間は無数に存在するため、予防だけで全てのすり抜けを防ぎ切ることは困難です。</li>
+<li><strong>検収（結果の空間に対するアプローチ）</strong>: 実行後に吐き出された <code>modelUsage</code> を機械的に検査し、「許可されていない上位モデル（Opus 等）が含まれていないか」という結果の性質をアサートします。原因が何であれ、結果の空間で検知すれば予期せぬ課金爆発を確実に検出できます。</li>
+</ul>
+<h3 id="対策1modelusage-の自動監査スクリプト">対策1：modelUsage の自動監査スクリプト</h3>
+<p>Claude Code の非対話実行（<code>-p</code>）で <code>--output-format json</code> を指定して実行結果を JSON 形式で出力・保存し、実行ログ内の <code>modelUsage</code> をパースして許可モデル以外の混入を即座に検知・停止する監査スクリプトを用意します。なお、Sonnet 指定時に内部で Haiku が正規に混ざるケースもあるため、許可モデルリストには柔軟に複数モデルを指定できるようにします。</p>
+<p>まず、ヘッドレス実行で <code>modelUsage</code> を含む JSON 出力をファイルへ保存し、監査スクリプトへ渡すコマンド例です。</p>
+<p>コマンド: <code>claude -p</code> による JSON 出力の保存と監査スクリプトの実行</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># ヘッドレス実行で JSON 出力を保存</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">claude</span><span style="color:#40A02B"> -p</span><span style="color:#40A02B"> "Web 調査タスクを実行してください"</span><span style="color:#40A02B"> --model</span><span style="color:#40A02B"> claude-haiku-5-5</span><span style="color:#40A02B"> --output-format</span><span style="color:#40A02B"> json</span><span style="color:#179299"> ></span><span style="color:#40A02B"> result.json</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 監査スクリプトを実行してモデル混入を検証（Haiku のみを許可）</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">python3</span><span style="color:#40A02B"> scripts/audit-model-usage.py</span><span style="color:#40A02B"> result.json</span><span style="color:#40A02B"> claude-haiku-5-5</span></span>
+<span class="line"></span></code></pre>
+<p><code>--output-format json</code> オプションを指定することで、セッション終了時に <code>modelUsage</code> や消費トークン内訳を含む構造化 JSON が標準出力に出力されます。これをリダイレクトで保存した上で、後続の監査スクリプトに渡します。</p>
+<p>続いて、出力された <code>result.json</code> を検証する監査スクリプトの本体です。</p>
+<p>ファイル: <code>scripts/audit-model-usage.py</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> json</span></span>
+<span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> sys</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> audit_model_usage</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">json_file_path</span><span style="color:#7C7F93">:</span><span style="color:#FE640B;font-style:italic"> str</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> allowed_models</span><span style="color:#7C7F93">:</span><span style="color:#E64553;font-style:italic"> list</span><span style="color:#7C7F93">[</span><span style="color:#FE640B;font-style:italic">str</span><span style="color:#7C7F93">])</span><span style="color:#7C7F93"> -></span><span style="color:#8839EF"> None</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">    with</span><span style="color:#FE640B;font-style:italic"> open</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">json_file_path</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "r"</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> encoding</span><span style="color:#179299">=</span><span style="color:#40A02B">"utf-8"</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> as</span><span style="color:#4C4F69"> f</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">        data </span><span style="color:#179299">=</span><span style="color:#4C4F69"> json</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">load</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">f</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">    model_usage </span><span style="color:#179299">=</span><span style="color:#4C4F69"> data</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"modelUsage"</span><span style="color:#7C7F93">,</span><span style="color:#7C7F93"> {})</span></span>
+<span class="line"><span style="color:#4C4F69">    violations </span><span style="color:#179299">=</span><span style="color:#7C7F93"> []</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">    print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"=== Model Usage Audit ==="</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> model_name</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> usage </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> model_usage</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">items</span><span style="color:#7C7F93">():</span></span>
+<span class="line"><span style="color:#4C4F69">        input_tokens </span><span style="color:#179299">=</span><span style="color:#4C4F69"> usage</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"inputTokens"</span><span style="color:#7C7F93">,</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">        output_tokens </span><span style="color:#179299">=</span><span style="color:#4C4F69"> usage</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"outputTokens"</span><span style="color:#7C7F93">,</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">        cache_read </span><span style="color:#179299">=</span><span style="color:#4C4F69"> usage</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"cacheReadInputTokens"</span><span style="color:#7C7F93">,</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">        web_search </span><span style="color:#179299">=</span><span style="color:#4C4F69"> usage</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"webSearchRequests"</span><span style="color:#7C7F93">,</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"Model: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">model_name</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"  Input: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">input_tokens</span><span style="color:#8839EF">:,</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">, Output: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">output_tokens</span><span style="color:#8839EF">:,</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">, CacheRead: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">cache_read</span><span style="color:#8839EF">:,</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">, WebSearch: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">web_search</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">        if</span><span style="color:#4C4F69"> model_name </span><span style="color:#8839EF">not</span><span style="color:#8839EF"> in</span><span style="color:#4C4F69"> allowed_models</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">            violations</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">append</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">model_name</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> violations</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">[ERROR] Disallowed models detected in modelUsage: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">violations</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">        sys</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">exit</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">1</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    else</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">[OK] All models are within allowed list."</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#4C4F69"> __name__ </span><span style="color:#179299">==</span><span style="color:#40A02B"> "__main__"</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#FE640B;font-style:italic"> len</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">sys</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">argv</span><span style="color:#7C7F93">)</span><span style="color:#179299"> &#x3C;</span><span style="color:#FE640B"> 3</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"Usage: python3 audit-model-usage.py &#x3C;result.json> &#x3C;allowed_model_1> [allowed_model_2 ...]"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">        sys</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">exit</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">2</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#1E66F5">    audit_model_usage</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">sys</span><span style="color:#7C7F93">.</span><span style="color:#E64553;font-style:italic">argv</span><span style="color:#7C7F93">[</span><span style="color:#FE640B;font-style:italic">1</span><span style="color:#7C7F93">],</span><span style="color:#4C4F69"> sys</span><span style="color:#7C7F93">.</span><span style="color:#E64553;font-style:italic">argv</span><span style="color:#7C7F93">[</span><span style="color:#FE640B;font-style:italic">2</span><span style="color:#7C7F93">:])</span></span>
+<span class="line"></span></code></pre>
+<p>このスクリプトを CI パイプラインや定期バッチの事後フックに組み込むことで、想定外の上位モデル課金が発生した際に即座に異常終了させることができます。</p>
+<h3 id="対策2実行環境の分離という運用方針">対策2：実行環境の分離という運用方針</h3>
+<p><code>claude -p</code> による同一プロセスツリーでの子プロセス呼び出しは、親セッションの環境状態がどこから波及しているか特定しにくいリスクを伴います。</p>
+<p>実務上の運用対策として、親セッションから直接子プロセスを起動するのではなく、独立した新しい端末セッションを作成し、クリーンな環境でエージェントを走らせる方針が有効です。筆者の環境では端末管理ツール（Orca）を採用していますが、一般的な環境であれば tmux や独立したサブシェル（<code>env -i</code> 等）、コンテナ環境での隔離実行が該当します。</p>
+<p>ファイル: <code>scripts/run-isolated-agent.sh</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#EA76CB;font-style:italic">#!/usr/bin/env bash</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">set</span><span style="color:#40A02B"> -euo</span><span style="color:#40A02B"> pipefail</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 親セッションから子プロセスとして叩くのではなく、</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># orca terminal create で独立した新しい端末セッションを作成して実行する</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">orca</span><span style="color:#40A02B"> terminal</span><span style="color:#40A02B"> create</span><span style="color:#40A02B"> --command</span><span style="color:#40A02B"> "claude -p 'Web 調査タスクを実行してください' --model claude-haiku-5-5"</span></span>
+<span class="line"></span></code></pre>
+<p><code>orca terminal create</code> の <code>--command</code> オプションを用いて独立した端末プロセスを立ち上げることで、親セッションのメモリ状態や対話セッション固有の設定が波及するリスクを低減できます。ただし、設定がディスク上の共通設定領域に保持されている場合は端末を分けても引き継がれる可能性があるため、環境分離だけで安心せず、対策1の <code>modelUsage</code> 監査と併用することが肝要です。</p>
+<h2 id="実機検証ログと再現手順">実機検証ログと再現手順</h2>
+<p>本記事で提示した実測数値の再現性を担保するため、検算用のスクリプトを提示します。</p>
+<p>実測ログに記録された総費用 $0.4434 と Opus 課金額 $0.3181 から、Opus が占める費用比率を検算するコードです。</p>
+<p>ファイル: <code>scripts/verify-cost-ratio.py</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#4C4F69">opus_cost </span><span style="color:#179299">=</span><span style="color:#FE640B"> 0.3181</span></span>
+<span class="line"><span style="color:#4C4F69">total_cost </span><span style="color:#179299">=</span><span style="color:#FE640B"> 0.4434</span></span>
+<span class="line"><span style="color:#4C4F69">ratio </span><span style="color:#179299">=</span><span style="color:#4C4F69"> opus_cost </span><span style="color:#179299">/</span><span style="color:#4C4F69"> total_cost</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"Total Cost: $</span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">total_cost</span><span style="color:#8839EF">:.4f</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"Opus Cost:  $</span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">opus_cost</span><span style="color:#8839EF">:.4f</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"Opus Ratio: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">ratio </span><span style="color:#179299">*</span><span style="color:#FE640B"> 100</span><span style="color:#8839EF">:.2f</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">%"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">assert</span><span style="color:#FE640B;font-style:italic"> round</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">total_cost</span><span style="color:#7C7F93">,</span><span style="color:#FE640B"> 4</span><span style="color:#7C7F93">)</span><span style="color:#179299"> ==</span><span style="color:#FE640B"> 0.4434</span></span>
+<span class="line"><span style="color:#8839EF">assert</span><span style="color:#FE640B;font-style:italic"> round</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">opus_cost</span><span style="color:#7C7F93">,</span><span style="color:#FE640B"> 4</span><span style="color:#7C7F93">)</span><span style="color:#179299"> ==</span><span style="color:#FE640B"> 0.3181</span></span>
+<span class="line"><span style="color:#8839EF">assert</span><span style="color:#FE640B;font-style:italic"> round</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">ratio</span><span style="color:#7C7F93">,</span><span style="color:#FE640B"> 3</span><span style="color:#7C7F93">)</span><span style="color:#179299"> ==</span><span style="color:#FE640B"> 0.717</span></span>
+<span class="line"></span></code></pre>
+<p>このスクリプトを実行することで、総費用の 71.74%（四捨五入で約 72%）が Opus 課金であった計算の整合性を確認できます。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-claude--p-model-claude-haiku-5-5-を指定したのに-opus-の課金が発生するのはなぜですか">Q. claude -p —model claude-haiku-5-5 を指定したのに Opus の課金が発生するのはなぜですか？</h3>
+<p><strong>A.</strong> 親セッションで有効化されていた Advisor Tool（<code>/advisor</code>）の設定が子プロセスに引き継がれ、Executor である Haiku が作業中に上位モデルである Opus を Advisor として透過的に呼び出した公算が高いと考えられます。Claude Code では CLI 引数で指定したモデル以外の設定が親環境から波及することがあり、Advisor が呼び出されると会話履歴全体が Opus の入力トークンとして課金されます。</p>
+<h3 id="q-settingsjson-に-advisor-の記述がない場合でも子プロセスに影響しますか">Q. settings.json に advisor の記述がない場合でも、子プロセスに影響しますか？</h3>
+<p><strong>A.</strong> 影響する可能性が極めて高いことが、対照実験の結果から示唆されています。対話セッションで <code>/advisor</code> を操作した場合、設定ファイル（settings 系ファイル）に明示的な変更が記録されていない状態であっても、同一環境から起動された子の <code>claude -p</code> プロセスにその状態が引き継がれ、上位モデルの課金が発生または停止しました。</p>
+<h3 id="q-サブエージェントや-claude--p-の実行で意図しない上位モデルの課金混入を防ぐにはどうすればよいですか">Q. サブエージェントや claude -p の実行で意図しない上位モデルの課金混入を防ぐにはどうすればよいですか？</h3>
+<p><strong>A.</strong> 推奨される対策は、実行環境の分離と実行後のログ検収です。<code>-p</code> による子プロセス呼び出しを避け、<code>orca terminal create</code> 等を用いた独立した端末セッションでエージェントを起動することに加え、実行ログの <code>modelUsage</code> を機械的にパースして許可モデル以外のトークン消費を検知するアサーションを CI や運用ハーネスに組み込むことが有効です。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li><strong>CLI のモデル指定だけではコストは確定しない</strong>: <code>--model</code> 引数で小型モデルを指定しても、親セッションの設定（<code>/advisor</code> 等）が波及して上位モデルの課金が混入することがあります。</li>
+<li><strong>コストの成否は modelUsage のトークン内訳で監査する</strong>: 合計金額や引数にとらわれず、ログの <code>modelUsage</code> で各モデルが消費した入力・出力トークン数を直接確認する検収が不可欠です。</li>
+<li><strong>Advisor Tool は会話履歴全体を上位モデル単価で消費する</strong>: Advisor の入力トークンは会話ログ全体が転送されるため、セッションが長引くほど Opus 単価での課金が急増します。</li>
+<li><strong>予期せぬ設定波及は独立端末（環境分離）と検収で防ぐ</strong>: <code>claude -p</code> による同一環境での子プロセス実行を避け、<code>orca terminal create</code> 等で独立した端末セッションを立ち上げるとともに、実行ログの <code>modelUsage</code> を自動監査することが有効な対策となります。</li>
+</ul>
+<p>AI エージェントのオーケストレーション設計や、サブエージェントのモデル選定・コスト監査・最適化について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://claude.com/blog/the-advisor-strategy">The advisor strategy: Give Sonnet an intelligence boost with Opus</a> Anthropic、2026年4月9日公開。小型モデル主導と Opus 助言の二刀流戦略コンセプトは記事冒頭、BrowseComp において Haiku + Opus Advisor が 41.2% を記録し単体比 2 倍以上・Sonnet 比 85% 低コストを達成したベンチマーク結果は §The advisor tool。※単一ソースのため Anthropic 公式ブログによるベンチマーク発表として言及。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/advisor-tool">Advisor tool</a> Anthropic、2026年11月8日確認。ベータ識別子 <code>advisor-tool-2026-03-01</code>、ツール型 <code>advisor_20260301</code>、<code>server_tool_use</code>、<code>advisor_tool_result</code>、空の <code>input</code>、会話トランスクリプト全体の自動転送仕様は §How it works、パラメータ仕様は §Tool parameters、プロンプトキャッシュ既定 <code>null</code> は §Advisor prompt caching、<code>usage.iterations</code> の <code>advisor_message</code> による内訳記録は §Usage and billing。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-2-4" data-footnote-backref="" aria-label="Back to reference 2-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-2-5" data-footnote-backref="" aria-label="Back to reference 2-5" class="data-footnote-backref">↩<sup>5</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://qiita.com/lavellehatcherjr/items/ae85147a770be54026d0">Anthropic Advisor Toolを50行のPythonで呼んでみた</a> lavellehatcherjr、2026年4月13日公開。<code>server_tool_use</code> と <code>advisor_tool_result</code> ブロックの送受信挙動の解説は §レスポンスの読み方、Advisor 側エラー発生時でもリクエスト全体は失敗せず継続する仕様の解説は §ハマりポイント。※単一メディアのため実務検証例として言及。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://zenn.dev/kai_kou/articles/207-claude-advisor-tool-guide">Claude Advisor Tool入門 — SonnetとOpusを組み合わせてコスト削減と品質向上を両立する</a> kai_kou、2026年5月6日公開。ベータヘッダー <code>advisor-tool-2026-03-01</code>、ツール型 <code>advisor_20260301</code> の解説は §クイックスタート（Python）、および <code>usage.iterations</code> による Advisor 使用量確認の解説は §レスポンス構造の理解 / §使用量の確認。※単一メディアのため実務解説として言及。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://platform.claude.com/docs/en/about-claude/pricing">Pricing</a> Anthropic、2026年11月8日確認。Opus 5.5（入力 $4/MTok、出力 $20/MTok、キャッシュ読出 $0.20/MTok）、Sonnet 5.5（入力 $2/MTok、出力 $10/MTok、キャッシュ読出 $0.10/MTok）、Haiku 5.5（100K以下 入力 $0.10/MTok、出力 $0.50/MTok、キャッシュ読出 $0.01/MTok）の基本単価表は Pricing 表。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://azukiazusa.dev/blog/claude-advisor-tool/">Claude の Advisor tool を活用して性能とコストのバランスを最適化する</a> azukiazusa、2026年4月11日公開。Claude Code における <code>/advisor</code> コマンドによるモデル切り替え操作および Opus の思考プロセス破棄と結論受け渡しの解説は §Claude Code での Advisor tool を試してみる。※単一メディアのため実務運用の観測例として言及。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://zenn.dev/tmae/articles/12de1a648e6385">社内 Claude Code 管理者のためのコスト最適化ガイド</a> tmae、2026年5月29日公開。Claude Code の設定ファイル <code>settings.json</code> の配置構成は §推奨設定スタック（組織配布テンプレート）、環境変数によるサブエージェントモデル指定の解説は §処方②：サブエージェントは Haiku にルーティング。※単一メディアのため実務解説として言及。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p>当ブログの一次計測ログ（非公開・リンクなしテキスト） meetsource、2026年11月6日計測（<code>hands-on-log.md</code>）。本文抽出タスク実測（Haiku $0.0147 と Sonnet $0.204）は §1、Web 調査タスクでの Haiku 実行と Opus 課金混入（$0.4434 中 $0.3181 が Opus、71.74%）は §2、親セッションでの <code>/advisor</code> 無効化と対照実験による Opus 課金消失（$0.1244）は §3、<code>settings.json</code> に記載がない状態での波及観察は §4。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-8-2" data-footnote-backref="" aria-label="Back to reference 8-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-8-3" data-footnote-backref="" aria-label="Back to reference 8-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

@@ -1,0 +1,239 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>AI worker に実装と手順書・SKILL.md を一緒に直させると何が食い違って残るのか ── 7 件の差し戻しから見えた 4 つの型と完了条件 | Meetsource</title><meta name="description" content="実装と手順書・SKILL.md の更新を同じ AI worker に任せると、worker が grep で同期先を調べていても、実行時の挙動・適用範囲・下流の読み手・文書の配置の食い違いが残ることがあります。運営リポジトリの 7 件の差し戻し記録をもとに、ずれの 4 つの型と「実走結果・読み手工程・変異確認」を報告に添える完了条件の設計案を整理します（効果は未計測）。"><link rel="canonical" href="https://www.meetsource.work/blog/ai-worker-doc-impl-mismatch"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="実装と手順書の食い違いで差し戻された 7 件の記録 ── 6 件では AI worker が grep で同期先を確認していた"><meta property="og:description" content="7 件のうち 6 件で worker は同期確認の grep を実行していました。それでも、終了コードの誤記・出力先の上書き・読む工程のない欄への追記などが初回コミットに残り、レビューで差し戻されました。4 つの型と、申告を証拠に置き換える完了条件案を整理します。"><meta property="og:url" content="https://www.meetsource.work/blog/ai-worker-doc-impl-mismatch"><meta property="og:image" content="https://www.meetsource.work/blog/ai-worker-doc-impl-mismatch-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-19T13:58:33.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="実装と手順書の食い違いで差し戻された 7 件の記録 ── 6 件では AI worker が grep で同期先を確認していた"><meta name="twitter:description" content="7 件のうち 6 件で worker は同期確認の grep を実行していました。それでも、終了コードの誤記・出力先の上書き・読む工程のない欄への追記などが初回コミットに残り、レビューで差し戻されました。4 つの型と、申告を証拠に置き換える完了条件案を整理します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/ai-worker-doc-impl-mismatch-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"AI worker に実装と手順書・SKILL.md を一緒に直させると何が食い違って残るのか ── 7 件の差し戻しから見えた 4 つの型と完了条件","description":"実装と手順書・SKILL.md の更新を同じ AI worker に任せると、worker が grep で同期先を調べていても、実行時の挙動・適用範囲・下流の読み手・文書の配置の食い違いが残ることがあります。運営リポジトリの 7 件の差し戻し記録をもとに、ずれの 4 つの型と「実走結果・読み手工程・変異確認」を報告に添える完了条件の設計案を整理します（効果は未計測）。","datePublished":"2026-11-19T13:58:33.000Z","image":"https://www.meetsource.work/blog/ai-worker-doc-impl-mismatch-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/ai-worker-doc-impl-mismatch"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"AI worker にコードと手順書を同時に更新させると、なぜ食い違いが残るのですか？","acceptedAnswer":{"@type":"Answer","text":"worker は同期先を grep で探せても、書いた文が実装の動きと合っているか、その文をどの工程が読むかまでは確かめないことがあるためです。筆者の運営リポジトリ（非公開）で差し戻された 7 件では、終了コードの誤記、同じコミット内での書き分け、読む工程の無い欄への追記、段落の差し込み位置のずれが初回コミットに残りました。"}},{"@type":"Question","name":"grep で関連箇所を検索させるだけでは、ドキュメントドリフトを防げないのですか？","acceptedAnswer":{"@type":"Answer","text":"grep は語の在りかを示すだけなので、それだけでは防げませんでした。実測した 7 件のうち 6 件で worker は同期確認の grep を実行していましたが、検索語や対象がずれていた、出力に出たファイルを更新しなかった、見つけた複数の文書に違う内容を書いた、対象外と知りつつ残した、といった形で食い違いが残りました。"}},{"@type":"Question","name":"実走確認や変異確認を完了条件に入れれば、すべての食い違いを防げますか？","acceptedAnswer":{"@type":"Answer","text":"防げません。段落の差し込み位置のずれは語句も動作も変わらないため、実走表にも読み手の 1 行にも現れません。記録した 7 件では、この型を司令塔の目視による差分確認で見つけました。また、3 つの完了条件の効果はまだ計測していないため、差分を読むレビューを置き換えるものではなく、レビューの前に食い違いが見える形にする案として扱います。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-19T13:58:33.000Z" data-astro-cid-7jjqptxk> 2026.11.19 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#code-review</span><span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>AI worker に実装と手順書・SKILL.md を一緒に直させると何が食い違って残るのか ── 7 件の差し戻しから見えた 4 つの型と完了条件</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/ai-worker-doc-impl-mismatch-hero.webp" alt="AI worker に実装と手順書・SKILL.md を一緒に直させると何が食い違って残るのか ── 7 件の差し戻しから見えた 4 つの型と完了条件" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>実装コードとあわせて <code>SKILL.md</code> や <code>CLAUDE.md</code>、手順書、コメントの更新を同じ AI worker（Claude Code などのコーディングエージェント）に任せ、「関連箇所を確認しました」「食い違いは残していません」という報告を受けて先へ進めたのに、後段のコードレビューで文書と実装の食い違いにより繰り返し差し戻されることがあります。<a href="/blog/worker-haiku-sonnet-rework-tokens">前回の記事</a> では同じ時期の実装タスクを worker のモデルとトークン消費の側から集計し、周辺文書の更新漏れへの手当てとして上位モデルの採用に加え、「変更前に関連箇所を検索して同期先を特定する」「完了報告前に検証コマンドを実際に実行し、終了コードと出力を確認する」という指示を勧めました。なお、本記事で扱う 7 件のうち 4 件（終了コード・段落挿入・指摘元ラベル・出所照合のタスク）は前回の記事でも扱った出来事を含みますが、7 件はいずれも前回の記事の公開より前に起きた出来事であり、そこで勧めた worker 定義のもとで動いていたわけではありません。</p>
+<p><strong>ドキュメントドリフト（Documentation Drift）</strong> とは、コードが変わったのに対応する文書が更新されず、両者が食い違っていく状態を指します<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。言い換えると、手順書やガイドに書いてある動きと、実際のプログラムの動きがずれていく現象です。AI 生成 PR 29,669 件を対象にした調査でも、全体の 63.2%（18,751 件）がコードを変更したにもかかわらず文書を 1 つも更新していませんでした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。もっとも、本記事が扱うのは「文書をまったく更新しなかった」ずれだけではありません。7 件のうち終了コード・正本更新・指摘元ラベルの各タスクには更新漏れも含まれますが、同時に「更新した文書の中身が実装や下流の仕様と食い違った」ずれが繰り返し起きていました。</p>
+<p>このブログの執筆パイプラインを動かしている運営リポジトリ（非公開。以下、リポジトリA）で 2026 年 10 月 28 日〜11 月 11 日に記録された 7 件のタスクについて、AI エージェントにセッション記録と git 履歴を突き合わせさせて復元し、検証コマンドを全件実走して確かめました<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。7 件の worker は Haiku 系が 5 件・Sonnet 系が 2 件、レビューを束ねる司令塔はいずれも Opus 系です<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。その記録を文書と実装の食い違いの側から見直すと、前回勧めた「検索して同期先を特定する」に当たる grep は、7 件中 6 件で worker がすでに実行していました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。それでも食い違いは残りました。grep が確かめるのは「その語がどのファイルにあるか」であって、「書いた文が実装の動きと合っているか」「その文を誰が読むか」ではないからです。本記事では 7 件のずれの型と grep がすり抜けた構造を整理したうえで、完了の根拠を自己申告から証拠へ移す完了条件の設計案を示します。</p>
+<h2 id="7-件の初回コミットに残った食い違いは-4-つの型に分かれた">7 件の初回コミットに残った食い違いは 4 つの型に分かれた</h2>
+<p>7 件すべてで、worker の初回コミットに文書と実装（または文書の配置）の食い違いが残り、レビュー後の修正コミットで直されています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-4" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。7 件のずれは、実行時の挙動・適用範囲・下流の読み手・文書の配置の 4 つに分かれました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>型</th><th>タスクの呼び名</th><th>初回コミットに残ったこと</th><th>修正コミットでの直り方</th><th>worker</th></tr></thead><tbody><tr><td>実行時の挙動</td><td>終了コード</td><td>スキル定義文書に「終了コード 2（使い方の誤り・plan.md が無い）」と書いたが、検査スクリプトが 2 を返すのは引数なしのときだけで、plan.md が無いときは 1。<code>CLAUDE.md</code> と冒頭コメントへの同期も漏れ</td><td>「引数なしで起動した場合」に直し、同期漏れの 2 か所も直した</td><td>Haiku 系</td></tr><tr><td>実行時の挙動</td><td>出力先</td><td>並行して走る 2 つの手順が同じ出力先ディレクトリを指定して上書きし合う。終了コード 2 での停止も未記載</td><td>片方の出力先を分け、「0 以外なら止める」に直した</td><td>Haiku 系</td></tr><tr><td>実行時の挙動</td><td>指摘元ラベル</td><td>集計スクリプトのコメントに「旧形式の欄名は書式違反になる」と書いたが、正規表現は旧欄名を読み飛ばし、旧欄名に正しい値を持つ 9 件が違反にならなかった（検出は 6 件）。ラベルの意味が実行ホストによって逆転する記述と <code>CLAUDE.md</code> の追従漏れも同時に残った</td><td>旧欄名の検査を足し、書式違反の検出は 6 件から 15 件になった</td><td>Haiku 系</td></tr><tr><td>実行時の挙動</td><td>出所照合</td><td>同じコミットで <code>CLAUDE.md</code> には実装どおりに書いたのに、ルール条文と 2 つのスキル定義文書には突き合わせをしない旨を書いた（実装は、<code>引用元:</code> に識別子があれば突き合わせて、不一致なら exit 1）</td><td>コードは変えず、3 文書の記述を実装に合わせた</td><td>Sonnet 系</td></tr><tr><td>適用範囲</td><td>正本更新</td><td>正本の用語集（<code>CONTEXT.md</code>）を更新しなかった。1 往復目で追記した必須条件は 2 つの工程に掛かる位置に置かれ、対象外の工程にも必須と読めた</td><td>追記の主語を対象の工程に絞り、対象外を明記した</td><td>Haiku 系</td></tr><tr><td>下流の読み手</td><td>補足指示</td><td>補足の指示を「降格理由の末尾に添える」と書いたが、そのファイルを読む執筆工程は無く、校閲工程はその欄を対象外にしていた。公開済み記事の過去記録を削り、別の記録が参照していた番号も消えた</td><td>補足の行き先を執筆工程が読む欄（設計書末尾の持ち越し欄）に変え、過去記録には事後整理の注記を足した</td><td>Sonnet 系</td></tr><tr><td>文書の配置</td><td>段落挿入</td><td>手順 3 の直下に手順 4 を差し込み、手順 3 に付属する 2 段落が手順 4 の説明に読める配置になった</td><td>内容は変えず、手順 4 を 2 段落の後ろへ移した</td><td>Haiku 系</td></tr></tbody></table>
+<p>上位モデルである Sonnet 系の worker が担当した 2 件も、実行時の挙動と下流の読み手の型に入っています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-5" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h3 id="実行時の挙動とのずれ書いた終了コードと実際の終了コードが違う">実行時の挙動とのずれ：書いた終了コードと実際の終了コードが違う</h3>
+<p>実行時の挙動がずれた代表例が、終了コードのタスクです<sup><a href="#user-content-fn-2" id="user-content-fnref-2-6" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。スキル定義文書（<code>SKILL.md</code>）の分岐説明に終了コード 2 の条件を書いた際、初回コミットでは実装されていない条件まで終了コード 2 に含めていました。レビュー後の修正差分は次のとおりです。</p>
+<p>引用元: リポジトリA（非公開）の SKILL.md の修正差分（セッション記録、2026-11-01）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="diff"><code><span class="line"><span style="color:#7C7F93"><span style="user-select: none;">-</span></span><span style="color:#D20F39">   - **終了コード 2（使い方の誤り・plan.md が無い）**: 昇格せず、ユーザーに報告して止めてください。</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">   - **終了コード 2（使い方の誤り。引数なしで起動した場合）**: 昇格せず、ユーザーに報告して止めてください。</span></span>
+<span class="line"></span></code></pre>
+<p><code>-</code> 行が初回コミットで worker が書いた文、<code>+</code> 行がレビュー後の文です。変わったのは括弧の中の条件だけで、<code>plan.md</code> が無いケースは終了コード 2 ではありませんでした。</p>
+<p>worker がレビューの指摘を受けてから、存在しないファイルを渡した場合と、引数を渡さない場合の 2 通りで企画ゲートの検査スクリプトを実行した結果は次のとおりでした<sup><a href="#user-content-fn-2" id="user-content-fnref-2-7" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>引用元: リポジトリA（非公開）のセッション記録（2026-11-01、worker による実行結果）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>missing plan exit=1</span></span>
+<span class="line"><span>no-arg exit=2</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>文書には「<code>plan.md</code> が無い → 2」と書いていましたが、実測は <code>1</code> でした。worker がこの 2 通りの実行を確かめたのは、レビューの指摘を受けた後でした。このタスクではさらに、<code>CLAUDE.md</code> とスクリプト冒頭コメントへの同期も初回コミットから漏れていました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-8" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>同じ「実行時の挙動」の型に入った残り 3 件でも、似た構造が見られました。出力先のタスクでは並行実行する 2 手順が同じディレクトリに出力して上書きし合う指定が残り、指摘元ラベルのタスクではコメントに「旧形式の欄名は書式違反になる」と書きながら正規表現が旧欄名を読み飛ばしていました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-9" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。また出所照合のタスクでは、同じコミット内の <code>CLAUDE.md</code> には実装どおりに書いたのに、ルール条文と 2 つのスキル定義文書には逆の挙動を書いていました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-10" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h3 id="適用範囲のずれ正本を直さず直した追記は対象外の工程にも掛かった">適用範囲のずれ：正本を直さず、直した追記は対象外の工程にも掛かった</h3>
+<p>正本更新のタスクは、7 件の中で唯一レビューが 2 往復したタスクです<sup><a href="#user-content-fn-2" id="user-content-fnref-2-11" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。初回コミットでは関連する 2 つのスキル文書だけを変更し、正本の用語集（<code>CONTEXT.md</code>）を更新しませんでした<sup><a href="#user-content-fn-2" id="user-content-fnref-2-12" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>さらに 1 往復目の修正で <code>CONTEXT.md</code> へ追記した際も、事前検証と校閲の 2 つの工程にまたがる位置へ必須条件を書いたため、本来は対象外の校閲工程にも必須と読める新たな過大記載が生まれました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-13" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。2 往復目で追記の主語を対象工程に絞り、校閲工程は対象外と明記してようやく収束しています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-14" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。差し戻しの往復を重ねても、修正のために足した文が次の適用範囲のずれを持ち込み得る例です。</p>
+<h3 id="下流の読み手がいない書いた指示を読む工程が無かった">下流の読み手がいない：書いた指示を読む工程が無かった</h3>
+<p>補足指示のタスクでは、「補足の指示は降格理由の末尾に添える」という手順を書きましたが、その出力ファイルを読む執筆工程が存在せず、校閲工程側はその欄を対象外としていました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-15" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>このタスクの worker は、校閲工程でその欄が拾われなくなることを認識したうえで仕様の指定どおりとしてそのまま残しており、執筆工程がそのファイルを読まない点は確かめていませんでした<sup><a href="#user-content-fn-2" id="user-content-fnref-2-16" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。同じ変更の中で公開済み記事の過去記録を削って参照番号を消す破壊も起き、修正コミットで補足の行き先を執筆工程が読む設計書末尾の欄へ変えています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-17" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h3 id="文書の配置のずれ段落の割り込みで説明の帰属が変わった">文書の配置のずれ：段落の割り込みで説明の帰属が変わった</h3>
+<p>段落挿入のタスクは、7 件の中で唯一 <code>code-review</code> サブエージェントを呼ばずに司令塔が差分を目視して見つけた例です<sup><a href="#user-content-fn-2" id="user-content-fnref-2-18" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>手順 3 の直下に手順 4 を差し込んだ結果、もともと手順 3 に付属していた 2 つの段落が手順 4 の説明であるかのように読める配置になりました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-19" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。中身の語句は 1 字も間違っておらず、実行しても動きは変わりません。修正コミットでは文面を変えず、手順 4 を 2 段落の後ろへ移しています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-20" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h2 id="grep-で同期先を確かめても食い違いが残ったgrep-が確かめていないもの">grep で同期先を確かめても食い違いが残った：grep が確かめていないもの</h2>
+<p>7 件のうち 6 件では、worker は他箇所の同期先を確かめるための grep をすでに実行していました（残る 1 件の出力先のタスクには、同期確認の grep の記録がありません）<sup><a href="#user-content-fn-2" id="user-content-fnref-2-21" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。もっとも、grep を実行した 6 件すべてが完了報告に同期確認を書いたわけではありません。完了報告に他箇所の確認や同期を明記したのは 3 件（出所照合・終了コード・補足指示のタスク）で、残る 3 件（正本更新・指摘元ラベル・段落挿入のタスク）は grep を実行したものの報告には書いていませんでした<sup><a href="#user-content-fn-2" id="user-content-fnref-2-22" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>完了報告に同期確認を書いた事例でも、終了コードのタスクでは「同じ規則を述べる箇所は、ほかに … にもありませんでした。食い違いは残していません。」と報告し、出所照合のタスクでは「…blog-write/blog-review の SKILL・CLAUDE.md の記述も同期しました」と報告していました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-23" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。それでも 7 件のうち 6 件は司令塔が起動した <code>code-review</code> サブエージェント（規約と仕様の 2 観点）の指摘で、1 件（段落挿入のタスク）は司令塔の目視による差分確認で食い違いが見つかっています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-24" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>なぜ grep を実行しても食い違いがすり抜けたのかを見ると、穴は次の 4 つに分かれます。</p>
+<ol>
+<li><strong>検索語・検索対象のずれ（終了コード・指摘元ラベル）</strong>: 終了コードのタスクでは別のスクリプト名を含む条件で検索していたため、検索対象に <code>CLAUDE.md</code> と該当スクリプト本体が入っていませんでした<sup><a href="#user-content-fn-2" id="user-content-fnref-2-25" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。指摘元ラベルのタスクでは、残っていた古い表記と検索した語が別だったため引っかかりませんでした<sup><a href="#user-content-fn-2" id="user-content-fnref-2-26" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</li>
+<li><strong>検索出力に出たファイルの見落とし（正本更新）</strong>: grep の出力の先頭に正本の用語集（<code>CONTEXT.md</code>）が現れていましたが、初回コミットでは更新されませんでした<sup><a href="#user-content-fn-2" id="user-content-fnref-2-27" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。出力にファイル名が表示されることと、そのファイルが正しく更新されることは一致しません。</li>
+<li><strong>同じコミット内での書き分け（出所照合）</strong>: worker は同期先のファイルをすべて見つけて同時に書き換えたにもかかわらず、<code>CLAUDE.md</code> と他の 3 文書で食い違う内容を書きました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-28" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。grep は語の在りかを示すだけで、書いた文同士や文と実装が一致しているかは見ません。</li>
+<li><strong>対象外と知りつつ残した（補足指示）</strong>: 下流の校閲工程で拾われなくなることを認識したうえで、仕様上の指定としてそのまま残していました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-29" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。検索の丁寧さとは別のところで起きた食い違いです。</li>
+</ol>
+<p>「語の照合で分かるずれ」と「挙動の説明のずれ」で検出されやすさが大きく違う点は、外部の事例研究でも観察されています。AI エージェントが日常的に編集するリポジトリに 20 件の古い記述を意図的に埋め込み、LLM による監査を延べ 180 チェック走らせた実験では、cron スケジュールの不一致（27 チェック中 27）や改名された識別子（27 チェック中 25）のようにディレクトリ一覧や対になる表と直接突き合わせられるずれは高い確率で検出されました<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。一方、スクリプトの挙動説明の不正確さは 18 チェック中 6（33%）しか検出されていません<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。手法も母数も異なるため率をそのまま比較はできませんが、語の有無ではなく「挙動の説明が実装と合っているか」を見抜く難しさは共通しています。</p>
+<p>なお、当ブログで過去に扱った、完了報告の裏にファイル編集や保存の実体が無かった「未実施事故」（<a href="/blog/ai-agent-completion-evidence">完了報告に証跡を求めて未実施を防ぐ記事</a>）や、承認ログ上は成功・承認済みなのに中身がモデルの謝罪文になっていた「完了の偽陽性」（<a href="/blog/ai-agent-false-positive-completion">承認ログと検収を分離する記事</a>）とは性質が異なります。今回の 7 件は、worker が実際にファイルを編集し、コミットも存在する状態で起きました。作業は行われていたにもかかわらず、書かれた文書の中身や配置が実装・下流仕様と食い違っていた点が特徴です。</p>
+<p>編集前に grep で同期先を探させる指示は、ずれが起きる前に原因を潰そうとする「予防」の設計です。しかし、検索語の選び違いから同一コミット内の書き分けまで原因の側は形を変えるため、予防だけを積んでも守っている場所が実際にずれた場所と噛み合わないことがあります。そこで必要になるのが、結果の側——「書いた文と実装の動きが合っているか」「その文を誰が読むか」——を完了時点で突き合わせる「検収」への重心移動です。</p>
+<h2 id="完了報告に確認しましたではなく証拠を添えさせる3-つの完了条件">完了報告に「確認しました」ではなく証拠を添えさせる：3 つの完了条件</h2>
+<p>7 件の差し戻し記録を受けて、リポジトリA では worker の完了条件として 3 つの案を書き留めました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-30" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。どれも「worker が確認したと申告すること」を、「申告を裏づける証拠を報告に添えること」に置き換える設計です。ただし、<strong>これら 3 つの完了条件を導入した後に差し戻しがどう変化したかはまだ計測していません</strong><sup><a href="#user-content-fn-2" id="user-content-fnref-2-31" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。ここでは効果の実測値ではなく、7 件の記録から抽出した設計案と、それぞれの対象範囲を整理します。</p>
+<h3 id="文書に書いたケースを-1-回ずつ実走した入力結果の表を添える">文書に書いたケースを 1 回ずつ実走した「入力→結果」の表を添える</h3>
+<p>実行時の挙動の型（終了コード・出力先・指摘元ラベル・出所照合）に向けた条件です。文書に「この条件なら終了コード N」「この入力なら止まる」と書いたら、そのケースごとに実際にコマンドを動かした結果を 1 行ずつ並べて完了報告に添えさせます。終了コードのタスクの例でいえば、「<code>plan.md</code> が無い → 2」と書いた行の実走欄には実測値の <code>1</code> が並ぶ形になります<sup><a href="#user-content-fn-2" id="user-content-fnref-2-32" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>GitLab のドキュメントドリフト修復ガイドでも、シェルの構文チェックでは改名されたオプションが動くかどうかは分からず、例を実行するコマンドであれば分かるという原則が示されています<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。構文や表記が整っていても、書いたケースを 1 回ずつ動かした結果と並べない限り、終了コードや出力のずれは表に出てきません。</p>
+<h3 id="どこへ書けという指示にはそこを読む工程を-1-行で特定させる">「どこへ書け」という指示には、そこを読む工程を 1 行で特定させる</h3>
+<p>下流の読み手の型（補足指示）と適用範囲の型（正本更新）に向けた条件です。「降格理由の末尾に添える」「<code>CONTEXT.md</code> に追記する」のように書き先を決める変更では、「その欄を読むのはどの工程か」を 1 行で報告に添えさせます。読む工程が存在しなければ、その欄には「なし」と書くことになります。</p>
+<p>同様に、適用範囲が問題になりやすい条文変更では、「この条件が掛かる工程」と「掛からない工程」を明記する行を添えさせます。書き先を直したかどうかではなく、「その文がどの工程で読まれ、どの工程には掛からないか」を構造として書き出させる点が狙いです。</p>
+<h3 id="検査を足したらその検査を外すとテストが落ちることを確かめる">検査を足したら、その検査を外すとテストが落ちることを確かめる</h3>
+<p>指摘元ラベルのタスクで起きた「検査を外しても通るテスト」に向けた条件です。初回コミットのテストでは、1 つの異常フィクスチャに「見出しの空白欠落」と「旧欄名」という 2 種類の違反を同居させていたため、新しく足した旧欄名の検査を外しても、もう一方の違反でテストが通ってしまう状態でした<sup><a href="#user-content-fn-2" id="user-content-fnref-2-33" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>レビューの指摘後、worker は違反ごとにフィクスチャを分離したうえで、検証履歴の集計スクリプトから値の検査を外した場合と旧欄名の検査を外した場合を 1 つずつ実行し、どちらでもテストが <code>exit=1</code> で落ちることを確かめてから元に戻しています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-34" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>引用元: リポジトリA（非公開）のセッション記録（2026-11-01、worker による変異実行の結果）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>FAIL: second malformed: got ["second-old-name"]</span></span>
+<span class="line"><span>exit=1</span></span>
+<span class="line"><span>FAIL: second malformed: got ["second-bad-value"]</span></span>
+<span class="line"><span>exit=1</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>上の 2 行が値の検査を外したとき、下の 2 行が旧欄名の検査を外したときの結果です。どちらの検査を外しても、外した検査が担当していたフィクスチャだけが違反として見つからなくなり、テストが失敗します。バグ修正や検査追加のあとに最初から通ってしまうテストをあえて壊して「赤になるか」を確かめる逆検証の考え方は、公開済みの <a href="/blog/regression-test-mutation-fault-masking">回帰テストの変異確認を扱った記事</a> でも整理しました。ドキュメントドリフトの検査でも同様に、文書を更新しない PR という負のフィクスチャ（4 行の Go ファイル追加）を与えて、検出が実際に発火するかを確かめる設計が紹介されています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>worker の grep 確認と後段の <code>code-review</code> は今回の 7 件で実際に動いていた仕組みで、3 つの完了条件はまだ案の段階にあります<sup><a href="#user-content-fn-2" id="user-content-fnref-2-35" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>手法</th><th>何を確かめるか</th><th>7 件での実績</th><th>捕まえにくい型</th><th>コスト</th></tr></thead><tbody><tr><td>worker の grep による同期確認（予防）</td><td>語がどのファイルにあるか</td><td>7 件中 6 件で実行、食い違いは残った</td><td>書き分け・挙動のずれ・読み手不在・配置</td><td>安い（worker の作業内）</td></tr><tr><td>後段の <code>code-review</code> サブエージェント（検収）</td><td>差分を規約と仕様の 2 観点で読む</td><td>7 件中 6 件の食い違いを検出（残り 1 件は呼ばず司令塔の目視で検出）</td><td>呼ばなかった変更には効かない</td><td>サブエージェント 2 本ぶんのトークン（量は測っていない）</td></tr><tr><td>証拠を添える完了条件（案）</td><td>書いた文が動きと合うか、誰が読むか、検査が効くか</td><td>未導入・未計測</td><td>段落の配置（実走でも読み手の特定でも出ない）</td><td>worker の作業が増える（量は測っていない）</td></tr></tbody></table>
+<p>繰り返しますが、3 つの完了条件の効果は測っていません<sup><a href="#user-content-fn-2" id="user-content-fnref-2-36" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。<code>code-review</code> を置き換えるものではなく、<code>code-review</code> に届く前に worker 自身の報告の中で食い違いが見える形にする案として位置づけています。</p>
+<p>3 つの案を 1 枚の完了報告にまとめると、次の 3 つの表を添えさせる形になります。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#DF8E1D">### 実走確認表</span></span>
+<span class="line"><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 文書に書いたケース </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 実行したコマンド </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 期待した結果 </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 実際の結果 </span><span style="color:#7C7F93">|</span></span>
+<span class="line"><span style="color:#7C7F93">|---|---|---|---|</span></span>
+<span class="line"><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 引数なしで起動 </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 引数なしで実行 </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> exit 2 </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> exit 2 </span><span style="color:#7C7F93">|</span></span>
+<span class="line"><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> plan.md が無い </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 存在しないファイルを渡す </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> exit 2 </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> exit 1 </span><span style="color:#7C7F93">|</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#DF8E1D">### 書き先と読み手・適用範囲</span></span>
+<span class="line"><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 書いた指示 </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 書いた場所 </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> その場所を読む工程 </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 確かめた方法 </span><span style="color:#7C7F93">|</span></span>
+<span class="line"><span style="color:#7C7F93">|---|---|---|---|</span></span>
+<span class="line"><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 補足の指示を降格理由の末尾に添える </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 事前検証結果ファイルの末尾 </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> なし </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 執筆工程の読み込み対象を確認 </span><span style="color:#7C7F93">|</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#DF8E1D">### 検査の変異確認</span></span>
+<span class="line"><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 足した検査 </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 外したときのテスト結果 </span><span style="color:#7C7F93">|</span></span>
+<span class="line"><span style="color:#7C7F93">|---|---|</span></span>
+<span class="line"><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 値の書式検査 </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> exit=1 </span><span style="color:#7C7F93">|</span></span>
+<span class="line"><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> 旧欄名の書式検査 </span><span style="color:#7C7F93">|</span><span style="color:#4C4F69"> exit=1 </span><span style="color:#7C7F93">|</span></span>
+<span class="line"></span></code></pre>
+<p>3 つの表はそれぞれ、実行時の挙動、下流の読み手と適用範囲、検査の効き目に対応しています。表に並んだ値が期待と食い違っていれば報告の時点で表面化しますが、段落の配置のずれだけはどの表にも現れません。</p>
+<h2 id="証拠を求めても残る限界と想定される反論">証拠を求めても残る限界と、想定される反論</h2>
+<p>完了報告に証拠を添えさせる設計には、仕組み上の限界とトレードオフがあります。</p>
+<p>第 1 に、<strong>段落の配置は証拠で捕まりません</strong>。段落挿入のタスクでは語句もスクリプトの挙動も変わっておらず、実走表にも読み手の 1 行にもずれが出ませんでした<sup><a href="#user-content-fn-2" id="user-content-fnref-2-37" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。7 件の中でこの型を見つけたのは、司令塔による差分の目視でした<sup><a href="#user-content-fn-2" id="user-content-fnref-2-38" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。差分を人間または独立したレビューエージェントが読む工程は依然として残ります。</p>
+<p>第 2 に、<strong>worker が作る証拠もまた worker の申告である点</strong> です。実走表や変異確認の表を埋めるのは worker 自身であるため、実際にはコマンドを動かさずに表を埋める余地はゼロになりません（今回の 7 件の記録に、実走表を偽って埋めた事例はありません）。報告を受け取る側が、どの行を自分の側で再実行して裏を取るかを決めておく必要があります。</p>
+<p>第 3 に、「<strong>worker の作業量とトークンが増えるのでは</strong>」という反論があります。実走や変異確認を完了条件に加えれば、worker のターン数と消費トークンは増える側に動きます（今回の 7 件では増減量を集計していないため、具体的な数値は出せません）<sup><a href="#user-content-fn-2" id="user-content-fnref-2-39" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。一方で、差し戻しの往復が増えると会話履歴全体が毎ターン再送信されて総トークンが膨らむ構図は、<a href="/blog/worker-haiku-sonnet-rework-tokens">前回の記事</a> で実測したとおりです。</p>
+<p>第 4 に、「<strong>上位モデルにすれば済むのでは</strong>」という反論もあります。7 件のうち 2 件（出所照合と補足指示のタスク）は、上位モデルである Sonnet 系の worker で起きています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-40" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。ただし、7 件は時期・タスクの種類・ツールの版がタスクごとに異なる実務記録であるため、モデル間の発生率や優劣をこの記録から比較することはできません<sup><a href="#user-content-fn-2" id="user-content-fnref-2-41" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。少なくとも、上位モデルであればこの種の食い違いが起きない前提には置けないことは確かです。</p>
+<p>第 5 に、「<strong>プロンプトに確認指示を足せば済むのでは</strong>」という反論です。前回の記事で勧めた「検索して同期先を特定する」に当たる grep は、今回の 7 件がそれより前の出来事でありながら 7 件中 6 件で worker が自ら実行していました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-42" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。今回の 4 つの穴（検索対象のずれ、出力先頭の見落とし、同一コミット内の書き分け、対象外と認識したままの放置）を見る限り、検索を促す文言を増やすだけでは届きにくい種類のずれに見えます。プロンプトの指示は守られない場合がある前提で、外から突き合わせられる証拠の枠組みを置く必要があります。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>モデルの能力や周辺の自動化ツールが変われば、完了条件の中で人の手や worker の手作業に残る範囲も変わります。</p>
+<p>まず、<strong>モデルが新しくなっても残る領域があります</strong>。先に触れた事例研究では、過去に起きた失敗を現行世代と旧世代のモデルにやり直させるリプレイ実験も行われています<sup><a href="#user-content-fn-3" id="user-content-fnref-3-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。現行の Sonnet 系モデルを使った実験では、行動の失敗 3 種がガードなしでも再発しなかった一方、スキルを追加したときに「スキルの件数」の記述がずれるドリフトだけは、pre-commit の lint 検査を外すと 3 回中 3 回再発し、lint 検査を入れた状態では 2 回中 0 回に抑えられました（3 回目は期限ルールによりタスクを辞退したため分母が 2）<sup><a href="#user-content-fn-3" id="user-content-fnref-3-4" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。1 つの事例研究からの結果ではありますが、文書の記述がコードやファイルの状態を写し取る種類のずれは、モデルの世代交代を待つより機械的な検査に任せる側に入る、という読み方ができます。</p>
+<p>次に、<strong>ドキュメントの自動検証ツールが普及した場合の変化</strong> です。GitLab のクックブックが示すように、文書中のコマンド例を CI で実行して壊れた例を検出・修復する仕組みが整えば<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>、worker が手で「入力→結果」の実走表を埋める手間は不要になります。それでも、「その文書を下流のどの工程が読むか」「追記した条件はどの工程に掛かるか」という設計上の問いはコマンドの実行だけでは答えが出ないため、読み手と適用範囲の確認は残ります。</p>
+<p>そうして機械的に確かめられる領域が広がるほど、人間の役割も移ります。AI が書いたコードや文書を人間が毎回すべて読み切る運用から離れるなら、人間が設計すべき対象は変更内容の 1 行ずつではなく、「worker の完了報告に何を添えさせ、どの観点でレビューさせるか」という確かめ方の仕組みの側になります。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-ai-worker-にコードと手順書を同時に更新させるとなぜ食い違いが残るのですか">Q. AI worker にコードと手順書を同時に更新させると、なぜ食い違いが残るのですか？</h3>
+<p><strong>A.</strong> worker は同期先を grep で探せても、書いた文が実装の動きと合っているか、その文をどの工程が読むかまでは確かめないことがあるためです。筆者の運営リポジトリ（非公開）で差し戻された 7 件では、終了コードの誤記、同じコミット内での書き分け、読む工程の無い欄への追記、段落の差し込み位置のずれが初回コミットに残りました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-43" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h3 id="q-grep-で関連箇所を検索させるだけではドキュメントドリフトを防げないのですか">Q. grep で関連箇所を検索させるだけでは、ドキュメントドリフトを防げないのですか？</h3>
+<p><strong>A.</strong> grep は語の在りかを示すだけなので、それだけでは防げませんでした。実測した 7 件のうち 6 件で worker は同期確認の grep を実行していましたが、検索語や対象がずれていた、出力に出たファイルを更新しなかった、見つけた複数の文書に違う内容を書いた、対象外と知りつつ残した、といった形で食い違いが残りました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-44" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h3 id="q-実走確認や変異確認を完了条件に入れればすべての食い違いを防げますか">Q. 実走確認や変異確認を完了条件に入れれば、すべての食い違いを防げますか？</h3>
+<p><strong>A.</strong> 防げません。段落の差し込み位置のずれは語句も動作も変わらないため、実走表にも読み手の 1 行にも現れません。記録した 7 件では、この型を司令塔の目視による差分確認で見つけました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-45" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。また、3 つの完了条件の効果はまだ計測していないため、差分を読むレビューを置き換えるものではなく、レビューの前に食い違いが見える形にする案として扱います<sup><a href="#user-content-fn-2" id="user-content-fnref-2-46" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li>リポジトリA で文書と実装の食い違いにより差し戻された 7 件では、ずれ方は実行時の挙動・適用範囲・下流の読み手・文書の配置の 4 つに分かれた<sup><a href="#user-content-fn-2" id="user-content-fnref-2-47" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</li>
+<li>同じ 7 件のうち 6 件で worker は同期確認の grep を実行していたが、検索対象のずれ・出力先頭の見落とし・同一コミット内の書き分け・対象外と認識したままの放置により食い違いは残った。grep が確かめるのは語の在りかであり、書いた文と実装の動きの一致ではない<sup><a href="#user-content-fn-2" id="user-content-fnref-2-48" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</li>
+<li>7 件のうち 2 件は上位モデルである Sonnet 系の worker で起きており（7 件ではモデル間の比較はできない）、上位モデルへの切り替えだけで解消する前提には置けない<sup><a href="#user-content-fn-2" id="user-content-fnref-2-49" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</li>
+<li>完了の根拠を「確認しました」という申告から、文書に書いたケースの実走結果、書き先を読む工程の 1 行特定、検査を外すとテストが落ちることの確認、という証拠へ移す案を書き留めた。導入後の効果は未計測である<sup><a href="#user-content-fn-2" id="user-content-fnref-2-50" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</li>
+<li>段落の配置のように実走表や読み手の特定では捕まらない型は残るため、差分を読むレビューは置き換えず、その手前で食い違いを見える形にする位置づけで運用する。</li>
+</ul>
+<p>AI エージェントに任せる作業の完了条件や、レビュー体制の設計について見直したい方は、<a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://arxiv.org/html/2610.27381v1">Documentation Drift in AI-Generated Pull Requests</a> Will De Michele, Kla Tantithamthavorn（Monash University）、2026 年 10 月 19 日公開、APSEC 2026 Early Research Achievements 採録。ドキュメントドリフトの定義は Section I、AI 生成 PR 29,669 件のうち 63.2%（18,751 件）が文書を 1 つも更新していなかった事実は Section IV-A（RQ1）。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p>このブログの運営リポジトリ（非公開）の実装タスク 7 件のセッション記録と git 履歴（2026 年 10 月 28 日〜11 月 11 日）。2026 年 11 月 19 日に AI エージェントでセッション記録と git 履歴を突き合わせて復元し、検証コマンドを全件実走して確認。対象 7 件の内訳・使用モデル、初回コミットと修正コミットの対応、同期確認 grep の実行有無と完了報告・発見経路、レビュー往復数・指摘件数・変異実行の実測を裏づける一次記録。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-2-4" data-footnote-backref="" aria-label="Back to reference 2-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-2-5" data-footnote-backref="" aria-label="Back to reference 2-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-2-6" data-footnote-backref="" aria-label="Back to reference 2-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-2-7" data-footnote-backref="" aria-label="Back to reference 2-7" class="data-footnote-backref">↩<sup>7</sup></a> <a href="#user-content-fnref-2-8" data-footnote-backref="" aria-label="Back to reference 2-8" class="data-footnote-backref">↩<sup>8</sup></a> <a href="#user-content-fnref-2-9" data-footnote-backref="" aria-label="Back to reference 2-9" class="data-footnote-backref">↩<sup>9</sup></a> <a href="#user-content-fnref-2-10" data-footnote-backref="" aria-label="Back to reference 2-10" class="data-footnote-backref">↩<sup>10</sup></a> <a href="#user-content-fnref-2-11" data-footnote-backref="" aria-label="Back to reference 2-11" class="data-footnote-backref">↩<sup>11</sup></a> <a href="#user-content-fnref-2-12" data-footnote-backref="" aria-label="Back to reference 2-12" class="data-footnote-backref">↩<sup>12</sup></a> <a href="#user-content-fnref-2-13" data-footnote-backref="" aria-label="Back to reference 2-13" class="data-footnote-backref">↩<sup>13</sup></a> <a href="#user-content-fnref-2-14" data-footnote-backref="" aria-label="Back to reference 2-14" class="data-footnote-backref">↩<sup>14</sup></a> <a href="#user-content-fnref-2-15" data-footnote-backref="" aria-label="Back to reference 2-15" class="data-footnote-backref">↩<sup>15</sup></a> <a href="#user-content-fnref-2-16" data-footnote-backref="" aria-label="Back to reference 2-16" class="data-footnote-backref">↩<sup>16</sup></a> <a href="#user-content-fnref-2-17" data-footnote-backref="" aria-label="Back to reference 2-17" class="data-footnote-backref">↩<sup>17</sup></a> <a href="#user-content-fnref-2-18" data-footnote-backref="" aria-label="Back to reference 2-18" class="data-footnote-backref">↩<sup>18</sup></a> <a href="#user-content-fnref-2-19" data-footnote-backref="" aria-label="Back to reference 2-19" class="data-footnote-backref">↩<sup>19</sup></a> <a href="#user-content-fnref-2-20" data-footnote-backref="" aria-label="Back to reference 2-20" class="data-footnote-backref">↩<sup>20</sup></a> <a href="#user-content-fnref-2-21" data-footnote-backref="" aria-label="Back to reference 2-21" class="data-footnote-backref">↩<sup>21</sup></a> <a href="#user-content-fnref-2-22" data-footnote-backref="" aria-label="Back to reference 2-22" class="data-footnote-backref">↩<sup>22</sup></a> <a href="#user-content-fnref-2-23" data-footnote-backref="" aria-label="Back to reference 2-23" class="data-footnote-backref">↩<sup>23</sup></a> <a href="#user-content-fnref-2-24" data-footnote-backref="" aria-label="Back to reference 2-24" class="data-footnote-backref">↩<sup>24</sup></a> <a href="#user-content-fnref-2-25" data-footnote-backref="" aria-label="Back to reference 2-25" class="data-footnote-backref">↩<sup>25</sup></a> <a href="#user-content-fnref-2-26" data-footnote-backref="" aria-label="Back to reference 2-26" class="data-footnote-backref">↩<sup>26</sup></a> <a href="#user-content-fnref-2-27" data-footnote-backref="" aria-label="Back to reference 2-27" class="data-footnote-backref">↩<sup>27</sup></a> <a href="#user-content-fnref-2-28" data-footnote-backref="" aria-label="Back to reference 2-28" class="data-footnote-backref">↩<sup>28</sup></a> <a href="#user-content-fnref-2-29" data-footnote-backref="" aria-label="Back to reference 2-29" class="data-footnote-backref">↩<sup>29</sup></a> <a href="#user-content-fnref-2-30" data-footnote-backref="" aria-label="Back to reference 2-30" class="data-footnote-backref">↩<sup>30</sup></a> <a href="#user-content-fnref-2-31" data-footnote-backref="" aria-label="Back to reference 2-31" class="data-footnote-backref">↩<sup>31</sup></a> <a href="#user-content-fnref-2-32" data-footnote-backref="" aria-label="Back to reference 2-32" class="data-footnote-backref">↩<sup>32</sup></a> <a href="#user-content-fnref-2-33" data-footnote-backref="" aria-label="Back to reference 2-33" class="data-footnote-backref">↩<sup>33</sup></a> <a href="#user-content-fnref-2-34" data-footnote-backref="" aria-label="Back to reference 2-34" class="data-footnote-backref">↩<sup>34</sup></a> <a href="#user-content-fnref-2-35" data-footnote-backref="" aria-label="Back to reference 2-35" class="data-footnote-backref">↩<sup>35</sup></a> <a href="#user-content-fnref-2-36" data-footnote-backref="" aria-label="Back to reference 2-36" class="data-footnote-backref">↩<sup>36</sup></a> <a href="#user-content-fnref-2-37" data-footnote-backref="" aria-label="Back to reference 2-37" class="data-footnote-backref">↩<sup>37</sup></a> <a href="#user-content-fnref-2-38" data-footnote-backref="" aria-label="Back to reference 2-38" class="data-footnote-backref">↩<sup>38</sup></a> <a href="#user-content-fnref-2-39" data-footnote-backref="" aria-label="Back to reference 2-39" class="data-footnote-backref">↩<sup>39</sup></a> <a href="#user-content-fnref-2-40" data-footnote-backref="" aria-label="Back to reference 2-40" class="data-footnote-backref">↩<sup>40</sup></a> <a href="#user-content-fnref-2-41" data-footnote-backref="" aria-label="Back to reference 2-41" class="data-footnote-backref">↩<sup>41</sup></a> <a href="#user-content-fnref-2-42" data-footnote-backref="" aria-label="Back to reference 2-42" class="data-footnote-backref">↩<sup>42</sup></a> <a href="#user-content-fnref-2-43" data-footnote-backref="" aria-label="Back to reference 2-43" class="data-footnote-backref">↩<sup>43</sup></a> <a href="#user-content-fnref-2-44" data-footnote-backref="" aria-label="Back to reference 2-44" class="data-footnote-backref">↩<sup>44</sup></a> <a href="#user-content-fnref-2-45" data-footnote-backref="" aria-label="Back to reference 2-45" class="data-footnote-backref">↩<sup>45</sup></a> <a href="#user-content-fnref-2-46" data-footnote-backref="" aria-label="Back to reference 2-46" class="data-footnote-backref">↩<sup>46</sup></a> <a href="#user-content-fnref-2-47" data-footnote-backref="" aria-label="Back to reference 2-47" class="data-footnote-backref">↩<sup>47</sup></a> <a href="#user-content-fnref-2-48" data-footnote-backref="" aria-label="Back to reference 2-48" class="data-footnote-backref">↩<sup>48</sup></a> <a href="#user-content-fnref-2-49" data-footnote-backref="" aria-label="Back to reference 2-49" class="data-footnote-backref">↩<sup>49</sup></a> <a href="#user-content-fnref-2-50" data-footnote-backref="" aria-label="Back to reference 2-50" class="data-footnote-backref">↩<sup>50</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://arxiv.org/html/2610.32578v1">Lessons Outlive Their Failures: A Case Study of Rules for AI Coding Agents</a> Hassan Hassanzadeh Aliabadi、2026 年 10 月 23 日公開（arXiv）。埋め込みエラー 20 件・延べ 180 チェックでの検出数（cron の不一致 27/27、改名された識別子 25/27、スクリプト挙動説明の不正確さ 6/18）は Section 5.2、現行の Sonnet 系モデルでスキル件数ドリフトが lint なしで 3/3 再発・lint ありで 0/2（3 回目は期限ルールにより辞退）となったリプレイ結果は Section 5.3・Table 3（および脚注 a）。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-3-3" data-footnote-backref="" aria-label="Back to reference 3-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-3-4" data-footnote-backref="" aria-label="Back to reference 3-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://about.gitlab.com/resources/well-architected/cookbook/flows/docs-and-runbook-drift-repair/">Docs and runbook drift repair · GitLab Well Architected</a> GitLab、2026 年 8 月 27 日公開。シェルの構文チェックではなくコマンド例そのものを実行して検証する原則は「1. Tell Duo where the docs and checks are」節。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://skippednote.dev/posts/building-a-documentation-skill-that-tests-whether-code-and-docs-stay-coupled/">Documentation Drift Checks for AI Coding Agents</a> Bassam Ismail、2026 年 9 月 3 日公開。文書を更新しない PR を負のフィクスチャ（4 行の Go ファイル追加）として与え、ドリフト検出が実際に発火するか確かめる設計は「The deliberately incomplete change」節。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

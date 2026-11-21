@@ -1,0 +1,538 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Claude Code 実装 worker で Haiku と Sonnet を実測比較 ── 差し戻し込みの総トークンは Sonnet が少なかった | Meetsource</title><meta name="description" content="Claude Code の実装 worker は、単価の安い Haiku 5.5 を選んでも差し戻し往復と履歴再送が重なると総トークン数が増え、上位の Sonnet 5.5 の方が少ない消費で完了する場合があります。実装タスク 14 件の一次実測から、Haiku が落としやすい失敗の型、Cost-Per-Task 視点での使い分け基準、ログ監査の手順を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/worker-haiku-sonnet-rework-tokens"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="実装 worker を安い Haiku にしたら、差し戻し込みで1件平均 3.69M トークン消費した話"><meta property="og:description" content="実装タスク 14 件を haiku/medium（9件）と sonnet/high（5件）で実測すると、Haiku 群は周辺文書の更新漏れなどで平均 0.78 往復・3.69M トークン、Sonnet 群は平均 0.20 往復・1.26M トークンでした。"><meta property="og:url" content="https://www.meetsource.work/blog/worker-haiku-sonnet-rework-tokens"><meta property="og:image" content="https://www.meetsource.work/blog/worker-haiku-sonnet-rework-tokens-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-17T17:45:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="実装 worker を安い Haiku にしたら、差し戻し込みで1件平均 3.69M トークン消費した話"><meta name="twitter:description" content="実装タスク 14 件を haiku/medium（9件）と sonnet/high（5件）で実測すると、Haiku 群は周辺文書の更新漏れなどで平均 0.78 往復・3.69M トークン、Sonnet 群は平均 0.20 往復・1.26M トークンでした。"><meta name="twitter:image" content="https://www.meetsource.work/blog/worker-haiku-sonnet-rework-tokens-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Claude Code 実装 worker で Haiku と Sonnet を実測比較 ── 差し戻し込みの総トークンは Sonnet が少なかった","description":"Claude Code の実装 worker は、単価の安い Haiku 5.5 を選んでも差し戻し往復と履歴再送が重なると総トークン数が増え、上位の Sonnet 5.5 の方が少ない消費で完了する場合があります。実装タスク 14 件の一次実測から、Haiku が落としやすい失敗の型、Cost-Per-Task 視点での使い分け基準、ログ監査の手順を解説します。","datePublished":"2026-11-17T17:45:00.000Z","image":"https://www.meetsource.work/blog/worker-haiku-sonnet-rework-tokens-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/worker-haiku-sonnet-rework-tokens"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"単価表では Haiku 5.5 の方が大幅に安いのに、なぜ総トークン数に注目して Sonnet に切り替えたのですか？","acceptedAnswer":{"@type":"Answer","text":"エージェントの実装ループでは毎ターン会話履歴全体を再送信するため、差し戻しやターン数が増えると総消費トークンの大半（今回の 14 件では 88.6%〜97.4%）を占めるキャッシュ読出が膨らみ、単価差以上の総量差が生じ得るためです。当ブログの実測 14 件では、1 件あたり平均トークンが haiku/medium 9 件で 3.69M（平均 0.78 往復）、sonnet/high 5 件で 1.26M（平均 0.20 往復）でした。さらに Haiku 5.5 はキャッシュを含む全入力の合計が 100K トークンを超えたリクエストで単価が 5 倍に跳ね上がる価格ティアを持つため、差し戻しでセッションが長引くほど単価面の優位性も縮まります。"}},{"@type":"Question","name":"差し戻しを防ぐために指示書（プロンプト）をもっと詳しく書けば、実装 worker でも Haiku で補えますか？","acceptedAnswer":{"@type":"Answer","text":"要求の基本的な読み取り精度は高められても、コード変更に付随する周辺文書や他参照箇所の同期漏れまでを指示書だけで完全に防ぐのは難しい場面があります。実際、今回の haiku/medium 9 件で最多の 8,200,207 トークン（2 往復・59 リクエスト）を消費したタスクは詳細な実装仕様書を与えた案件であり、条文に書き切られていない細部やリポジトリ内の運用ガイド文書の更新漏れで差し戻しが発生しました。検収ゲートを持つ実装タスクでは、プロンプトの補強だけでなくリトライ回数を減らせるモデル・effort 選定を併用する方が安定します。"}},{"@type":"Question","name":"すべてのサブエージェントや自動化タスクで Haiku 5.5 の利用はやめるべきですか？","acceptedAnswer":{"@type":"Answer","text":"いいえ、作業の型が「1 指示で小さく完結し、100K トークン以内で収まるタスク」であれば Haiku 5.5 は依然として有効な選択肢です。Anthropic 公式も Haiku 5.5 を要約・分類・狭くスコープされたサブエージェント向けと位置づけており、当ブログの別の実測でも原典からの狭く深い事実抽出では Haiku 5.5 が高精度かつ低コストでした。一方で、複数ファイル間の整合維持や厳格なルール同期が求められ、検収による差し戻しが発生し得る実装 worker には Sonnet 5.5 などの上位モデルを割り当てる使い分けが合理的です。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-17T17:45:00.000Z" data-astro-cid-7jjqptxk> 2026.11.18 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#ai-cost-optimization</span><span class="tag" data-astro-cid-7jjqptxk>#llm</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>Claude Code 実装 worker で Haiku と Sonnet を実測比較 ── 差し戻し込みの総トークンは Sonnet が少なかった</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/worker-haiku-sonnet-rework-tokens-hero.webp" alt="Claude Code 実装 worker で Haiku と Sonnet を実測比較 ── 差し戻し込みの総トークンは Sonnet が少なかった" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>Claude Code などのコーディングエージェントで実装タスクをサブエージェントや自律ワーカー（worker）に委任するとき、API のトークン単価が安い小型モデル（Claude Haiku 5.5 等）を選べば総コストを抑えられると考えがちです。しかし、レビューやテストによる「検収」と差し戻しを伴う開発パイプラインでは、トークンの総消費量でも、司令塔や人の確認を含めたタスク完了までの負担でも、単価表の見た目どおりの差が出ないことがあります。</p>
+<p>ここで重要になるのが、1 回の API 呼び出し単価（Price per Million Tokens）ではなく、やり直しや差し戻し往復を含めてタスクを完了させるまでに消費した総トークン量とコストで評価する <strong>Cost-Per-Task（タスク完了あたりのコスト）</strong> という指標です<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。とくに実装タスクを担う AI エージェントでは、レビュー指摘に伴う修正セッションの継続や再実行によって会話履歴が毎ターン再送信されるため、差し戻し往復が増えるほど追加のトークン負荷と確認側の負荷が積み上がります。</p>
+<p>私が管理している当ブログの運営リポジトリ（非公開）の自社開発パイプラインにおいて、実装タスク 14 件の worker セッション消費トークンを実測したところ、worker に <code>Claude Haiku 5.5</code>（設定表記: <code>haiku/medium</code>）を用いた 9 件は、リポジトリ内の運用ガイド文書や要約の更新漏れなどによる差し戻し（平均 <code>0.78</code> 往復）を含め 1 件あたり平均 <strong>3.69M トークン</strong>（<code>3,694,069</code> トークン）を消費しました。これに対し、<code>Claude Sonnet 5.5</code>（設定表記: <code>sonnet/high</code>）を用いた 5 件は平均 <code>0.20</code> 往復・1 件あたり平均 <strong>1.26M トークン</strong>（<code>1,255,070</code> トークン）にとどまり、総消費トークンでも差し戻し回数でも Sonnet 群の方が少なくなりました<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。なお、本実測で直接比較した一次指標は worker 単体の総トークン数と差し戻し往復数であり、実際の API 課金額（USD）や司令塔（<code>opus/low</code>）の消費分は未計測です<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。その上で、トークン総量が約 2.9 倍に膨らみ差し戻しが重なる構図が、なぜ単価表の差を縮めて運用コストを圧迫するのかを一次ログから解剖します。</p>
+<p>単発のテスト試行で手応えがあっても、検収を挟む実務運用では差し戻しによるターン数の増加が総消費を押し上げます。既刊の <a href="/blog/subagent-model-ranking-inversion">サブエージェント3モデルの実測記事</a> で扱った狭く閉じた事実抽出タスク（Haiku 5.5 が高精度・低コストを示した例）や、親設定の透過課金が原因だった <a href="/blog/claude-p-advisor-opus-cost-leak">advisor 設定波及の検証記事</a> とは異なり、本記事では実装 worker における「差し戻しと総トークン逆転」の一次ログを解剖し、用途別のモデル選定基準とログ監査の具体的なやり方を整理します。</p>
+<h2 id="検証環境と調査スコープ">検証環境と調査スコープ</h2>
+<p>今回の実測は、当ブログの運営リポジトリ（非公開）にて 2026 年 10 月 31 日〜11 月 1 日（UTC <code>2026-10-31T18:49:26Z</code>〜<code>2026-11-01T03:22:07Z</code>、日本時間 2026 年 11 月 1 日 03:49〜12:22）に自律実装パイプラインで連続実行した実装タスク 14 件を対象としています<sup><a href="#user-content-fn-4" id="user-content-fnref-4-3" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<h3 id="パイプライン構成と計測単位">パイプライン構成と計測単位</h3>
+<p>パイプラインは、仕様確認とコードレビューを担当する司令塔（オーケストレーター）と、隔離された git worktree 内で実装および修正コミットを行う実装 worker の 2 役で構成されています<sup><a href="#user-content-fn-4" id="user-content-fnref-4-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<ul>
+<li><strong>司令塔（オーケストレーター・レビュー担当）</strong>: <code>Claude Opus 5.5</code>（設定: <code>opus/low</code>）<sup><a href="#user-content-fn-4" id="user-content-fnref-4-5" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup></li>
+<li><strong>実装 worker（前半 9 件）</strong>: <code>Claude Haiku 5.5</code>（モデル ID: <code>claude-haiku-5-5</code><sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>、設定: <code>haiku/medium</code>）<sup><a href="#user-content-fn-4" id="user-content-fnref-4-6" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup></li>
+<li><strong>実装 worker（後半 5 件）</strong>: <code>Claude Sonnet 5.5</code>（モデル ID: <code>claude-sonnet-5-5</code><sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>、設定: <code>sonnet/high</code>）<sup><a href="#user-content-fn-4" id="user-content-fnref-4-7" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup></li>
+</ul>
+<p>計測対象は <strong>実装 worker 単体のセッション消費トークン</strong>（以下、<code>worker_tokens</code>）と、司令塔とのレビュー差し戻し往復数、修正指示の送信回数（<code>send</code>）、検証失敗回数、中断回数（<code>halt</code>）です<sup><a href="#user-content-fn-4" id="user-content-fnref-4-8" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。14 件すべてにおいて worker 自身がさらに子サブエージェントを起動した回数は <code>0</code> 回でした<sup><a href="#user-content-fn-4" id="user-content-fnref-4-9" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。なお、API 上の既定 effort は <code>Claude Haiku 5.5</code>（2026 年 10 月 7 日リリース）が <code>medium</code><sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>、<code>Claude Sonnet 5.5</code>（2026 年 9 月 28 日リリース）が <code>high</code> である一方、Claude Code およびアプリ上の Sonnet 5.5 の既定 effort は <code>medium</code> に設定されています<sup><a href="#user-content-fn-7" id="user-content-fnref-7-2" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup><sup><a href="#user-content-fn-8" id="user-content-fnref-8-2" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。effort パラメータは推論の深さだけでなく、読むファイル数や検証回数にも影響します<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<h3 id="計測の経緯と既定切り替えの時系列">計測の経緯と既定切り替えの時系列</h3>
+<p>もともとこの連続実行は「細かく指示を出せば Haiku 5.5 でも高い再現性が出るのでは」という期待から、性能確認を兼ねて開始しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-10" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。隔離 worktree を片付けると内部の作業用設定ファイルが消えて使用モデル名が失われるため、1 件完了するごとにタスク管理の計測メモへモデル名・往復数・総トークンを手元で記録し、あとから各 worker セッションの生トランスクリプト（<code>.jsonl</code>）を全件再集計して突き合わせています<sup><a href="#user-content-fn-4" id="user-content-fnref-4-11" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>経過としては、当時の既定設定である <code>haiku/medium</code> で 9 件を実行したあと、比較対象として <code>haiku/high</code> による effort 単独検証は挟まず、<code>sonnet/high</code> を明示指定して先行 3 件を実行しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-12" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。2026 年 11 月 1 日 00:52Z（日本時間 09:52）時点でこの途中集計（<code>haiku/medium</code> 9 件 vs <code>sonnet/high</code> 3 件）を比較した流れでローカルの既定設定を <code>sonnet/high</code> へ切り替えており（切替時にどの指標を最重視したかの内訳まではログに残っていません）、同セッション後半（03:09Z〜03:22Z）に既定設定のまま追加 2 件を実行して計 14 件の記録が揃いました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-13" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<h3 id="調査スコープの境界書けること書けないこと">調査スコープの境界（書けること・書けないこと）</h3>
+<p>実務ログに基づく調査であるため、以下の 3 つの境界（交絡要因と未計測事項）を明確に置いた上でデータを解釈します。</p>
+<ol>
+<li><strong>非対照実験によるタスク規模・条件差</strong>: 2 群は同一課題を両モデルに解かせた A/B テストではなく、実務で積まれていたタスク列を順に処理した記録です<sup><a href="#user-content-fn-4" id="user-content-fnref-4-14" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。<code>haiku/medium</code> 期（9 件）と <code>sonnet/high</code> 期（5 件）では変更ファイル数や作業規模、詳細仕様メモの有無（<code>haiku/medium</code> 期の 1 件のみ仕様メモなし）が揃っていません<sup><a href="#user-content-fn-4" id="user-content-fnref-4-15" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。実際、<code>sonnet/high</code> 後半の 1 件は公開記事の軽微な訂正のみで <code>792,107</code> トークンにとどまり、平均値を押し下げています<sup><a href="#user-content-fn-4" id="user-content-fnref-4-16" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+<li><strong>モデル差と effort 差の同時変更</strong>: 前半は <code>haiku/medium</code>、後半は <code>sonnet/high</code> であり、モデル（Haiku 5.5 vs Sonnet 5.5）と effort 設定（<code>medium</code> vs <code>high</code>）が同時に変わっています<sup><a href="#user-content-fn-4" id="user-content-fnref-4-17" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-9" id="user-content-fnref-9-2" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。したがって、観測された差がモデル能力のみに由来するのか、<code>high</code> effort による探索・検証の徹底度の影響を含むのかは、このログ単独では切り分けられません<sup><a href="#user-content-fn-4" id="user-content-fnref-4-18" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+<li><strong>未計測事項（USD 金額・司令塔消費・ターン別分布）</strong>: 集計はトランスクリプト記録に基づく実トークン数のみであり、モデル別 API 料金（USD）の実支払額比較、司令塔（<code>opus/low</code>）側のトークン消費比較、および各リクエスト単体で 100K トークンを超過した回数の分布は計測・集計していません<sup><a href="#user-content-fn-4" id="user-content-fnref-4-19" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+</ol>
+<h2 id="なぜ単価が安くても総トークンが膨らむのかエージェントのターン蓄積構造">なぜ単価が安くても総トークンが膨らむのか：エージェントのターン蓄積構造</h2>
+<p>モデル単価では大きな開きがあるにもかかわらず、なぜ実装タスク全体の消費トークンや実効コストで逆転が起き得るのでしょうか。その背景には、コーディングエージェントのターン蓄積構造と、Claude Haiku 5.5 の価格仕様の 2 点があります。</p>
+<h3 id="毎ターン会話全体を再送信するターン蓄積構造">毎ターン会話全体を再送信するターン蓄積構造</h3>
+<p>LLM API はステートレスであるため、Claude Code のようなエージェントがファイルを読み込み、編集し、テストを実行するたびに 1 回の API リクエスト（1 ターン / <code>req</code>）が発生します。各リクエストでは、システムプロンプト、ツール定義、プロジェクトのガイド設定（<code>CLAUDE.md</code> 等）、それまでの会話履歴とツール出力のすべてをプレフィックスとして再送信し、末尾に新しいメッセージを追加します<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup><sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。</p>
+<p>Anthropic の Addy Osmani による試算例でも、20K トークンから 120K トークンへ文脈が成長するタスクは、40 ターン（1 ターン平均 70K 想定）で累積入力が約 <code>2.8M</code> トークンに達するのに対し、25 ターンで終えられれば約 <code>1.75M</code> トークンに収まります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。1 ターン増えるごとに増加分だけでなく過去の履歴全体を再送するため、「最も安いターンは不要なターンである」という構造になります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。Honeycomb のエンジニアリングブログも、LLM コスト浪費の代表パターンとして「結果改善に寄与しない入力の反復送信」と「無制限のリトライ・修正ループ」を挙げ、単発のトークン総量ではなく「成功結果あたりのコスト（cost per successful outcome）」で計測する重要性を指摘しています<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<h3 id="総トークンの-886974-を占めたキャッシュ読出の正体">総トークンの 88.6%〜97.4% を占めたキャッシュ読出の正体</h3>
+<p>再送されたプレフィックスを低遅延・低単価で再利用するのがプロンプトキャッシュ（Prompt Caching）です。API レスポンスの <code>usage</code> オブジェクトには、未キャッシュ入力の <code>input_tokens</code>、キャッシュ書込の <code>cache_creation_input_tokens</code>、キャッシュ読出の <code>cache_read_input_tokens</code> が、出力の <code>output_tokens</code> とは別に記録されます<sup><a href="#user-content-fn-10" id="user-content-fnref-10-2" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。拡張思考（thinking）が有効な場合、前ターンの思考ブロックも次ターンではキャッシュ読出として入力トークンに算入されます<sup><a href="#user-content-fn-10" id="user-content-fnref-10-3" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。</p>
+<p>今回の実装 worker 14 件の実測でも、総消費トークンの大半はキャッシュ読出が占めていました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-20" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。最多となったタスク 3（<code>8,200,207</code> トークン）では <code>97.4%</code>（<code>7,987,239</code> トークン）、Sonnet 群で最多となったタスク 14（<code>1,650,174</code> トークン）でも <code>93.5%</code>（<code>1,542,352</code> トークン）、全 14 件を通じた範囲でも <strong><code>88.6%〜97.4%</code></strong> に達しています<sup><a href="#user-content-fn-4" id="user-content-fnref-4-21" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。つまり、修正や差し戻しでターン数（<code>req</code>）が伸びるほど、膨らんだ履歴をキャッシュから読み直す回数が掛け算で増えていきます。</p>
+<h3 id="料金体系の背景構造と-haiku-55-の-100k-トークン境界">料金体系の背景構造と Haiku 5.5 の 100K トークン境界</h3>
+<p>API 料金は改定によって変わり得るため、本記事の比較の主軸は不変の実測指標であるトークン数と差し戻し往復数に置きます。その上で、なぜ単価表の差ほど実効コストが開きにくいかという背景構造を、2026 年 11 月時点の Anthropic 公式料金表（100 万トークンあたり）で確認しておきます<sup><a href="#user-content-fn-12" id="user-content-fnref-12" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。</p>
+<ul>
+<li><strong>Claude Sonnet 5.5</strong>: 基本入力 <code>$2</code>、出力 <code>$10</code>、5 分キャッシュ書込 <code>$2.50</code>、キャッシュ読出 <code>$0.10</code>（基本入力の 0.05 倍。Haiku 5.5 発表同日の 2026 年 10 月 7 日に <code>$0.20</code> から半額化）<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-12" id="user-content-fnref-12-2" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup></li>
+<li><strong>Claude Haiku 5.5（100K トークン以下）</strong>: 基本入力 <code>$0.10</code>、出力 <code>$0.50</code>、5 分キャッシュ書込 <code>$0.125</code>、キャッシュ読出 <code>$0.01</code>（基本入力の 0.1 倍）<sup><a href="#user-content-fn-12" id="user-content-fnref-12-3" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup></li>
+<li><strong>Claude Haiku 5.5（100K トークン超）</strong>: 基本入力 <code>$0.50</code>、出力 <code>$2.50</code>、5 分キャッシュ書込 <code>$0.625</code>、キャッシュ読出 <code>$0.05</code>（基本入力の 0.1 倍）<sup><a href="#user-content-fn-12" id="user-content-fnref-12-4" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup></li>
+</ul>
+<p>ここで見落としやすいのが、Haiku 5.5 の <strong>100K トークン境界は未キャッシュ入力だけでなく <code>cache_read_input_tokens</code> と <code>cache_creation_input_tokens</code> を含む全入力トークンの合計で判定される</strong> という仕様です<sup><a href="#user-content-fn-12" id="user-content-fnref-12-5" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。リクエスト単位で <code>100,000</code> トークンを超えると、そのリクエストの入力・出力・キャッシュ書込・キャッシュ読出すべてに 5 倍の上位ティア単価が適用されます<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-12" id="user-content-fnref-12-6" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。</p>
+<p>キャッシュ読出が消費の大部分を占める実装セッションでは、100K 以下でも Haiku と Sonnet のキャッシュ読出単価差は 10 倍（<code>$0.01</code> vs <code>$0.10</code>）、100K を超えると <strong>わずか 2 倍（<code>$0.05</code> vs <code>$0.10</code>）</strong> まで縮まります<sup><a href="#user-content-fn-12" id="user-content-fnref-12-7" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。さらに、公式ベンチマーク Terminal-Bench 4.0 の <code>medium</code> effort における 1 試行あたりコスト比較では、Haiku 5.5（<code>$0.68</code>・スコア <code>20.3%</code>）と Sonnet 5.5（<code>$0.68</code>・スコア <code>28.8%</code>）が同額に並び、Sonnet がスコアで 8.5 ポイント上回る結果も公表されています<sup><a href="#user-content-fn-5" id="user-content-fnref-5-3" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>ここを切り分けて整理すると、仮に worker 単体の総トークン差が後述の実測どおり約 2.9 倍にとどまる場合、100K 以下の単価帯（キャッシュ読出 10 倍差・出力 20 倍差）が保たれていれば worker だけの API 課金額はなお Haiku 側が低く収まる計算になります。しかし実務の Cost-Per-Task では、第 1 にセッションが長引いて 100K トークン超の価格帯に入るとキャッシュ読出の単価差が 2 倍（出力・キャッシュ書込も 4 倍）まで縮まる点<sup><a href="#user-content-fn-12" id="user-content-fnref-12-8" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>、第 2 に差し戻し 1 往復ごとに最上位モデル（本構成では <code>opus/low</code>）の司令塔による再レビューと人の確認・待機負荷が上乗せされる点<sup><a href="#user-content-fn-4" id="user-content-fnref-4-22" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>が、単価表上の優位を削る方向に働きます。</p>
+<p>一方、サブエージェント自体は親と独立したコンテキスト・ツール構成で起動するため、セッション途中でモデルを切り替えるようなキャッシュ無効化（コールドスタート）の損失を構造的に受けにくい利点があります<sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-11" id="user-content-fnref-11-2" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。したがって、Haiku 5.5 の二重価格は直感的に把握しづらいものの、サブエージェントのように 1 指示で小さく動かして 100K 以下で完結させる用途であれば高い費用対効果を期待できます。反対に、検収を伴うパイプラインで差し戻しが発生し、同じセッションの続きで修正を重ねてトークン量が膨らみ 100K トークン超の価格帯へ入ってしまうリスクを避けるには、最初からリトライを減らせる上位モデルを選ぶ設計が適しています（なお今回の実測 14 件では、個別リクエスト単位で 100K を超えた回数そのものは集計対象外としています<sup><a href="#user-content-fn-4" id="user-content-fnref-4-23" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>）。</p>
+<h2 id="実測データ比較haiku-9件と-sonnet-5件の往復数総トークン数">実測データ比較：Haiku 9件と Sonnet 5件の往復数・総トークン数</h2>
+<p>実装 worker 14 件のトランスクリプトを 1 トークン単位で再集計した結果、既定切り替え時点の先行 3 件だけでなくセッション末までの全 5 件を含めても、<code>sonnet/high</code> 群は <code>haiku/medium</code> 群に対して 1 件あたり平均総トークン数が約 3 分の 1（<code>1.26M / 3.69M ≒ 0.34</code>）、平均差し戻し往復数が約 4 分の 1（<code>0.20 / 0.78 ≒ 0.26</code>、先行 3 件時点では <code>0</code> 往復）に抑えられていました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-24" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。なお、ここで比較している数値はあくまで worker 単体の消費トークン数と差し戻し往復数であり、API 課金額の比較ではありません<sup><a href="#user-content-fn-4" id="user-content-fnref-4-25" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>比較群（母数）</th><th>往復合計</th><th>平均往復数</th><th>0往復件数</th><th>worker_tokens 合計</th><th>1件あたり平均</th><th>リクエスト数（req）範囲</th><th>検証失敗 / 中断</th></tr></thead><tbody><tr><td><strong><code>haiku/medium</code>（9件）</strong></td><td>7 往復</td><td><strong>0.78 往復</strong>（0.7778）</td><td>3 / 9 件</td><td>33,246,624</td><td><strong>3.69M</strong>（3,694,069）</td><td>14〜59 回</td><td>0 / 0</td></tr><tr><td><strong><code>sonnet/high</code> 既定切替時（先行3件）</strong></td><td>0 往復</td><td><strong>0.00 往復</strong></td><td>3 / 3 件</td><td>3,833,069</td><td><strong>1.28M</strong>（1,277,690）</td><td>12〜15 回</td><td>0 / 0</td></tr><tr><td><strong><code>sonnet/high</code> 全件（5件）</strong></td><td>1 往復</td><td><strong>0.20 往復</strong></td><td>4 / 5 件</td><td>6,275,350</td><td><strong>1.26M</strong>（1,255,070）</td><td>10〜16 回</td><td>0 / 0</td></tr></tbody></table>
+<p>差し戻し往復を含めた 1 件あたりの総消費トークン平均では、<code>haiku/medium</code>（<code>3.69M</code>）が <code>sonnet/high</code> 全 5 件（<code>1.26M</code>）の約 2.9 倍（<code>3,694,069 / 1,255,070 ≒ 2.94</code>）に達しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-26" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。さらに注目すべき点として、差し戻しが 0 往復だったタスク同士のみで比べても、<code>haiku/medium</code> の 0 往復 3 件（タスク 1・2・4）は平均約 <code>2.68M</code> トークン（<code>2,684,732</code>、req <code>20〜27</code> 回）を消費しており、<code>sonnet/high</code> の 0 往復 4 件（タスク 10・11・12・13）の平均約 <code>1.16M</code> トークン（<code>1,156,294</code>、req <code>10〜15</code> 回）に対して約 2.3 倍（<code>2,684,732 / 1,156,294 ≒ 2.32</code>）の開きがあります<sup><a href="#user-content-fn-4" id="user-content-fnref-4-27" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。つまり総消費の差は差し戻し往復だけでなく、0 往復案件も含めたリクエスト数（<code>req</code>）の多寡やタスク規模差・effort 差といった複合要因が重なって生じています<sup><a href="#user-content-fn-4" id="user-content-fnref-4-28" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<h3 id="途中集計丸め差の訂正履歴">途中集計・丸め差の訂正履歴</h3>
+<p>既定値を切り替えた時点（先行 3 件完了時）に残した備忘メモには、当時の途中集計である「Sonnet 3 件・0 往復・1.28M」と、セッション内報告の丸め表記「Haiku 3.70M」「最多 8.2M」が記されていました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-29" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。その後、同セッション後半の追加 2 件を含めた全 14 件の生トランスクリプトとタスク管理記録を 1 トークン単位で再集計した結果、Sonnet 全 5 件では「平均 <code>0.20</code> 往復・1.26M（<code>1,255,070</code>）」、Haiku 9 件の実数平均は <code>3,694,069.33</code> を小数第 2 位で丸めた「<strong>3.69M</strong>」、最多案件の実数は「<strong>8.20M</strong>（<code>8,200,207</code>）」であることを確定しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-30" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。途中集計と全件集計は時点の異なる実測値であり、本記事では全件実数を基準に扱います。</p>
+<h3 id="全-14-件の実行順一覧と規模比較">全 14 件の実行順一覧と規模比較</h3>
+<p>全 14 件の実行結果（非公開識別子は一般化したタスク連番と種別で表記）は次のとおりです<sup><a href="#user-content-fn-4" id="user-content-fnref-4-31" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>順</th><th>タスク種別</th><th>モデル / effort</th><th>往復</th><th>send</th><th>worker_tokens</th><th>出力トークン (out)</th><th>req</th><th>結果・指摘の概要</th></tr></thead><tbody><tr><td>1</td><td>数値照合スクリプト境界修正</td><td><code>haiku/medium</code></td><td>0</td><td>0</td><td>2,883,402</td><td>25,513</td><td>27</td><td>0 往復完了</td></tr><tr><td>2</td><td>テストフィクスチャ化と手順微修正</td><td><code>haiku/medium</code></td><td>0</td><td>0</td><td>2,507,085</td><td>23,313</td><td>20</td><td>0 往復完了</td></tr><tr><td>3</td><td>引用照合強化・複数文書同期</td><td><code>haiku/medium</code></td><td>2</td><td>4</td><td>8,200,207</td><td>63,468</td><td>59</td><td>取りこぼし 3 件（実装細部 2・運用ガイド更新漏れ 1）＋再レビュー 1 件</td></tr><tr><td>4</td><td>企画ゲート照合拡張と過去企画補完</td><td><code>haiku/medium</code></td><td>0</td><td>0</td><td>2,663,708</td><td>19,295</td><td>25</td><td>0 往復完了</td></tr><tr><td>5</td><td>検証ルール照合拡張・手順書同期</td><td><code>haiku/medium</code></td><td>1</td><td>2</td><td>3,476,266</td><td>26,795</td><td>29</td><td>手順書 2 件の要約更新取り残し 1 件・表記修正</td></tr><tr><td>6</td><td>校閲フロー追加・運用ガイド更新（仕様メモなし）</td><td><code>haiku/medium</code></td><td>1</td><td>2</td><td>2,351,011</td><td>16,230</td><td>23</td><td>運用ガイド・冒頭コメント更新漏れ、終了コード説明誤り</td></tr><tr><td>7</td><td>共通前処理のブランチ確認追加</td><td><code>haiku/medium</code></td><td>1</td><td>1</td><td>1,407,220</td><td>13,232</td><td>14</td><td>既存説明段落を分断する挿入位置誤り</td></tr><tr><td>8</td><td>意見抽出ロジック拡張とテスト追加</td><td><code>haiku/medium</code></td><td>1</td><td>2</td><td>3,565,409</td><td>24,578</td><td>31</td><td>実データの形の取りこぼし 2 件（同キー複数行・書式揺れ）</td></tr><tr><td>9</td><td>別系統モデル検証統一と統計検査</td><td><code>haiku/medium</code></td><td>1</td><td>3</td><td>6,192,316</td><td>32,965</td><td>50</td><td>ラベル統一漏れ・旧欄名扱い・運用ガイド 2 行更新漏れ</td></tr><tr><td>10</td><td>企画ゲート未確認タグ検査・文書同期</td><td><code>sonnet/high</code></td><td>0</td><td>0</td><td>1,434,945</td><td>11,094</td><td>15</td><td>0 往復完了</td></tr><tr><td>11</td><td>一次記録 1 ファイル内の記述移動</td><td><code>sonnet/high</code></td><td>0</td><td>0</td><td>1,030,149</td><td>6,081</td><td>12</td><td>単一文書修正、0 往復完了（小規模）</td></tr><tr><td>12</td><td>注記書式統一・抽出コード修正と設計書 8 本 18 箇所修正</td><td><code>sonnet/high</code></td><td>0</td><td>0</td><td>1,367,975</td><td>12,505</td><td>14</td><td>親作成仕様書の誤記 2 件を実データ照合で訂正し 0 往復完了</td></tr><tr><td>13</td><td>公開記事 1 本のエスケープ訂正</td><td><code>sonnet/high</code></td><td>0</td><td>0</td><td>792,107</td><td>4,831</td><td>10</td><td>軽微な訂正、0 往復完了（最小規模）</td></tr><tr><td>14</td><td>引用照合の出所突合変更・文書同期</td><td><code>sonnet/high</code></td><td>1</td><td>1</td><td>1,650,174</td><td>11,697</td><td>16</td><td>コード挙動と条文表現の食い違いで 1 往復</td></tr></tbody></table>
+<p>公平を期すと、<code>sonnet/high</code> のタスク 11（<code>1,030,149</code>）とタスク 13（<code>792,107</code>）は変更範囲が 1 ファイルかつ軽微であり、これらが Sonnet 平均を押し下げている点は割り引く必要があります<sup><a href="#user-content-fn-4" id="user-content-fnref-4-32" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。一方で、設計書 8 本・18 箇所の一括修正と関連手順・抽出コードの同期を含むタスク 12（<code>1,367,975</code> トークン / 14 req / 0 往復）を基準に、<code>haiku/medium</code> のタスク 8（<code>3,565,409</code> / 31 req / 1 往復）およびタスク 9（<code>6,192,316</code> / 50 req / 1 往復）と比べても、Haiku 側はそれぞれ約 2.6 倍〜約 4.5 倍（<code>3,565,409 / 1,367,975 ≒ 2.61</code>、<code>6,192,316 / 1,367,975 ≒ 4.53</code>）のトークンを消費しています<sup><a href="#user-content-fn-4" id="user-content-fnref-4-33" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。複数文書の同期を含む複合改修となったタスク 3（<code>8,200,207</code> / 59 req / 2 往復）では差がさらに開きました（ただしタスク間の変更複雑度は完全には揃っていません）<sup><a href="#user-content-fn-4" id="user-content-fnref-4-34" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>なお、最多のタスク 3（<code>8,200,207</code> トークン）の 4 分類内訳は、未キャッシュ入力 <code>118</code> + 出力 <code>63,468</code> + キャッシュ書込 <code>149,382</code> + <strong>キャッシュ読出 <code>7,987,239</code>（97.4%）</strong> でした<sup><a href="#user-content-fn-4" id="user-content-fnref-4-35" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。Sonnet で唯一差し戻されたタスク 14（<code>1,650,174</code> トークン）でも、未キャッシュ入力 <code>32</code> + 出力 <code>11,697</code> + キャッシュ書込 <code>96,093</code> + <strong>キャッシュ読出 <code>1,542,352</code>（93.5%）</strong> という内訳であり、総消費の大部分がキャッシュ読出で膨らむ構造は両モデルで共通しています<sup><a href="#user-content-fn-4" id="user-content-fnref-4-36" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<h2 id="haikumedium-で観測された失敗の型と-sonnethigh-の挙動差"><code>haiku/medium</code> で観測された「失敗の型」と <code>sonnet/high</code> の挙動差</h2>
+<p>単にトークン消費量に差が出ただけでなく、差し戻しが発生したタスクで何が起きていたかを解剖すると、モデルと effort の組み合わせごとに特徴的な傾向が見えてきます。</p>
+<h3 id="haikumedium-差し戻し-6-件の内訳">haiku/medium 差し戻し 6 件の内訳</h3>
+<p><code>haiku/medium</code> 9 件のうち差し戻しが発生したのは <strong>6 件</strong>（1 往復 5 件＋2 往復 1 件）でした<sup><a href="#user-content-fn-4" id="user-content-fnref-4-37" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。指摘内容を一次ログから整理すると、大きく 2 つの型に分かれます。</p>
+<ol>
+<li><strong>同じ変更を他の参照箇所・周辺文書・要約へ反映し忘れる型（6 件中 4 件）</strong>
+<ul>
+<li>タスク 3・タスク 6・タスク 9 の 3 件では、スクリプトやルール本体を変更したにもかかわらず、リポジトリ内の運用ガイド文書の更新が漏れて差し戻されました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-38" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+<li>タスク 5 では、執筆支援手順書 2 件に置かれていた同一ルールの要約箇所だけ更新を取り残しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-39" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+<li>当時のセッション記録では、9 件を通じた総括として「要求の読み違いは出ておらず、要求解釈の面では見立てどおりだった一方、関連箇所まで同時に直す部分は司令塔のレビューに依存した」と振り返っています<sup><a href="#user-content-fn-4" id="user-content-fnref-4-40" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。また、詳細な実装仕様書を与えたタスク 3 については「条文に書かれていない細部を取りこぼしており、細かく指示すれば再現性が高いという見立ての反例寄り」と記録されており、タスク 6 でも運用ガイドの更新漏れに加えて「終了コード説明の誤記述」という周辺同期以外の誤りが混入していました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-41" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+</ul>
+</li>
+<li><strong>挿入位置の誤りと実データ形状の取りこぼし（6 件中 2 件）</strong>
+<ul>
+<li>タスク 7 では、共通前処理の既存説明段落 2 つを分断する位置に新手順を差し込んでしまい、位置移動の差し戻しが発生しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-42" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+<li>タスク 8 では、単体テストは通過したものの、実データに現れる 2 つの形状（同じキーが複数回並ぶケースと、出典注記内の「の意見」という語尾の有無や番号前の空白の有無による書式揺れ）を取りこぼして 1 往復しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-43" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+</ul>
+</li>
+</ol>
+<h3 id="sonnethigh-5-件の対照的な挙動">sonnet/high 5 件の対照的な挙動</h3>
+<p>一方、<code>sonnet/high</code> の 5 件には対照的な長所と、やはりゼロではない限界の両面が表れました。</p>
+<ul>
+<li><strong>仕様書誤記の自律訂正（タスク 12）</strong>: 既存の設計書 8 本・18 箇所への一括反映を含むタスク 12 では、実は親セッション側が作成した仕様書に 2 件の誤り（参照番号の取り違えと、先行マージでずれていた台帳行番号）が含まれていました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-44" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。<code>sonnet/high</code> の worker は仕様書を鵜呑みにせず実データと照合して誤記 2 件を自ら訂正し、表外の注記まで揃えて 0 往復（<code>1,367,975</code> トークン）で完了しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-45" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+<li><strong>Sonnet でも差し戻しはゼロではない（タスク 14）</strong>: 後半のタスク 14 では、引用照合コードの挙動（欠損識別子の扱い）とルール条文の表現が食い違ったため 1 往復（<code>1,650,174</code> トークン）の差し戻しが発生しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-46" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。修正規模を含めても 1.65M トークンに収まっていますが、上位モデルでも条文とコードの微細な整合ずれは起こり得ます。</li>
+</ul>
+<h3 id="外部知見との構造的一致と本ログの解釈限界">外部知見との構造的一致と、本ログの解釈限界</h3>
+<p>こうした観測傾向は、Anthropic 公式および外部エンジニアリングブログの知見とも構造的に一致する部分があります。</p>
+<p>Anthropic 公式の『Prompting Claude Haiku 5.5』は、<code>low</code> および <code>medium</code> effort において Haiku 5.5 が検証チェックを実行せずにコード変更を完了と報告する場合があることを明記しています<sup><a href="#user-content-fn-13" id="user-content-fnref-13" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup>。また Addy Osmani の解説でも、<code>medium</code> effort では API ハンドラとテストだけ直して呼び出し元クライアントの更新を見落としやすい（「求められたことはやったが、2 つ目の呼び出し元を見つけるほど先まで読まなかった」）一方、<code>high</code> effort では編集前に呼び出し箇所まで読みに行って 1 パスで両レイヤーを直し切る傾向があると説明されています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>Lydia Hallie によるモデル・effort 選定ガイドは、ファイル読み飛ばしやテスト未実行は effort 不足のシグナルであり、十分な文脈を与えて試行しても誤るならモデル引き上げのシグナルであるとした上で、難易度の高い複数ステップ作業では小型モデルが試行回数を消費するため、上位モデルの方がタスク総コストが低くなり得ると述べています<sup><a href="#user-content-fn-9" id="user-content-fnref-9-3" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。さらに、対象は異なるものの、MindStudio によるオープンウェイトモデル（Kimi K2 等）とフロンティア Claude 構成の比較でも、短期・局所タスクでは軽量モデルが機能する一方、複数制約を保持する長期作業で「drift（ルール逸脱・制約忘れ）」による差し戻しループが起きる傾向が報告されています<sup><a href="#user-content-fn-14" id="user-content-fnref-14" data-footnote-ref="" aria-describedby="footnote-label">14</a></sup>。2026 年 7 月時点の旧世代モデル（Haiku 4.5 対 Sonnet 5）を対象とした Explore Agentic の整理でも、失敗や再試行を含めた Cost-Per-Task 評価と、小型モデルが中盤のターン以降で制約保持や自己修正を落としやすい劣化パターンが分析されています<sup><a href="#user-content-fn-15" id="user-content-fnref-15" data-footnote-ref="" aria-describedby="footnote-label">15</a></sup>。</p>
+<p>ただし、<strong>今回の実測ログの解釈には明確な限界があります</strong>。2 群では「<code>haiku/medium</code> 対 <code>sonnet/high</code>」とモデルと effort を同時に変えており、どのタスクで本来運用ガイド更新が必要だったか（分母）や、<code>haiku/medium</code> 群が周辺文書を落とした内部要因（モデル能力の限界か、<code>medium</code> effort の影響か、プロンプト後半の読み落としか）はトランスクリプトから切り分けられません<sup><a href="#user-content-fn-4" id="user-content-fnref-4-47" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。前述のとおり本セッションでは <code>haiku/high</code> を試す中間ステップを置いていないため、<code>medium</code> effort 固有の挙動がどの程度影響していたかは未検証であり、本データは「<code>haiku/medium</code> と <code>sonnet/high</code> の各条件下で観測された失敗パターンの傾向」として捉える必要があります。</p>
+<h3 id="調査と実装で評価が分かれる理由と監視コストへの波及">「調査」と「実装」で評価が分かれる理由と、監視コストへの波及</h3>
+<p>既刊の <a href="/blog/subagent-model-ranking-inversion">サブエージェント3モデルの実測記事</a> では、狭く閉じた原典抽出や調査タスクにおいて Haiku 5.5 が高い忠実度と低コストを示しました。しかし今回の実装 worker では、複数ファイルや周辺文書との整合維持で差し戻しが多発しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-48" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>この対比を振り返ると、小型モデル（Haiku 5.5）が機能するかどうかは結局のところ状況次第であり、狭く範囲を切った調査タスクについては司令塔の指示だけで回るように見える一方、複数箇所の整合維持など少し難易度が上がると急に精度が落ちる何らかの臨界点があるようにも感じます（※これは私の体感に基づく仮説であり、定量的な閾値として確証されたものではありません）。</p>
+<p>さらに、差し戻し 1 往復が増やすのは worker 単体のトークンだけではありません。司令塔（<code>opus/low</code>）の再レビュー・指示送信コストに加え、結果を確認する人間の待機・監視負荷も膨らみます。この構造は、上流での手抜きが下流の巨大な手戻りと人間の監視負荷（Botsitting）へ跳ね返ることを実測した <a href="/blog/ai-agent-supervision-cost">監視コストの実測記事</a> と同じ力学の上にあります（なお今回の 14 件では、司令塔側のトークン消費の群間比較は未計測です<sup><a href="#user-content-fn-4" id="user-content-fnref-4-49" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>）。</p>
+<h2 id="実装-worker-のモデル選定基準とログ監査のやり方">実装 worker のモデル選定基準とログ監査のやり方</h2>
+<p>ここまでの実測と公式仕様を踏まえ、開発パイプラインでサブエージェントや実装 worker のモデル・effort を使い分け、実ログで監査する具体的な手順を整理します。</p>
+<h3 id="作業の型と検収の有無による使い分け基準">作業の型と検収の有無による使い分け基準</h3>
+<p>テスト環境で単発の成功を確認できても、検収ゲートを持つ実務パイプラインでは差し戻しの有無や作業範囲によって最適なモデルが入れ替わります。タスクが「1 指示で閉じた抽出・変換」か「複数ファイルと周辺文書の整合を保つ実装」かでモデルと effort を切り分けるのが現実的です。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>タスクの型</th><th>特徴・失敗時の戻り方</th><th>推奨モデル / effort の目安</th><th>既刊記事との位置づけ</th></tr></thead><tbody><tr><td><strong>1 指示で閉じた事実抽出・定型チェック</strong></td><td>対象範囲が狭い。検収が機械的・安価で 100K トークン以下で完結しやすい</td><td><strong>Haiku 5.5</strong>（<code>model: haiku</code> / <code>effort: medium</code>）</td><td><a href="/blog/subagent-model-ranking-inversion">3モデル比較記事</a>（狭く深い抽出の実測） / <a href="/blog/subagent-small-model-verification">検証系サブエージェント記事</a>（Haiku 4.5 時代の損益試算・設計仮説）</td></tr><tr><td><strong>複数ファイル・周辺文書同期を含む実装</strong></td><td>コード変更と合わせて運用ガイド・要約・テストの整合維持が必要。差し戻しやターン増加で消費が膨らみやすい</td><td><strong>Sonnet 5.5</strong>（<code>model: sonnet</code> / <code>effort: high</code> を検討）</td><td>本記事の一次実測（平均 1.26M・0.20 往復）</td></tr><tr><td><strong>広域の網羅探索・全体設計判断</strong></td><td>多数のファイルを横断走査し、文脈の抜け漏れや微妙な引用改変を避けたい</td><td><strong>Opus 5.5</strong>（<code>model: opus</code>）</td><td><a href="/blog/subagent-model-ranking-inversion">3モデル比較記事</a>（広域探索の実測）</td></tr></tbody></table>
+<p>Haiku 5.5 は 1 指示で小さく動かすサブエージェント的な使い方に最も費用対効果を発揮する一方<sup><a href="#user-content-fn-5" id="user-content-fnref-5-4" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>、検収と差し戻しが発生する実装 worker では、リトライ自体を減らせる上位モデル（Sonnet 5.5 等）を選ぶ設計が適しています。</p>
+<h3 id="モデル切り替え時の既定値確認と切り分け規律">モデル切り替え時の既定値確認と切り分け規律</h3>
+<p>モデルを切り替える際は、提供者が設定した既定値（モデルごとのデフォルト effort 等）が自分のパイプラインに合うとは限らないため、既定値の確認までを切り替え作業に含めるべきです。実際、Sonnet 5.5 は API 上の既定 effort が <code>high</code> であるのに対し、Claude Code 上の既定は <code>medium</code> です<sup><a href="#user-content-fn-7" id="user-content-fnref-7-3" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup><sup><a href="#user-content-fn-8" id="user-content-fnref-8-3" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<p>もし小型モデルで失敗が起きたときは、Honeycomb が推奨するようにコンテキスト・モデル・出力制限を一度に変えず、<strong>1 回に 1 変数ずつ変更して品質ガードレールと合わせて効果を切り分ける</strong> のが安全です<sup><a href="#user-content-fn-3" id="user-content-fnref-3-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。Lydia Hallie の判断基準に沿って、ファイルの読み飛ばしや検証漏れが原因ならまず effort を引き上げ、十分な文脈を与えても誤るならモデルを引き上げます<sup><a href="#user-content-fn-9" id="user-content-fnref-9-4" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。今回の連続実行では比較対象として直接 <code>sonnet/high</code> を選んで既定を切り替えたため effort 単独の効果は未検証のまま残りましたが、自環境で原因を切り分けながら調整する場合は、この 1 変数ずつの手順を踏むのが安全です。なお、サブエージェント側でモデルを指定しても親セッション側の設定（<code>/advisor</code> 等）が子プロセスへ波及する経路もあるため、独立プロセスの呼び出し設定は <a href="/blog/claude-p-advisor-opus-cost-leak">advisor 設定波及の検証記事</a> の対策も併せて確認してください。</p>
+<h3 id="実装例-1最小例-1-指示で閉じる抽出用サブエージェント定義">実装例 1（最小例）: 1 指示で閉じる抽出用サブエージェント定義</h3>
+<p>1 指示で完結する狭く閉じた事実抽出・要約タスク向けに、<code>model: haiku</code> と <code>effort: medium</code> を明示し、ファイル編集ツールを禁止した最小のカスタムサブエージェント定義を示します。</p>
+<p>ファイル: <code>.claude/agents/bounded-extractor.md</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#7C7F93">---</span></span>
+<span class="line"><span style="color:#1E66F5">name</span><span style="color:#179299">:</span><span style="color:#40A02B"> bounded-extractor</span></span>
+<span class="line"><span style="color:#1E66F5">description</span><span style="color:#179299">:</span><span style="color:#40A02B"> 1指示で完結する限定範囲の事実抽出・要約タスクを実行する</span></span>
+<span class="line"><span style="color:#1E66F5">model</span><span style="color:#179299">:</span><span style="color:#40A02B"> haiku</span></span>
+<span class="line"><span style="color:#1E66F5">effort</span><span style="color:#179299">:</span><span style="color:#40A02B"> medium</span></span>
+<span class="line"><span style="color:#1E66F5">tools</span><span style="color:#179299">:</span><span style="color:#40A02B"> Read, Glob, Grep</span></span>
+<span class="line"><span style="color:#1E66F5">disallowedTools</span><span style="color:#179299">:</span><span style="color:#40A02B"> Edit, Write, Bash</span></span>
+<span class="line"><span style="color:#7C7F93">---</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">指定されたファイルまたは範囲のみを読み込み、事実を抽出して簡潔に要約してください。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#4C4F69"> 対象外のファイルへの広域探索や、ファイルの編集・コマンド実行は行わない</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#4C4F69"> 指定範囲に該当する記述が見当たらない場合は推測で補わず、「該当なし」と明記する</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#4C4F69"> 根拠となるファイル名・見出し・行番号を併記し、1回の応答で簡潔に返す</span></span>
+<span class="line"></span></code></pre>
+<p>公式ドキュメントでサポートされている frontmatter キー（<code>name</code>, <code>description</code>, <code>model</code>, <code>effort</code>, <code>tools</code>, <code>disallowedTools</code>）のみを使い、先頭行から YAML の <code>---</code> 区切りで記述しています<sup><a href="#user-content-fn-16" id="user-content-fnref-16" data-footnote-ref="" aria-describedby="footnote-label">16</a></sup>。書き込みツールを <code>disallowedTools</code> で遮断した上で <code>model: haiku</code>・<code>effort: medium</code> に固定し、未確認事項を推測で埋めない指示を加えています。なお、設定だけで入力長が自動的に 100K 以下に抑えられるわけではないため、1 指示あたりの読み込み対象を小さく絞る呼び出し設計と組み合わせてこそ、100K トークン以下の低単価ティアに収まりやすい短命サブエージェントとして機能します<sup><a href="#user-content-fn-12" id="user-content-fnref-12-9" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。稼働中のサブエージェントがどのモデルと effort で動いているかは、実行中に <code>/tasks</code> コマンドで確認できます<sup><a href="#user-content-fn-16" id="user-content-fnref-16-2" data-footnote-ref="" aria-describedby="footnote-label">16</a></sup>。</p>
+<h3 id="実装例-2実践例-検収パイプライン向け実装-worker-定義と起動コマンド">実装例 2（実践例）: 検収パイプライン向け実装 worker 定義と起動コマンド</h3>
+<p>複数ファイルの変更や周辺ガイド文書の同期を伴う実装タスク向けに、<code>model: sonnet</code> と <code>effort: high</code> を指定し、完了報告前の実際のチェック実行と関連文書の同期確認をシステムプロンプトに組み込んだ定義と CLI 起動例を示します。</p>
+<p>ファイル: <code>.claude/agents/implementer.md</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#7C7F93">---</span></span>
+<span class="line"><span style="color:#1E66F5">name</span><span style="color:#179299">:</span><span style="color:#40A02B"> implementer</span></span>
+<span class="line"><span style="color:#1E66F5">description</span><span style="color:#179299">:</span><span style="color:#40A02B"> 複数ファイル変更や周辺文書の整合維持を伴う実装タスクを実行する</span></span>
+<span class="line"><span style="color:#1E66F5">model</span><span style="color:#179299">:</span><span style="color:#40A02B"> sonnet</span></span>
+<span class="line"><span style="color:#1E66F5">effort</span><span style="color:#179299">:</span><span style="color:#40A02B"> high</span></span>
+<span class="line"><span style="color:#1E66F5">tools</span><span style="color:#179299">:</span><span style="color:#40A02B"> Read, Glob, Grep, Edit, Write, Bash</span></span>
+<span class="line"><span style="color:#1E66F5">isolation</span><span style="color:#179299">:</span><span style="color:#40A02B"> worktree</span></span>
+<span class="line"><span style="color:#7C7F93">---</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">与えられた実装仕様に基づき、対象コードと関連文書を一貫して更新してください。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#179299">1.</span><span style="color:#4C4F69"> 変更前に関連箇所・呼び出し元・運用ガイド文書・スキル要約を検索し、同期が必要な参照先を特定する</span></span>
+<span class="line"><span style="color:#179299">2.</span><span style="color:#4C4F69"> コードと関連文書・コメントの整合を保ったまま編集する</span></span>
+<span class="line"><span style="color:#179299">3.</span><span style="color:#4C4F69"> 完了を報告する前に、テスト・型チェック・ビルド等の検証コマンドを実際に実行し、終了コードと出力を確認する（未実行のまま完了と報告しない）</span></span>
+<span class="line"></span></code></pre>
+<p>ファイルを作成せず 1 回限りの検証用として CLI から直接定義して起動する場合は、<code>--agents</code> フラグに JSON を渡して実行できます<sup><a href="#user-content-fn-16" id="user-content-fnref-16-3" data-footnote-ref="" aria-describedby="footnote-label">16</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">claude</span><span style="color:#40A02B"> --agents</span><span style="color:#40A02B"> '{</span></span>
+<span class="line"><span style="color:#40A02B">  "implementer": {</span></span>
+<span class="line"><span style="color:#40A02B">    "description": "複数ファイル変更や周辺文書の整合維持を伴う実装タスクを実行する",</span></span>
+<span class="line"><span style="color:#40A02B">    "prompt": "与えられた実装仕様に基づき、対象コードと関連文書を一貫して更新してください。編集前に呼び出し元や関連ガイド文書を検索し、完了報告前に必ずテスト等の検証コマンドを実走して出力を確認してください。",</span></span>
+<span class="line"><span style="color:#40A02B">    "tools": ["Read", "Glob", "Grep", "Edit", "Write", "Bash"],</span></span>
+<span class="line"><span style="color:#40A02B">    "model": "sonnet",</span></span>
+<span class="line"><span style="color:#40A02B">    "effort": "high",</span></span>
+<span class="line"><span style="color:#40A02B">    "isolation": "worktree"</span></span>
+<span class="line"><span style="color:#40A02B">  }</span></span>
+<span class="line"><span style="color:#40A02B">}'</span></span>
+<span class="line"></span></code></pre>
+<p>Claude Code 上では Sonnet 5.5 の既定 effort が <code>medium</code> になるため<sup><a href="#user-content-fn-7" id="user-content-fnref-7-4" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup><sup><a href="#user-content-fn-8" id="user-content-fnref-8-4" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>、周辺参照の見落としを防ぐ目的で意図的に <code>effort: high</code> を明示しています。また、<code>tools</code> には実装と検証に必要な <code>Read</code>, <code>Glob</code>, <code>Grep</code>, <code>Edit</code>, <code>Write</code>, <code>Bash</code> を許可し、作業の安全性を確保するため一時的な隔離環境で実行する <code>isolation: worktree</code> を指定しました<sup><a href="#user-content-fn-16" id="user-content-fnref-16-4" data-footnote-ref="" aria-describedby="footnote-label">16</a></sup>。完了報告前に実際のチェック実行を指示に明記しているのは、公式プロンプティングガイドが示す「検証なしでの完了報告」を防ぐためです<sup><a href="#user-content-fn-13" id="user-content-fnref-13-2" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup>。</p>
+<h3 id="実装例-3事後監査スクリプト-jsonl-から実トークンを集計する">実装例 3（事後監査スクリプト）: <code>.jsonl</code> から実トークンを集計する</h3>
+<p>今回の計測で得た実務上の重要な教訓は、<strong>タスク管理記録に worker のモデル名が残らず、外部オーケストレーターが隔離 worktree 内に置く設定・状態ファイルは片付け時に消える</strong> という点でした<sup><a href="#user-content-fn-4" id="user-content-fnref-4-50" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。Claude Code のセッショントランスクリプト（<code>.jsonl</code>）自体はローカルに保存されますが（カスタムサブエージェントの場合は <code>~/.claude/projects/{project}/{sessionId}/subagents/agent-{agentId}.jsonl</code> に格納され、<code>cleanupPeriodDays</code> 既定 30 日で自動削除されます<sup><a href="#user-content-fn-16" id="user-content-fnref-16-5" data-footnote-ref="" aria-describedby="footnote-label">16</a></sup>）、どのタスクで何往復差し戻したかと使用モデル・effort の対応は、片付け前にタスク管理側へ明示的に記録しておかないと後から比較・検証できません<sup><a href="#user-content-fn-4" id="user-content-fnref-4-51" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>また、公式の <code>/usage</code> コマンドでも <code>Usage by model</code> や <code>Prompt cache (main)</code> 統計を確認できますが、公式ドキュメントが明記するとおり <code>Prompt cache (main)</code> 行はメイン会話のみを対象としておりサブエージェント分は含まれません<sup><a href="#user-content-fn-17" id="user-content-fnref-17" data-footnote-ref="" aria-describedby="footnote-label">17</a></sup>。独立セッションで動く worker やサブエージェントを評価するには、OpenTelemetry エクスポート<sup><a href="#user-content-fn-17" id="user-content-fnref-17-2" data-footnote-ref="" aria-describedby="footnote-label">17</a></sup>を利用するか、ローカルの <code>.jsonl</code> ファイルから API <code>usage</code> フィールドとターン数を集計する仕組みが必要になります<sup><a href="#user-content-fn-4" id="user-content-fnref-4-52" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-10" id="user-content-fnref-10-4" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。</p>
+<p>以下のスクリプトは、外部パッケージを追加せず Node.js 標準モジュール（<code>node:fs</code>）のみで、独立 worker の <code>.jsonl</code> またはサブエージェントの <code>subagents/agent-&#x3C;id>.jsonl</code> から、実際に使用されたモデル名、リクエスト数（ターン数）、API トークン 4 分類、総トークン数、キャッシュ読出比率を集計します。</p>
+<p>ファイル: <code>audit-worker-tokens.mjs</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="javascript"><code><span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> fs </span><span style="color:#8839EF">from</span><span style="color:#40A02B"> 'node:fs'</span><span style="color:#7C7F93">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">const</span><span style="color:#4C4F69"> filePath </span><span style="color:#179299">=</span><span style="color:#4C4F69"> process</span><span style="color:#179299">.</span><span style="color:#4C4F69">argv[</span><span style="color:#FE640B">2</span><span style="color:#4C4F69">]</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#4C4F69"> (</span><span style="color:#179299">!</span><span style="color:#4C4F69">filePath) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#4C4F69">  console</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">error</span><span style="color:#4C4F69">(</span><span style="color:#40A02B">'Usage: node audit-worker-tokens.mjs &#x3C;path-to-transcript.jsonl>'</span><span style="color:#4C4F69">)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  process</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">exit</span><span style="color:#4C4F69">(</span><span style="color:#FE640B">2</span><span style="color:#4C4F69">)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">const</span><span style="color:#4C4F69"> byModel </span><span style="color:#179299">=</span><span style="color:#8839EF;font-weight:bold"> new</span><span style="color:#1E66F5;font-style:italic"> Map</span><span style="color:#4C4F69">()</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">const</span><span style="color:#4C4F69"> seenRequests </span><span style="color:#179299">=</span><span style="color:#8839EF;font-weight:bold"> new</span><span style="color:#1E66F5;font-style:italic"> Set</span><span style="color:#4C4F69">()</span><span style="color:#7C7F93">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#4C4F69"> (</span><span style="color:#8839EF">const</span><span style="color:#4C4F69"> line </span><span style="color:#8839EF">of</span><span style="color:#4C4F69"> fs</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">readFileSync</span><span style="color:#4C4F69">(filePath</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> 'utf-8'</span><span style="color:#4C4F69">)</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">split</span><span style="color:#4C4F69">(</span><span style="color:#40A02B">'</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">'</span><span style="color:#4C4F69">)) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#4C4F69"> (</span><span style="color:#179299">!</span><span style="color:#4C4F69">line</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">trim</span><span style="color:#4C4F69">()) </span><span style="color:#8839EF">continue</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">  let</span><span style="color:#4C4F69"> record</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">  try</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#4C4F69">    record </span><span style="color:#179299">=</span><span style="color:#FE640B"> JSON</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">parse</span><span style="color:#4C4F69">(line)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">  }</span><span style="color:#8839EF"> catch</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#8839EF">    continue</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#4C4F69"> (record</span><span style="color:#179299">.</span><span style="color:#4C4F69">type </span><span style="color:#179299">!==</span><span style="color:#40A02B"> 'assistant'</span><span style="color:#4C4F69">) </span><span style="color:#8839EF">continue</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> usage </span><span style="color:#179299">=</span><span style="color:#4C4F69"> record</span><span style="color:#179299">.</span><span style="color:#4C4F69">message</span><span style="color:#179299">?.</span><span style="color:#4C4F69">usage</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#4C4F69"> (</span><span style="color:#179299">!</span><span style="color:#4C4F69">usage) </span><span style="color:#8839EF">continue</span><span style="color:#7C7F93">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#4C4F69"> (record</span><span style="color:#179299">.</span><span style="color:#4C4F69">requestId) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> (seenRequests</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">has</span><span style="color:#4C4F69">(record</span><span style="color:#179299">.</span><span style="color:#4C4F69">requestId)) </span><span style="color:#8839EF">continue</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">    seenRequests</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">add</span><span style="color:#4C4F69">(record</span><span style="color:#179299">.</span><span style="color:#4C4F69">requestId)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> model </span><span style="color:#179299">=</span><span style="color:#4C4F69"> record</span><span style="color:#179299">.</span><span style="color:#4C4F69">message</span><span style="color:#179299">?.</span><span style="color:#4C4F69">model </span><span style="color:#179299">??</span><span style="color:#40A02B"> 'unknown'</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> counter </span><span style="color:#179299">=</span><span style="color:#4C4F69"> byModel</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">get</span><span style="color:#4C4F69">(model) </span><span style="color:#179299">??</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#4C4F69">    requests</span><span style="color:#179299">:</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">    input</span><span style="color:#179299">:</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">    output</span><span style="color:#179299">:</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">    cacheWrite</span><span style="color:#179299">:</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">    cacheRead</span><span style="color:#179299">:</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">  };</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">  counter</span><span style="color:#179299">.</span><span style="color:#4C4F69">requests </span><span style="color:#179299">+=</span><span style="color:#FE640B"> 1</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  counter</span><span style="color:#179299">.</span><span style="color:#4C4F69">input </span><span style="color:#179299">+=</span><span style="color:#4C4F69"> usage</span><span style="color:#179299">.</span><span style="color:#4C4F69">input_tokens </span><span style="color:#179299">??</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  counter</span><span style="color:#179299">.</span><span style="color:#4C4F69">output </span><span style="color:#179299">+=</span><span style="color:#4C4F69"> usage</span><span style="color:#179299">.</span><span style="color:#4C4F69">output_tokens </span><span style="color:#179299">??</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  counter</span><span style="color:#179299">.</span><span style="color:#4C4F69">cacheWrite </span><span style="color:#179299">+=</span><span style="color:#4C4F69"> usage</span><span style="color:#179299">.</span><span style="color:#4C4F69">cache_creation_input_tokens </span><span style="color:#179299">??</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  counter</span><span style="color:#179299">.</span><span style="color:#4C4F69">cacheRead </span><span style="color:#179299">+=</span><span style="color:#4C4F69"> usage</span><span style="color:#179299">.</span><span style="color:#4C4F69">cache_read_input_tokens </span><span style="color:#179299">??</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  byModel</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">set</span><span style="color:#4C4F69">(model</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> counter)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#4C4F69"> (</span><span style="color:#8839EF">const</span><span style="color:#7C7F93"> [</span><span style="color:#4C4F69">model</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> c</span><span style="color:#7C7F93">]</span><span style="color:#8839EF"> of</span><span style="color:#4C4F69"> byModel) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> total </span><span style="color:#179299">=</span><span style="color:#4C4F69"> c</span><span style="color:#179299">.</span><span style="color:#4C4F69">input </span><span style="color:#179299">+</span><span style="color:#4C4F69"> c</span><span style="color:#179299">.</span><span style="color:#4C4F69">output </span><span style="color:#179299">+</span><span style="color:#4C4F69"> c</span><span style="color:#179299">.</span><span style="color:#4C4F69">cacheWrite </span><span style="color:#179299">+</span><span style="color:#4C4F69"> c</span><span style="color:#179299">.</span><span style="color:#4C4F69">cacheRead</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> cacheReadRatio </span><span style="color:#179299">=</span><span style="color:#4C4F69"> total </span><span style="color:#179299">></span><span style="color:#FE640B"> 0</span><span style="color:#179299"> ?</span><span style="color:#4C4F69"> ((c</span><span style="color:#179299">.</span><span style="color:#4C4F69">cacheRead </span><span style="color:#179299">/</span><span style="color:#4C4F69"> total) </span><span style="color:#179299">*</span><span style="color:#FE640B"> 100</span><span style="color:#4C4F69">)</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">toFixed</span><span style="color:#4C4F69">(</span><span style="color:#FE640B">1</span><span style="color:#4C4F69">) </span><span style="color:#179299">:</span><span style="color:#40A02B"> '0.0'</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  console</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">log</span><span style="color:#4C4F69">(</span><span style="color:#40A02B">`</span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">model</span><span style="color:#7C7F93">}</span><span style="color:#40A02B">: total=</span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">total</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">toLocaleString</span><span style="color:#40A02B">(</span><span style="color:#40A02B">'en-US'</span><span style="color:#40A02B">)</span><span style="color:#7C7F93">}</span><span style="color:#40A02B"> (req=</span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">c</span><span style="color:#179299">.</span><span style="color:#4C4F69">requests</span><span style="color:#7C7F93">}</span><span style="color:#40A02B">, cacheRead=</span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">cacheReadRatio</span><span style="color:#7C7F93">}</span><span style="color:#40A02B">%)`</span><span style="color:#4C4F69">)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  console</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">log</span><span style="color:#4C4F69">(</span><span style="color:#40A02B">`  input=</span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">c</span><span style="color:#179299">.</span><span style="color:#4C4F69">input</span><span style="color:#7C7F93">}</span><span style="color:#40A02B"> output=</span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">c</span><span style="color:#179299">.</span><span style="color:#4C4F69">output</span><span style="color:#7C7F93">}</span><span style="color:#40A02B"> cacheWrite=</span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">c</span><span style="color:#179299">.</span><span style="color:#4C4F69">cacheWrite</span><span style="color:#7C7F93">}</span><span style="color:#40A02B"> cacheRead=</span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">c</span><span style="color:#179299">.</span><span style="color:#4C4F69">cacheRead</span><span style="color:#7C7F93">}</span><span style="color:#40A02B">`</span><span style="color:#4C4F69">)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span></code></pre>
+<p>保存したスクリプトに対し、対象の <code>.jsonl</code> ファイルを引数に指定して実行します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">node</span><span style="color:#40A02B"> audit-worker-tokens.mjs</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$HOME</span><span style="color:#40A02B">/.claude/projects/-workspace-app/00000000-0000-0000-0000-000000000000/subagents/agent-a1b2c3d.jsonl"</span></span>
+<span class="line"></span></code></pre>
+<p>実装上のポイントは 3 つあります。第 1 に、ローカルの実ログ観測上、同一の <code>requestId</code> がストリーミングや複数ブロック記録により複数行に分かれて出力されることがあるため、<code>seenRequests</code> で重複を除外しないとトークン数とリクエスト数が二重計上されます<sup><a href="#user-content-fn-4" id="user-content-fnref-4-53" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。第 2 に、実装例 2 のようにカスタムサブエージェントとして隔離実行した場合は、親セッションの <code>.jsonl</code> ではなく <code>subagents/agent-*.jsonl</code> 側を指定して監査します<sup><a href="#user-content-fn-16" id="user-content-fnref-16-6" data-footnote-ref="" aria-describedby="footnote-label">16</a></sup>。第 3 に、トランスクリプトの <code>assistant</code> 行にはリクエスト別の金額フィールドは記録されないため、金額換算に頼らず「総トークン数と <code>req</code> 数」を一次指標として取り出し、タスク管理側の差し戻し往復数と突き合わせて運用改善に活かします<sup><a href="#user-content-fn-4" id="user-content-fnref-4-54" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-単価表では-haiku-55-の方が大幅に安いのになぜ総トークン数に注目して-sonnet-に切り替えたのですか">Q. 単価表では Haiku 5.5 の方が大幅に安いのに、なぜ総トークン数に注目して Sonnet に切り替えたのですか？</h3>
+<p><strong>A.</strong> エージェントの実装ループでは毎ターン会話履歴全体を再送信するため、差し戻しやターン数が増えると総消費トークンの大半（今回の 14 件では 88.6%〜97.4%）を占めるキャッシュ読出が膨らみ、単価差以上の総量差が生じ得るためです。当ブログの実測 14 件では、1 件あたり平均トークンが <code>haiku/medium</code> 9 件で <code>3.69M</code>（平均 <code>0.78</code> 往復）、<code>sonnet/high</code> 5 件で <code>1.26M</code>（平均 <code>0.20</code> 往復）でした<sup><a href="#user-content-fn-4" id="user-content-fnref-4-55" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。さらに Haiku 5.5 はキャッシュを含む全入力の合計が 100K トークンを超えたリクエストで単価が 5 倍に跳ね上がる価格ティアを持つため<sup><a href="#user-content-fn-12" id="user-content-fnref-12-10" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>、差し戻しでセッションが長引くほど単価面の優位性も縮まります。</p>
+<h3 id="q-差し戻しを防ぐために指示書プロンプトをもっと詳しく書けば実装-worker-でも-haiku-で補えますか">Q. 差し戻しを防ぐために指示書（プロンプト）をもっと詳しく書けば、実装 worker でも Haiku で補えますか？</h3>
+<p><strong>A.</strong> 要求の基本的な読み取り精度は高められても、コード変更に付随する周辺文書や他参照箇所の同期漏れまでを指示書だけで完全に防ぐのは難しい場面があります。実際、今回の <code>haiku/medium</code> 9 件で最多の <code>8,200,207</code> トークン（2 往復・59 リクエスト）を消費したタスクは詳細な実装仕様書を与えた案件であり、条文に書き切られていない細部やリポジトリ内の運用ガイド文書の更新漏れで差し戻しが発生しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-56" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。検収ゲートを持つ実装タスクでは、プロンプトの補強だけでなくリトライ回数を減らせるモデル・effort 選定を併用する方が安定します。</p>
+<h3 id="q-すべてのサブエージェントや自動化タスクで-haiku-55-の利用はやめるべきですか">Q. すべてのサブエージェントや自動化タスクで Haiku 5.5 の利用はやめるべきですか？</h3>
+<p><strong>A.</strong> いいえ、作業の型が「1 指示で小さく完結し、100K トークン以内で収まるタスク」であれば Haiku 5.5 は依然として有効な選択肢です。Anthropic 公式も Haiku 5.5 を要約・分類・狭くスコープされたサブエージェント向けと位置づけており<sup><a href="#user-content-fn-5" id="user-content-fnref-5-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>、当ブログの別の実測でも原典からの狭く深い事実抽出では Haiku 5.5 が高精度かつ低コストでした。一方で、複数ファイル間の整合維持や厳格なルール同期が求められ、検収による差し戻しが発生し得る実装 worker には Sonnet 5.5 などの上位モデルを割り当てる使い分けが合理的です。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li><strong>実装 worker は単価だけでなく「差し戻し込みの総トークンと確認往復（Cost-Per-Task の視点）」で選ぶ</strong>: 毎ターン履歴全体を再送するエージェント構造では、差し戻し（平均 <code>0.78</code> 往復）とターン増加が重なった <code>haiku/medium</code> 9 件の平均消費（<code>3.69M</code>）が、<code>sonnet/high</code> 5 件（平均 <code>0.20</code> 往復・<code>1.26M</code>）の約 2.9 倍に達する事例が実際に観測されました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-57" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。worker 単体の USD 課金額は未計測であるものの、100K 超ティアでの単価差縮小（キャッシュ読出 2 倍差）<sup><a href="#user-content-fn-12" id="user-content-fnref-12-11" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>に加え、差し戻しごとに司令塔の再レビューと人の確認負荷が積み上がるため、単価表の倍率どおりのコスト削減は期待できません。</li>
+<li><strong>小型モデルの落とし穴は「周辺参照の更新漏れ」に現れやすい</strong>: 今回の <code>haiku/medium</code> 差し戻し 6 件のうち 4 件は、主変更はできていながら運用ガイド文書や要約など周辺箇所の同期を落とす型であり、詳細な仕様書を与えても条文外の細部で発生しました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-58" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+<li><strong>同じモデルでも「1 指示の局所抽出」と「検収付きの多箇所実装」で役割を分ける</strong>: Haiku 5.5 は 100K トークン以下で完結する単発の抽出・調査サブエージェントに向く一方<sup><a href="#user-content-fn-5" id="user-content-fnref-5-6" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>、差し戻し時にセッション継続で長引きやすい検収付き実装 worker には Sonnet 5.5 などのリトライを抑えられる構成を充てます。</li>
+<li><strong>モデル・effort 変更時は既定値を確認し、worktree 消滅前に実測ログを残す</strong>: Claude Code のモデルごとの既定 effort やサブエージェント設定を確認した上で<sup><a href="#user-content-fn-7" id="user-content-fnref-7-5" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup><sup><a href="#user-content-fn-8" id="user-content-fnref-8-5" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup><sup><a href="#user-content-fn-16" id="user-content-fnref-16-7" data-footnote-ref="" aria-describedby="footnote-label">16</a></sup>、トランスクリプトとタスク管理記録からモデル名・往復数・<code>worker_tokens</code>・<code>req</code> 数をタスク単位で突合・記録し、1 変数ずつ実測で検証します<sup><a href="#user-content-fn-3" id="user-content-fnref-3-4" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4-59" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+</ul>
+<p>AI エージェントを活用した開発パイプラインの構築や、用途に応じたモデル選定・コスト最適化について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://claude.dev/blog/what-a-task-costs-on-opus-5-5/">What a task costs on Opus 5.5</a> Addy Osmani、Anthropic (<code>claude.dev</code>)、2026年9月25日公開。リトライが節約分を上回るトレードオフは <code>## THE COST OF A TASK, AND THE COST OF A RETRY</code>、毎ターン会話全体を再送するため「最も安いターンは不要なターン」である点と 40 ターン（2.8M）対 25 ターン（1.75M）の試算は <code>### Turns</code>、<code>medium</code> effort が API ハンドラ等の 1 レイヤーだけ直して呼び出し元を見落としやすい解説は <code>#### When medium fixes one layer</code>。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://openchamber.dev/blog/model-routing-coding-agents/">Model routing for coding agents: when it pays off</a> OpenChamber Team、OpenChamber Blog、2026年11月11日公開。Haiku 5.5 の 100K トークン超価格ティア（5 倍）による逆転リスクは <code>## What routing breaks</code>、サブエージェントが空コンテキスト開始でモデル切替時のキャッシュ無効化損を免れる点は <code>## When a router pays off: the math</code>、「Measure cost per finished task」は <code>## A routing policy that holds up</code>。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://www.honeycomb.io/blog/llm-cost-optimization-patterns">LLM Cost Optimization: 3 Patterns to Cut LLM Token Spend</a> Dan Juengst、Honeycomb、2026年11月5日公開。反復入力・無制限リトライの嵐・成果に結びつかない出力の 3 パターンは <code>## Three observable LLM cost optimization patterns</code>、<code>cost per successful outcome</code> の計測と品質ガードレールおよび「1 度に 1 つの無駄パターンずつ変更して効果と品質を切り分ける」原則は <code>## Treat every cost reduction like a production change</code>。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-3-3" data-footnote-backref="" aria-label="Back to reference 3-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-3-4" data-footnote-backref="" aria-label="Back to reference 3-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p>当ブログの一次計測ログ（非公開テキスト） meetsource、2026年10月31日〜11月1日計測・2026年11月18日検算（非公開の一次計測ログおよびセッション記録）。計測経緯・ローカル既定切替（2026-11-01 00:52Z）と交絡要因の境界は記録 §1、全 14 件の <code>worker_tokens</code>・往復数・<code>req</code>・キャッシュ読出比率（タスク 3 で 97.4%、タスク 14 で 93.5%、14 件全体では 88.6%〜97.4%）・0 往復平均（Haiku 3 件約 2.68M vs Sonnet 4 件約 1.16M）とモデル別再集計値（<code>haiku/medium</code> 9 件平均 0.78 往復・3.69M vs <code>sonnet/high</code> 先行 3 件 0.00 往復・1.28M / 全 5 件平均 0.20 往復・1.26M）は §2、Haiku 差し戻し 6 件中 4 件の周辺文書更新漏れ・2 件の挿入位置と実データ形状取りこぼし・Sonnet の仕様書誤記訂正と 1 往復内容は §3、途中集計（3.70M・3 件）の訂正経緯は §4、未計測事項（USD 金額・司令塔消費・対照実験）は §5、ローカル <code>.jsonl</code> の <code>type</code>/<code>usage</code>/<code>requestId</code> 記録構造はセッションログ集計記録に基づく。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-4-3" data-footnote-backref="" aria-label="Back to reference 4-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-4-4" data-footnote-backref="" aria-label="Back to reference 4-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-4-5" data-footnote-backref="" aria-label="Back to reference 4-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-4-6" data-footnote-backref="" aria-label="Back to reference 4-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-4-7" data-footnote-backref="" aria-label="Back to reference 4-7" class="data-footnote-backref">↩<sup>7</sup></a> <a href="#user-content-fnref-4-8" data-footnote-backref="" aria-label="Back to reference 4-8" class="data-footnote-backref">↩<sup>8</sup></a> <a href="#user-content-fnref-4-9" data-footnote-backref="" aria-label="Back to reference 4-9" class="data-footnote-backref">↩<sup>9</sup></a> <a href="#user-content-fnref-4-10" data-footnote-backref="" aria-label="Back to reference 4-10" class="data-footnote-backref">↩<sup>10</sup></a> <a href="#user-content-fnref-4-11" data-footnote-backref="" aria-label="Back to reference 4-11" class="data-footnote-backref">↩<sup>11</sup></a> <a href="#user-content-fnref-4-12" data-footnote-backref="" aria-label="Back to reference 4-12" class="data-footnote-backref">↩<sup>12</sup></a> <a href="#user-content-fnref-4-13" data-footnote-backref="" aria-label="Back to reference 4-13" class="data-footnote-backref">↩<sup>13</sup></a> <a href="#user-content-fnref-4-14" data-footnote-backref="" aria-label="Back to reference 4-14" class="data-footnote-backref">↩<sup>14</sup></a> <a href="#user-content-fnref-4-15" data-footnote-backref="" aria-label="Back to reference 4-15" class="data-footnote-backref">↩<sup>15</sup></a> <a href="#user-content-fnref-4-16" data-footnote-backref="" aria-label="Back to reference 4-16" class="data-footnote-backref">↩<sup>16</sup></a> <a href="#user-content-fnref-4-17" data-footnote-backref="" aria-label="Back to reference 4-17" class="data-footnote-backref">↩<sup>17</sup></a> <a href="#user-content-fnref-4-18" data-footnote-backref="" aria-label="Back to reference 4-18" class="data-footnote-backref">↩<sup>18</sup></a> <a href="#user-content-fnref-4-19" data-footnote-backref="" aria-label="Back to reference 4-19" class="data-footnote-backref">↩<sup>19</sup></a> <a href="#user-content-fnref-4-20" data-footnote-backref="" aria-label="Back to reference 4-20" class="data-footnote-backref">↩<sup>20</sup></a> <a href="#user-content-fnref-4-21" data-footnote-backref="" aria-label="Back to reference 4-21" class="data-footnote-backref">↩<sup>21</sup></a> <a href="#user-content-fnref-4-22" data-footnote-backref="" aria-label="Back to reference 4-22" class="data-footnote-backref">↩<sup>22</sup></a> <a href="#user-content-fnref-4-23" data-footnote-backref="" aria-label="Back to reference 4-23" class="data-footnote-backref">↩<sup>23</sup></a> <a href="#user-content-fnref-4-24" data-footnote-backref="" aria-label="Back to reference 4-24" class="data-footnote-backref">↩<sup>24</sup></a> <a href="#user-content-fnref-4-25" data-footnote-backref="" aria-label="Back to reference 4-25" class="data-footnote-backref">↩<sup>25</sup></a> <a href="#user-content-fnref-4-26" data-footnote-backref="" aria-label="Back to reference 4-26" class="data-footnote-backref">↩<sup>26</sup></a> <a href="#user-content-fnref-4-27" data-footnote-backref="" aria-label="Back to reference 4-27" class="data-footnote-backref">↩<sup>27</sup></a> <a href="#user-content-fnref-4-28" data-footnote-backref="" aria-label="Back to reference 4-28" class="data-footnote-backref">↩<sup>28</sup></a> <a href="#user-content-fnref-4-29" data-footnote-backref="" aria-label="Back to reference 4-29" class="data-footnote-backref">↩<sup>29</sup></a> <a href="#user-content-fnref-4-30" data-footnote-backref="" aria-label="Back to reference 4-30" class="data-footnote-backref">↩<sup>30</sup></a> <a href="#user-content-fnref-4-31" data-footnote-backref="" aria-label="Back to reference 4-31" class="data-footnote-backref">↩<sup>31</sup></a> <a href="#user-content-fnref-4-32" data-footnote-backref="" aria-label="Back to reference 4-32" class="data-footnote-backref">↩<sup>32</sup></a> <a href="#user-content-fnref-4-33" data-footnote-backref="" aria-label="Back to reference 4-33" class="data-footnote-backref">↩<sup>33</sup></a> <a href="#user-content-fnref-4-34" data-footnote-backref="" aria-label="Back to reference 4-34" class="data-footnote-backref">↩<sup>34</sup></a> <a href="#user-content-fnref-4-35" data-footnote-backref="" aria-label="Back to reference 4-35" class="data-footnote-backref">↩<sup>35</sup></a> <a href="#user-content-fnref-4-36" data-footnote-backref="" aria-label="Back to reference 4-36" class="data-footnote-backref">↩<sup>36</sup></a> <a href="#user-content-fnref-4-37" data-footnote-backref="" aria-label="Back to reference 4-37" class="data-footnote-backref">↩<sup>37</sup></a> <a href="#user-content-fnref-4-38" data-footnote-backref="" aria-label="Back to reference 4-38" class="data-footnote-backref">↩<sup>38</sup></a> <a href="#user-content-fnref-4-39" data-footnote-backref="" aria-label="Back to reference 4-39" class="data-footnote-backref">↩<sup>39</sup></a> <a href="#user-content-fnref-4-40" data-footnote-backref="" aria-label="Back to reference 4-40" class="data-footnote-backref">↩<sup>40</sup></a> <a href="#user-content-fnref-4-41" data-footnote-backref="" aria-label="Back to reference 4-41" class="data-footnote-backref">↩<sup>41</sup></a> <a href="#user-content-fnref-4-42" data-footnote-backref="" aria-label="Back to reference 4-42" class="data-footnote-backref">↩<sup>42</sup></a> <a href="#user-content-fnref-4-43" data-footnote-backref="" aria-label="Back to reference 4-43" class="data-footnote-backref">↩<sup>43</sup></a> <a href="#user-content-fnref-4-44" data-footnote-backref="" aria-label="Back to reference 4-44" class="data-footnote-backref">↩<sup>44</sup></a> <a href="#user-content-fnref-4-45" data-footnote-backref="" aria-label="Back to reference 4-45" class="data-footnote-backref">↩<sup>45</sup></a> <a href="#user-content-fnref-4-46" data-footnote-backref="" aria-label="Back to reference 4-46" class="data-footnote-backref">↩<sup>46</sup></a> <a href="#user-content-fnref-4-47" data-footnote-backref="" aria-label="Back to reference 4-47" class="data-footnote-backref">↩<sup>47</sup></a> <a href="#user-content-fnref-4-48" data-footnote-backref="" aria-label="Back to reference 4-48" class="data-footnote-backref">↩<sup>48</sup></a> <a href="#user-content-fnref-4-49" data-footnote-backref="" aria-label="Back to reference 4-49" class="data-footnote-backref">↩<sup>49</sup></a> <a href="#user-content-fnref-4-50" data-footnote-backref="" aria-label="Back to reference 4-50" class="data-footnote-backref">↩<sup>50</sup></a> <a href="#user-content-fnref-4-51" data-footnote-backref="" aria-label="Back to reference 4-51" class="data-footnote-backref">↩<sup>51</sup></a> <a href="#user-content-fnref-4-52" data-footnote-backref="" aria-label="Back to reference 4-52" class="data-footnote-backref">↩<sup>52</sup></a> <a href="#user-content-fnref-4-53" data-footnote-backref="" aria-label="Back to reference 4-53" class="data-footnote-backref">↩<sup>53</sup></a> <a href="#user-content-fnref-4-54" data-footnote-backref="" aria-label="Back to reference 4-54" class="data-footnote-backref">↩<sup>54</sup></a> <a href="#user-content-fnref-4-55" data-footnote-backref="" aria-label="Back to reference 4-55" class="data-footnote-backref">↩<sup>55</sup></a> <a href="#user-content-fnref-4-56" data-footnote-backref="" aria-label="Back to reference 4-56" class="data-footnote-backref">↩<sup>56</sup></a> <a href="#user-content-fnref-4-57" data-footnote-backref="" aria-label="Back to reference 4-57" class="data-footnote-backref">↩<sup>57</sup></a> <a href="#user-content-fnref-4-58" data-footnote-backref="" aria-label="Back to reference 4-58" class="data-footnote-backref">↩<sup>58</sup></a> <a href="#user-content-fnref-4-59" data-footnote-backref="" aria-label="Back to reference 4-59" class="data-footnote-backref">↩<sup>59</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://www.anthropic.com/claude-haiku-5-5">Introducing Claude Haiku 5.5</a> Anthropic、2026年10月7日公開。サブエージェント・要約・compaction 等の狭くスコープされた用途推奨は冒頭導入節 <code>## Claude Haiku 5.5</code> および <code>## Further updates</code>、API モデル ID <code>claude-haiku-5-5</code> は <code>## Availability</code>、Sonnet 5.5 のキャッシュ読出半減（<code>$0.20</code>→<code>$0.10</code>）および Terminal-Bench 4.0 の <code>medium</code> effort における Haiku 5.5（<code>$0.68</code>, <code>20.3%</code>）対 Sonnet 5.5（<code>$0.68</code>, <code>28.8%</code>）比較データは <code>## Further updates</code>。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-5-3" data-footnote-backref="" aria-label="Back to reference 5-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-5-4" data-footnote-backref="" aria-label="Back to reference 5-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-5-5" data-footnote-backref="" aria-label="Back to reference 5-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-5-6" data-footnote-backref="" aria-label="Back to reference 5-6" class="data-footnote-backref">↩<sup>6</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://platform.claude.com/docs/en/models/haiku-5-5/overview">Claude Haiku 5.5</a> Anthropic、Claude Platform Docs、2026年11月18日確認。リリース日（2026年10月7日）および API 既定 effort <code>medium</code> は <code>## Specifications</code> 内の <code>### Capabilities</code> と <code>### Availability</code>。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://www.anthropic.com/claude-sonnet-5-5">Introducing Claude Sonnet 5.5</a> Anthropic、2026年9月28日公開。Claude Code およびアプリにおける既定 effort が <code>Medium</code> で Claude Platform API が <code>High</code> である仕様は <code>## Cost and speed</code> 内の <code>## Pricing</code>、API モデル ID <code>claude-sonnet-5-5</code> は <code>## Getting started</code>。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-7-2" data-footnote-backref="" aria-label="Back to reference 7-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-7-3" data-footnote-backref="" aria-label="Back to reference 7-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-7-4" data-footnote-backref="" aria-label="Back to reference 7-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-7-5" data-footnote-backref="" aria-label="Back to reference 7-5" class="data-footnote-backref">↩<sup>5</sup></a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://platform.claude.com/docs/en/models/sonnet-5-5/overview">Claude Sonnet 5.5</a> Anthropic、Claude Platform Docs、2026年11月18日確認。リリース日（2026年9月28日）および Claude Platform API 上の既定 effort <code>high</code> は <code>## Specifications</code> 内の <code>### Capabilities</code> と <code>### Availability</code>。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-8-2" data-footnote-backref="" aria-label="Back to reference 8-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-8-3" data-footnote-backref="" aria-label="Back to reference 8-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-8-4" data-footnote-backref="" aria-label="Back to reference 8-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-8-5" data-footnote-backref="" aria-label="Back to reference 8-5" class="data-footnote-backref">↩<sup>5</sup></a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://claude.com/resources/articles/claude-model-and-effort-level-in-claude-code">Claude Code effort level and model selection</a> Lydia Hallie、Anthropic、2026年7月7日公開。effort がファイル読み込み数・検証回数・手順の完遂度に影響する解説は記事冒頭の導入部（<code>## How model selection works</code> より前）、文脈が揃い試行しても誤るならモデルを引き上げ、ファイル読み飛ばしやテスト未実行なら effort を引き上げる切り分け基準は <code>## What to change when Claude gets it wrong</code>、高難度の複数ステップ作業では小型モデルが試行回数を消費し上位モデルの方がタスク総コストが低くなり得る説明は <code>## Effort, model, and token consumption</code>。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-9-2" data-footnote-backref="" aria-label="Back to reference 9-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-9-3" data-footnote-backref="" aria-label="Back to reference 9-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-9-4" data-footnote-backref="" aria-label="Back to reference 9-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching">Prompt caching</a> Anthropic、Claude Platform Docs、2026年11月18日確認。API レスポンス <code>usage</code> 内の <code>cache_read_input_tokens</code>・<code>cache_creation_input_tokens</code>・<code>input_tokens</code> の定義は <code>### Tracking cache performance</code>、思考ブロックが次ターンのキャッシュ読出時に入力トークンとして計上される仕様は <code>### Caching with thinking blocks</code>。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-10-2" data-footnote-backref="" aria-label="Back to reference 10-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-10-3" data-footnote-backref="" aria-label="Back to reference 10-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-10-4" data-footnote-backref="" aria-label="Back to reference 10-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://code.claude.com/docs/en/prompt-caching">How Claude Code uses prompt caching</a> Anthropic、Claude Code Docs、2026年11月18日確認。毎ターン <code>System prompt</code>・<code>Project context</code>・<code>Conversation</code> プレフィックス全体を再送信する構造は <code>## How the cache is organized</code>、サブエージェントが別プロンプトで起動し初回は親キャッシュを参照せず自前キャッシュをウォームする仕様は <code>## Subagents and the cache</code>。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-11-2" data-footnote-backref="" aria-label="Back to reference 11-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-12">
+<p><a href="https://platform.claude.com/docs/en/about-claude/pricing">Pricing</a> Anthropic、Claude Platform Docs、2026年11月18日確認。Claude Sonnet 5.5 / Haiku 5.5 の基本入出力単価・5 分キャッシュ書込・キャッシュ読出単価（Sonnet 5.5 は 0.05x、Haiku 5.5 は 0.1x）および Haiku 5.5 の 100K トークン前後での二重価格は <code>## Model pricing</code> と <code>### Prompt caching</code>、リクエスト単位でキャッシュ読出・書込を含む全入力トークンが 100K 境界に算入され超過時に全カテゴリへ上位ティアが適用される仕様は <code>### Long context pricing</code>。 <a href="#user-content-fnref-12" data-footnote-backref="" aria-label="Back to reference 12" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-12-2" data-footnote-backref="" aria-label="Back to reference 12-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-12-3" data-footnote-backref="" aria-label="Back to reference 12-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-12-4" data-footnote-backref="" aria-label="Back to reference 12-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-12-5" data-footnote-backref="" aria-label="Back to reference 12-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-12-6" data-footnote-backref="" aria-label="Back to reference 12-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-12-7" data-footnote-backref="" aria-label="Back to reference 12-7" class="data-footnote-backref">↩<sup>7</sup></a> <a href="#user-content-fnref-12-8" data-footnote-backref="" aria-label="Back to reference 12-8" class="data-footnote-backref">↩<sup>8</sup></a> <a href="#user-content-fnref-12-9" data-footnote-backref="" aria-label="Back to reference 12-9" class="data-footnote-backref">↩<sup>9</sup></a> <a href="#user-content-fnref-12-10" data-footnote-backref="" aria-label="Back to reference 12-10" class="data-footnote-backref">↩<sup>10</sup></a> <a href="#user-content-fnref-12-11" data-footnote-backref="" aria-label="Back to reference 12-11" class="data-footnote-backref">↩<sup>11</sup></a></p>
+</li>
+<li id="user-content-fn-13">
+<p><a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-haiku-5-5">Prompting Claude Haiku 5.5</a> Anthropic、Claude Platform Docs、2026年11月18日確認。<code>low</code> / <code>medium</code> effort で Haiku 5.5 が検証チェックを実行せず完了報告する場合がある注意と検証指示プロンプト例は <code>## Tell coding agents to verify their changes</code>。 <a href="#user-content-fnref-13" data-footnote-backref="" aria-label="Back to reference 13" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-13-2" data-footnote-backref="" aria-label="Back to reference 13-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-14">
+<p><a href="https://www.mindstudio.ai/blog/mixing-ai-models-coding-workflow-strategy">Mixing AI Models: Cut Coding Costs Without Losing Code Quality</a> Luis Chavez-Mattos、MindStudio、2026年11月5日公開。短期的・局所的タスクでは機能するオープンウェイトモデル（Kimi K2 等）が、複数制約を維持する長期開発タスクで「drift（ルール逸脱・制約忘れ）」を起こし差し戻しループでトークンを消費する構造は <code>## Why do open models struggle on longer coding tasks?</code>。 <a href="#user-content-fnref-14" data-footnote-backref="" aria-label="Back to reference 14" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-15">
+<p><a href="https://www.exploreagentic.ai/insights/claude-haiku-vs-sonnet/">Claude Haiku vs Sonnet: Cost-Per-Task Math for Agents</a> Tommy Tao、Explore Agentic、2026年7月3日公開。失敗・エスカレーション確率を織り込んだ Cost-Per-Task 評価と「失敗を安く検知できるか」の境界基準は <code>## The Cost-Per-Task Math</code>（<code>### Failure-adjusted cost: the number that matters</code>）、旧世代 Haiku 4.5 の観測として整理された 4 劣化パターン（計画保持劣化・曖昧さの推測確定・エラー黙殺・浅い自己修正）は <code>## Where Haiku 4.5 Degrades</code>。※Haiku 4.5 対 Sonnet 5 時代の記事であり、世代差を踏まえて参照している。 <a href="#user-content-fnref-15" data-footnote-backref="" aria-label="Back to reference 15" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-16">
+<p><a href="https://code.claude.com/docs/en/sub-agents">Create custom subagents</a> Anthropic、Claude Code Docs、2026年11月18日確認。<code>--agents</code> CLI フラグの JSON 形式は <code>### Choose the subagent scope</code>、YAML frontmatter フィールド（<code>name</code>, <code>description</code>, <code>tools</code>, <code>disallowedTools</code>, <code>model</code>, <code>effort</code>, <code>isolation</code>）は <code>#### Supported frontmatter fields</code>、<code>/tasks</code> でのモデル・effort 確認は <code>### Choose a model</code>、サブエージェントのトランスクリプト格納先（<code>~/.claude/projects/{project}/{sessionId}/subagents/agent-{agentId}.jsonl</code>）と <code>cleanupPeriodDays</code> 保持仕様は <code>#### Resume subagents</code>。 <a href="#user-content-fnref-16" data-footnote-backref="" aria-label="Back to reference 16" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-16-2" data-footnote-backref="" aria-label="Back to reference 16-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-16-3" data-footnote-backref="" aria-label="Back to reference 16-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-16-4" data-footnote-backref="" aria-label="Back to reference 16-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-16-5" data-footnote-backref="" aria-label="Back to reference 16-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-16-6" data-footnote-backref="" aria-label="Back to reference 16-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-16-7" data-footnote-backref="" aria-label="Back to reference 16-7" class="data-footnote-backref">↩<sup>7</sup></a></p>
+</li>
+<li id="user-content-fn-17">
+<p><a href="https://code.claude.com/docs/en/costs">Manage costs effectively</a> Anthropic、Claude Code Docs、2026年11月18日確認。<code>/usage</code> の <code>Usage by model</code> 表記と、メイン会話のみを対象としサブエージェントを含まない <code>Prompt cache (main)</code> 統計仕様は <code>### Using the /usage command</code> および <code>#### Prompt cache statistics</code>、OpenTelemetry エクスポートによるモデル別・トークン別監査は <code>## Manage costs for your organization</code> と <code>### Cloud providers</code>。 <a href="#user-content-fnref-17" data-footnote-backref="" aria-label="Back to reference 17" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-17-2" data-footnote-backref="" aria-label="Back to reference 17-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

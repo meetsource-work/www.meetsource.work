@@ -1,0 +1,292 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>「更新した」のに mise の Python と Homebrew の Git は漏洩 CA を信頼していた ── Mac の信頼ストア多重構造と実測検証 | Meetsource</title><meta name="description" content="Mac でツールを更新しても、Homebrew の Git や mise の Python は未修正の /etc/ssl/cert.pem を参照し続ける盲点があります。eMudhra の CA 鍵漏洩対応の実測から、ツールごとの信頼ストアの違いと、遮断（陽性）と正規疎通（陰性対照）をセットで点検する検証手順を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/mac-ca-store-toolchain-verification"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="「更新した」のに mise の Python と Homebrew の Git は漏洩 CA を信頼していた ── Mac の信頼ストア多重構造と実測検証 | Meetsource"><meta property="og:description" content="Mac でツールを更新しても、Homebrew の Git や mise の Python は未修正の /etc/ssl/cert.pem を参照し続ける盲点があります。eMudhra の CA 鍵漏洩対応の実測から、ツールごとの信頼ストアの違いと、遮断（陽性）と正規疎通（陰性対照）をセットで点検する検証手順を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/mac-ca-store-toolchain-verification"><meta property="og:image" content="https://www.meetsource.work/blog/mac-ca-store-toolchain-verification-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-30T16:05:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="「更新した」のに mise の Python と Homebrew の Git は漏洩 CA を信頼していた ── Mac の信頼ストア多重構造と実測検証 | Meetsource"><meta name="twitter:description" content="Mac でツールを更新しても、Homebrew の Git や mise の Python は未修正の /etc/ssl/cert.pem を参照し続ける盲点があります。eMudhra の CA 鍵漏洩対応の実測から、ツールごとの信頼ストアの違いと、遮断（陽性）と正規疎通（陰性対照）をセットで点検する検証手順を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/mac-ca-store-toolchain-verification-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"「更新した」のに mise の Python と Homebrew の Git は漏洩 CA を信頼していた ── Mac の信頼ストア多重構造と実測検証","description":"Mac でツールを更新しても、Homebrew の Git や mise の Python は未修正の /etc/ssl/cert.pem を参照し続ける盲点があります。eMudhra の CA 鍵漏洩対応の実測から、ツールごとの信頼ストアの違いと、遮断（陽性）と正規疎通（陰性対照）をセットで点検する検証手順を解説します。","datePublished":"2026-10-30T16:05:00.000Z","image":"https://www.meetsource.work/blog/mac-ca-store-toolchain-verification-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/mac-ca-store-toolchain-verification"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Homebrew で git や curl を最新にアップデートしたのに、なぜ古い証明書が使われるのですか？","acceptedAnswer":{"@type":"Answer","text":"Homebrew の git が macOS システム標準の libcurl を使用するようにビルドされており、システムの /etc/ssl/cert.pem を直接参照する構成になっているためです。ツール本体のバイナリが最新であっても、動的リンク先のライブラリが参照する証明書ストアが更新されていなければ、システム側の古い証明書が有効なままとなります。"}},{"@type":"Question","name":"証明書バンドルを手動で修正した後に気をつけるべき注意点は何ですか？","acceptedAnswer":{"@type":"Answer","text":"macOS のソフトウェアアップデートを実行すると、/etc/ssl/cert.pem が Apple 標準のファイルで上書きされて元に戻る点です。Dennis Jackson 氏の検証でも、手動修正後にリリースされた macOS 27.2 へのアップデートによって修正が初期化され、再度脆弱な状態に戻ってしまった事実が報告されています。OS のアップデートを適用した後は、該当の証明書が再度混入していないか確認し、必要に応じて除外処理を再実行する必要があります。"}},{"@type":"Question","name":"陰性対照（negative control）の確認はなぜ必要なのですか？","acceptedAnswer":{"@type":"Answer","text":"遮断対策の過程で証明書バンドルを誤って破損させたり、必要な正規ルート証明書まで削除してしまったりする「過剰遮断（巻き添えによる通信障害）」を即座に検知するためです。テスト用ホストで拒否されること（陽性確認）と、GitHub や PyPI などの正規ホストへ正常に接続できること（陰性対照）を 1 回の確認にセットで入れることで、安全に運用を継続できることが保証されます。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-30T16:05:00.000Z" data-astro-cid-7jjqptxk> 2026.10.31 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#Mac</span><span class="tag" data-astro-cid-7jjqptxk>#security</span><span class="tag" data-astro-cid-7jjqptxk>#tls</span><span class="tag" data-astro-cid-7jjqptxk>#verification</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>「更新した」のに mise の Python と Homebrew の Git は漏洩 CA を信頼していた ── Mac の信頼ストア多重構造と実測検証</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/mac-ca-store-toolchain-verification-hero.webp" alt="「更新した」のに mise の Python と Homebrew の Git は漏洩 CA を信頼していた ── Mac の信頼ストア多重構造と実測検証" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>SSL/TLS 信頼ストアとは、システムやツールが HTTPS 通信を行う際に接続先サーバーの証明書チェーンを検証するためのルート証明書・中間証明書の保管場所です。</p>
+<p>2026年10月、認証局 eMudhra の中間 CA 秘密鍵において乱数生成のエントロピー不足が発覚し、公開された証明書から 255 ステップ以内の計算で秘密鍵が復元可能だったという衝撃的なインシデントが報告されました<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。この事態を受けて eMudhra 社は SSL/TLS 証明書事業からの自主的撤退を発表しています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>Safari や Google Chrome などの主要ブラウザでは、OneCRL や CRLSets といった動的な失効リスト配信の仕組みにより、侵害された中間 CA が即座に遮断されました。しかし、ターミナルで動作する CLI ツールやスクリプト言語環境は、通信時にリアルタイムで失効情報（CRL/OCSP）を問い合わせず、ローカルディスク上の静的ファイルやバイナリ内の証明書リストに依存しています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>このニュースを見て「<code>brew upgrade</code> でパッケージを最新にしたから大丈夫」と安心していないでしょうか。手元の Mac 環境で実際に計測してみたところ、ツールの更新だけでは対策として不完全であり、普段使っている Git や Python が依然として漏洩 CA を信頼したまま通信している実態が明らかになりました。専門外の複雑なセキュリティ・信頼ストア問題ではありましたが、AI エージェントと協業しながらコマンドを実行し、経路ごとに実測と切り分けを進めることで安全に対処することができました。</p>
+<p><a href="/blog/agent-secret-exposure-paths">過去の秘密情報保護に関する検証記事</a> でも触れたように、セキュリティ対策が正しく効いているかを確かめるには「更新した」という申告やバージョン番号を鵜呑みにせず、実際の通信経路ごとに実測し直す姿勢が不可欠です。</p>
+<p>本記事では、手元の Mac 環境において各種ツールチェーン（Homebrew、mise、Node.js、macOS システム標準）がどの信頼ストアを参照しているかを実測した記録を共有します。さらに、問題のある証明書の除外手順と、漏洩 CA が拒否されること（陽性確認）だけでなく「GitHub や PyPI などの正規ホストが正常に通信できること（陰性対照）」を 1 回の確認にセットで組み込む検証作法を解説します。</p>
+<h2 id="検証環境と調査スコープ">検証環境と調査スコープ</h2>
+<p>本調査では、macOS 上で日常的な開発作業に使用される代表的な CLI ツールチェーン（curl、git、python3、node）を対象に、テスト用エンドポイントへの接続挙動と参照先ストアを調査しました。Safari や Mail などの Apple ネイティブ GUI アプリケーションは検証スコープ外とし、ターミナル環境の実態に絞って検証しています。</p>
+<p>また、本記事ではターミナルログやエラー出力、HTTP ステータスコードなどの「観測された客観的事実（Fact）」と、リンク構造やコンパイル時設定に関する「技術的推測・考察（Inference）」を厳格に分離して記述します。</p>
+<p>検証を実施したマシンの環境スペックおよび各ツールのバージョンは以下のとおりです。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>項目</th><th>バージョン / 詳細</th></tr></thead><tbody><tr><td>OS・アーキテクチャ</td><td>macOS (Apple Silicon darwin arm64)</td></tr><tr><td>計測実施日</td><td>2026年10月22日</td></tr><tr><td>macOS システム標準 curl</td><td><code>/usr/bin/curl</code></td></tr><tr><td>Homebrew 版 curl</td><td><code>curl 8.22.0</code>（更新後 <code>8.23.0</code>）</td></tr><tr><td>macOS システム標準 python3</td><td><code>/usr/bin/python3</code></td></tr><tr><td>mise 管理下 python3</td><td><code>python3 3.14.7</code>（<code>python-build-standalone</code>）</td></tr><tr><td>Homebrew 版 python3</td><td><code>/opt/homebrew/bin/python3</code></td></tr><tr><td>macOS システム標準 git</td><td><code>/usr/bin/git</code></td></tr><tr><td>Homebrew 版 git</td><td><code>git 2.56.0</code></td></tr><tr><td>Node.js</td><td><code>v24.21.0</code>（更新後 <code>v24.22.1</code>）</td></tr><tr><td>Homebrew ca-certificates</td><td><code>2026-09-25</code>（更新後 <code>2026-10-20</code>）</td></tr><tr><td>mise</td><td><code>2026.10.0</code></td></tr></tbody></table>
+<p>初期状態（手動更新前）の測定では、試行したすべての CLI クライアント（システム標準 curl/python3、Homebrew curl、mise python3、node）において、漏洩中間 CA で署名されたテスト用ホストへの接続が HTTP ステータスコード <code>200</code> で成功し、警告なく信頼されている状態でした。</p>
+<h2 id="評価基準と前提となるアーキテクチャ概念">評価基準と前提となるアーキテクチャ概念</h2>
+<p>なぜブラウザと CLI ツールでは失効の反映速度が根本的に異なるのでしょうか。そして、Mac の中では証明書ストアがどのように多重化されているのでしょうか。</p>
+<h3 id="ブラウザ環境と-cli-環境の失効モデルの違い">ブラウザ環境と CLI 環境の失効モデルの違い</h3>
+<p>Web ブラウザでは、認証局の鍵漏洩や誤発行が発生した際、ベンダー（Google、Mozilla、Apple、Microsoft）が集中管理する失効リスト（Chrome の CRLSets、Firefox の OneCRL、CRLite など）がバックグラウンドでプッシュ配信されます<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。これにより、OS の更新を待つことなく数時間から数日単位で該当証明書が全世界のブラウザで無効化されます。</p>
+<p>一方、ターミナル上で動作する多くの CLI ツールやスクリプト言語ランタイムは、パフォーマンスやオフライン動作への配慮から、通信のたびに CRL（証明書失効リスト）のダウンロードや OCSP（オンライン証明書状態プロトコル）の問い合わせを行いません<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。そのため、手元のマシンに保存された静的な証明書ファイル（CA バンドル）が更新されない限り、失効した証明書を有効なものとして信頼し続けます。</p>
+<h3 id="mac-における信頼ストアの多重構造">Mac における信頼ストアの多重構造</h3>
+<p>Mac 上で開発を行っている場合、信頼ストアは単一の「キーチェーン（Keychain）」だけにまとまっているわけではありません。利用するツールチェーンごとに、参照先が以下のように分散しています。</p>
+<ol>
+<li><strong>macOS システム証明書バンドル（<code>/etc/ssl/cert.pem</code>）</strong>: Apple が OS レベルで配置している静的な証明書ファイルです。Apple のセキュリティフレームワークを利用するネイティブアプリ（Safari 等）はキーチェーンの動的ブロックを参照しますが、macOS に同梱される CLI ツール（<code>/usr/bin/curl</code> や <code>/usr/bin/git</code>）はこの <code>/etc/ssl/cert.pem</code> を直接参照します<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。なお、このファイルを手動で修正しても、macOS のソフトウェアアップデートによって Apple 標準の未修正ファイルで上書きされてしまう問題が指摘されています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</li>
+<li><strong>Homebrew の CA バンドル（<code>/opt/homebrew/etc/ca-certificates/cert.pem</code>）</strong>: Homebrew で管理されるツール群が参照するバンドルです。<code>brew upgrade ca-certificates</code> を実行することで最新の Mozilla CA ルートに更新されます。</li>
+<li><strong>Python の証明書ストア</strong>: インタプリタがコンパイルされた際のビルド設定（<code>ssl.get_default_verify_paths()</code> で確認可能）に依存します<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。OS の OpenSSL ディレクトリを参照するか、あるいは <code>certifi</code> パッケージ同梱の <code>cacert.pem</code> を利用するかによって挙動が分かれます。</li>
+<li><strong>Node.js の内蔵ストア</strong>: Node.js は外部の証明書ファイルに依存せず、バイナリ自体に Mozilla のルート証明書リストをコンパイル時に組み込んでいます。そのため、Node.js 自体のマイナーバージョンアップによって失効情報が反映されます。</li>
+</ol>
+<h3 id="評価基準2-つの確認軸">評価基準（2 つの確認軸）</h3>
+<p>本検証では、各ツールの安全性を確認するために以下の 2 つの確認軸を設定しました。</p>
+<ul>
+<li><strong>陽性確認（Positive Check）</strong>: 漏洩中間 CA で署名されたテスト用ホスト（<code>https://dv-g3b-emudhra.we-have-a-problem.com/</code>）にアクセスし、正しく接続拒否（SSL/TLS エラー）となることを確認する。</li>
+<li><strong>陰性対照（Negative Control）</strong>: 開発業務に不可欠な正規ホスト（<code>https://github.com/</code>、<code>https://pypi.org/</code>）にアクセスし、正常疎通（HTTP 200）が維持されていることを確認する。</li>
+</ul>
+<p>遮断の成否（陽性）だけを確認して満足すると、設定ミスで正常な通信まで巻き添えで壊してしまったことに気づけません。必ず両面をセットで評価します。</p>
+<h2 id="各ツールチェーンの個別挙動と特徴">各ツールチェーンの個別挙動と特徴</h2>
+<p>パッケージマネージャ経由でツールや証明書の更新を手動で実施した後、テスト用ホストへの接続を再測定しました。その結果、ツールの挙動は真っ二つに分裂しました。</p>
+<h3 id="1-更新によって正常に遮断されたツール">1. 更新によって正常に遮断されたツール</h3>
+<p>Homebrew 版の <code>curl</code> を <code>8.23.0</code> に、<code>ca-certificates</code> を <code>2026-10-20</code> に、そして <code>Node.js</code> を <code>v24.22.1</code> にアップデートしたところ、これらは期待どおりテスト用ホストへの接続を遮断しました。</p>
+<ul>
+<li><code>curl (PATH)</code>: 接続拒否（終了コードおよびステータス <code>000</code>）</li>
+<li><code>/opt/homebrew/bin/python3</code>: <code>urllib.error.URLError</code>（証明書検証エラー）</li>
+<li><code>node</code>: <code>ERR CERT_REVOKED</code>（内蔵失効テーブルによる拒否）</li>
+</ul>
+<h3 id="2-更新後も漏洩-ca-を信頼し続けていたツール">2. 更新後も漏洩 CA を信頼し続けていたツール</h3>
+<p>一方で、最新版をインストールしているはずの以下のツールは、テスト用ホストに対して依然として警告なく接続できてしまいました。</p>
+<ul>
+<li><code>python3 (PATH)</code>（mise で管理している Python 3.14.7）: HTTP ステータス <code>200</code> で接続成功</li>
+<li><code>git</code>（Homebrew で導入した最新の <code>git 2.56.0</code>）: TLS ハンドシェイク成功（証明書情報 <code>issuer: C=NL; O=eMudhra BV; CN=EM DV TLS CA - G3B</code> を取得）</li>
+<li>macOS 標準の <code>/usr/bin/curl</code> および <code>/usr/bin/python3</code>: HTTP ステータス <code>200</code> で接続成功</li>
+</ul>
+<h3 id="盲点の原因分析">盲点の原因分析</h3>
+<p>なぜ Homebrew の Git や mise の Python は、更新後も漏洩 CA を信頼し続けていたのでしょうか。各ツールの内部動作を調査したところ、以下の構造が明らかになりました。</p>
+<p>まず、mise でインストールした Python 3.14.7（<code>python-build-standalone</code> 提供のビルド）で <code>ssl.get_default_verify_paths()</code> を実行したところ、デフォルトの <code>cafile</code> が <code>/private/etc/ssl/cert.pem</code> に固定されていました。コンパイル時にシステムの OpenSSL 設定ディレクトリが指定されているため、Homebrew の証明書バンドルが新しくなっても、システム側のファイルを読みに行っていたのです。</p>
+<p>次に、Homebrew 版の <code>git 2.56.0</code> です。<code>GIT_CURL_VERBOSE=1</code> を指定して詳細ログを確認したところ、読み込まれていたのは <code>CAfile: /etc/ssl/cert.pem</code> でした。Homebrew の Git フォーミュラは <code>uses_from_macos "curl"</code> と定義されており、macOS システム標準の動的ライブラリ <code>/usr/lib/libcurl.4.dylib</code> にリンクされています。Git は独自に設定（<code>http.sslCAInfo</code> など）を行わない限りリンク先 libcurl の既定パスを参照するため<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>、Homebrew 側で <code>curl</code> バイナリを更新しても、Git が利用する libcurl はシステムの <code>/etc/ssl/cert.pem</code> を参照し続けていたのです。</p>
+<p>実際に <code>/etc/ssl/cert.pem</code> のタイムスタンプを確認したところ、更新日は <code>Sep 24</code> のままでした。さらに中身を検索すると、問題の中間 CA が連鎖するルート証明書（<code>emSign ECC Root CA - G3</code> および <code>AAA Certificate Services</code>）が合計 4 件そのまま残存していました。</p>
+<h2 id="共通点と相違点の比較">共通点と相違点の比較</h2>
+<p>同じ Mac のターミナル上で動かしていても、ツールチェーンごとに参照している信頼ストアと失効への耐性は大きく異なっていました。</p>
+<p>主要な 4 つのツールチェーンにおける挙動の違いを以下の表にまとめます。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>ツールチェーン</th><th>デフォルトの参照先証明書ストア</th><th>手動更新後の挙動（テストホスト接続）</th><th>遮断に至る修正経路</th></tr></thead><tbody><tr><td>Homebrew curl</td><td>Homebrew 管理の CA バンドル</td><td>遮断（接続拒否 <code>000</code>）</td><td><code>brew upgrade curl ca-certificates</code></td></tr><tr><td>Node.js</td><td>バイナリ内蔵のルート証明書ストア</td><td>遮断（<code>ERR CERT_REVOKED</code>）</td><td><code>mise</code> / <code>nvm</code> 等で Node.js バージョン更新</td></tr><tr><td>mise python3</td><td><code>/private/etc/ssl/cert.pem</code></td><td><strong>未遮断（200 接続成功）</strong></td><td><code>/etc/ssl/cert.pem</code> の修正、または <code>SSL_CERT_FILE</code></td></tr><tr><td>Homebrew git</td><td><code>/etc/ssl/cert.pem</code>（macOS libcurl 経由）</td><td><strong>未遮断（TLS 接続成功）</strong></td><td><code>/etc/ssl/cert.pem</code> の修正、または <code>http.sslCAInfo</code></td></tr></tbody></table>
+<p>このように、ツール本体やランタイムを最新版に上げただけでは、システムの <code>/etc/ssl/cert.pem</code> に依存しているツールチェーンの穴は塞がりません。なお、Homebrew の curl はデフォルトで Homebrew 管理下の CA バンドルを探索しますが、環境変数 <code>CURL_CA_BUNDLE</code> や <code>SSL_CERT_FILE</code> によって参照先パスを上書きする仕様となっています<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<h2 id="ベストプラクティスと推奨実装">ベストプラクティスと推奨実装</h2>
+<p>手元の Mac 環境で安全な状態を確立するための、具体的な確認・修正手順を説明します。</p>
+<h3 id="1-python-の参照先-ca-ストア確認">1. Python の参照先 CA ストア確認</h3>
+<p>実行中の Python インタプリタがどの証明書ファイルを参照しているかを特定します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">python3</span><span style="color:#40A02B"> -c</span><span style="color:#40A02B"> "import ssl, sys; print(sys.executable); print(ssl.get_default_verify_paths())"</span></span>
+<span class="line"></span></code></pre>
+<p>実行結果ログ（抜粋）:</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>/Users/&#x3C;username>/.local/share/mise/installs/python/3/bin/python3</span></span>
+<span class="line"><span>DefaultVerifyPaths(cafile='/private/etc/ssl/cert.pem', capath='/private/etc/ssl/certs', openssl_cafile_env='SSL_CERT_FILE', openssl_cafile='/private/etc/ssl/cert.pem', openssl_capath_env='SSL_CERT_DIR', openssl_capath='/private/etc/ssl/certs')</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><code>ssl.get_default_verify_paths()</code> により、OpenSSL のビルド時に指定されたデフォルトの <code>cafile</code> が <code>/private/etc/ssl/cert.pem</code> であることが確認できます。もしここがシステムのパスを指している場合、OS 側のバンドルが未修正であれば影響を受けます。</p>
+<h3 id="2-git-の参照先-ca-ストアと-tls-ハンドシェイク確認">2. Git の参照先 CA ストアと TLS ハンドシェイク確認</h3>
+<p>Git コマンドが HTTPS 通信時にどの証明書バンドルを読み込んでいるかをデバッグ出力から特定します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#4C4F69">GIT_CURL_VERBOSE</span><span style="color:#179299">=</span><span style="color:#40A02B">1</span><span style="color:#D20F39;font-style:italic"> command</span><span style="color:#40A02B"> git</span><span style="color:#40A02B"> ls-remote</span><span style="color:#40A02B"> https://dv-g3b-emudhra.we-have-a-problem.com/</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> -iE</span><span style="color:#40A02B"> 'CAfile|issuer'</span></span>
+<span class="line"></span></code></pre>
+<p>実行結果ログ（抜粋）:</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>13:32:04.383950 http.c:994              == Info:  CAfile: /etc/ssl/cert.pem</span></span>
+<span class="line"><span>13:32:04.735320 http.c:994              == Info:  issuer: C=NL; O=eMudhra BV; CN=EM DV TLS CA - G3B</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>Git が内部で使用している libcurl により、<code>CAfile: /etc/ssl/cert.pem</code> が読み込まれ、侵害された中間 CA（<code>EM DV TLS CA - G3B</code>）が発行者として認識されていることが確認できます。</p>
+<h3 id="3-etcsslcertpem-から侵害ルートを除外する修正コマンド">3. <code>/etc/ssl/cert.pem</code> から侵害ルートを除外する修正コマンド</h3>
+<p>システムの <code>/etc/ssl/cert.pem</code> に依存しているツールを保護するため、バックアップを作成した上で、該当する 2 つのルート証明書（<code>emSign ECC Root CA - G3</code> および <code>AAA Certificate Services</code>）を除外します。</p>
+<p>引用元: 筆者の検証セッションの記録（2026-10-22。検証サイトのワークアラウンド手順に基づく実行ログ）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">sudo</span><span style="color:#40A02B"> cp</span><span style="color:#40A02B"> -p</span><span style="color:#40A02B"> /etc/ssl/cert.pem</span><span style="color:#40A02B"> /etc/ssl/cert.pem.bak</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#1E66F5;font-style:italic"> sudo</span><span style="color:#40A02B"> /usr/bin/awk</span><span style="color:#40A02B"> '/^(###|===) /{skip=0} /^=== .*\/CN=(AAA Certificate Services|emSign ECC Root CA - G3)$/{skip=1} !skip'</span><span style="color:#40A02B"> /etc/ssl/cert.pem.bak</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> sudo</span><span style="color:#40A02B"> tee</span><span style="color:#40A02B"> /etc/ssl/cert.pem</span><span style="color:#179299"> ></span><span style="color:#40A02B"> /dev/null</span></span>
+<span class="line"></span></code></pre>
+<p>元ファイルをパーミッション保持のまま <code>.bak</code> として複製し、<code>awk</code> スクリプトによって該当する Common Name を持つ証明書ブロックをスキップして新しい <code>cert.pem</code> を生成しています。</p>
+<h3 id="4-修正後の証明書バンドル検算コマンド">4. 修正後の証明書バンドル検算コマンド</h3>
+<p>除外処理によって目的の証明書のみが正確に削除されたかを検算します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">grep</span><span style="color:#40A02B"> -cE</span><span style="color:#40A02B"> 'CN=(AAA Certificate Services|emSign ECC Root CA - G3)$'</span><span style="color:#40A02B"> /etc/ssl/cert.pem</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">grep</span><span style="color:#40A02B"> -c</span><span style="color:#40A02B"> 'BEGIN CERT'</span><span style="color:#40A02B"> /etc/ssl/cert.pem</span><span style="color:#40A02B"> /etc/ssl/cert.pem.bak</span></span>
+<span class="line"></span></code></pre>
+<p>実行結果ログ（抜粋）:</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>0</span></span>
+<span class="line"><span>/etc/ssl/cert.pem:126</span></span>
+<span class="line"><span>/etc/ssl/cert.pem.bak:128</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>侵害ルートのヒット数が 4 から 0 になり、全体の証明書数が 128 枚から 126 枚へと正確に 2 枚分減少していることが確認できます。</p>
+<h2 id="実機検証結果と検証ログ">実機検証結果と検証ログ</h2>
+<p>証明書バンドルの修正後、未対策だったツールを含む全クライアントでの接続結果（陽性確認）と、正規ホストへの通信維持（陰性対照）を一括で検証しました。</p>
+<h3 id="陽性と陰性対照を一括確認する検証スクリプト">陽性と陰性対照を一括確認する検証スクリプト</h3>
+<p>テスト用ホストでの遮断と、開発で日常的に使用する主要ホスト（GitHub、PyPI）への正常疎通を 1 回のスクリプトで同時に確認します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># テスト用ホストでの遮断確認（陽性）</span></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#4C4F69"> u </span><span style="color:#8839EF">in</span><span style="color:#40A02B"> https://dv-g3b-emudhra.we-have-a-problem.com/</span><span style="color:#40A02B"> https://dv-g3b-aaa-emudhra.we-have-a-problem.com/</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  echo</span><span style="color:#40A02B"> "## </span><span style="color:#4C4F69">$u</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">  /usr/bin/curl</span><span style="color:#40A02B"> -sS</span><span style="color:#40A02B"> -o</span><span style="color:#40A02B"> /dev/null</span><span style="color:#40A02B"> -w</span><span style="color:#40A02B"> '%{http_code}\n'</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$u</span><span style="color:#40A02B">"</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> tail</span><span style="color:#40A02B"> -1</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">  curl</span><span style="color:#40A02B"> -sS</span><span style="color:#40A02B"> -o</span><span style="color:#40A02B"> /dev/null</span><span style="color:#40A02B"> -w</span><span style="color:#40A02B"> '%{http_code}\n'</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$u</span><span style="color:#40A02B">"</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> tail</span><span style="color:#40A02B"> -1</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">  /usr/bin/python3</span><span style="color:#40A02B"> -c</span><span style="color:#40A02B"> "import urllib.request as r; print(r.urlopen('</span><span style="color:#4C4F69">$u</span><span style="color:#40A02B">').status)"</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> tail</span><span style="color:#40A02B"> -1</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">  python3</span><span style="color:#40A02B"> -c</span><span style="color:#40A02B"> "import urllib.request as r; print(r.urlopen('</span><span style="color:#4C4F69">$u</span><span style="color:#40A02B">').status)"</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> tail</span><span style="color:#40A02B"> -1</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  command</span><span style="color:#40A02B"> git</span><span style="color:#40A02B"> ls-remote</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$u</span><span style="color:#40A02B">"</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> tail</span><span style="color:#40A02B"> -1</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">  /usr/bin/git</span><span style="color:#40A02B"> ls-remote</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$u</span><span style="color:#40A02B">"</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> tail</span><span style="color:#40A02B"> -1</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">  node</span><span style="color:#40A02B"> -e</span><span style="color:#40A02B"> "require('https').get('</span><span style="color:#4C4F69">$u</span><span style="color:#40A02B">', r => console.log(r.statusCode)).on('error', e => console.log('ERR', e.code))"</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> tail</span><span style="color:#40A02B"> -1</span></span>
+<span class="line"><span style="color:#8839EF">done</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 正規ホストでの疎通確認（陰性対照）</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> "## sanity"</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">/usr/bin/curl</span><span style="color:#40A02B"> -sS</span><span style="color:#40A02B"> -o</span><span style="color:#40A02B"> /dev/null</span><span style="color:#40A02B"> -w</span><span style="color:#40A02B"> '%{http_code}\n'</span><span style="color:#40A02B"> https://github.com/</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">python3</span><span style="color:#40A02B"> -c</span><span style="color:#40A02B"> "import urllib.request as r; print(r.urlopen('https://pypi.org/').status)"</span></span>
+<span class="line"></span></code></pre>
+<p>実行結果ログ（抜粋）:</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>## https://dv-g3b-emudhra.we-have-a-problem.com/</span></span>
+<span class="line"><span>000</span></span>
+<span class="line"><span>000</span></span>
+<span class="line"><span>urllib.error.URLError: &#x3C;urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1129)></span></span>
+<span class="line"><span>urllib.error.URLError: &#x3C;urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1144)></span></span>
+<span class="line"><span>fatal: unable to access 'https://dv-g3b-emudhra.we-have-a-problem.com/': SSL certificate problem: unable to get local issuer certificate</span></span>
+<span class="line"><span>fatal: unable to access 'https://dv-g3b-emudhra.we-have-a-problem.com/': SSL certificate problem: unable to get local issuer certificate</span></span>
+<span class="line"><span>ERR CERT_REVOKED</span></span>
+<span class="line"><span>## https://dv-g3b-aaa-emudhra.we-have-a-problem.com/</span></span>
+<span class="line"><span>000</span></span>
+<span class="line"><span>000</span></span>
+<span class="line"><span>urllib.error.URLError: &#x3C;urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1129)></span></span>
+<span class="line"><span>urllib.error.URLError: &#x3C;urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1144)></span></span>
+<span class="line"><span>fatal: unable to access 'https://dv-g3b-aaa-emudhra.we-have-a-problem.com/': SSL certificate problem: unable to get local issuer certificate</span></span>
+<span class="line"><span>fatal: unable to access 'https://dv-g3b-aaa-emudhra.we-have-a-problem.com/': SSL certificate problem: unable to get local issuer certificate</span></span>
+<span class="line"><span>ERR CERT_REVOKED</span></span>
+<span class="line"><span>## sanity</span></span>
+<span class="line"><span>200</span></span>
+<span class="line"><span>200</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>テスト用ホストへの接続は、すべてのツールで証明書検証エラーや接続拒否（<code>000</code>、<code>CERT_REVOKED</code>、<code>unable to get local issuer certificate</code>）となり、漏洩した中間 CA が確実に無効化されたことが確認できました。</p>
+<p>同時に実施した陰性対照の確認では、macOS 標準の <code>/usr/bin/curl</code> による <code>github.com</code> へのアクセス、および mise の <code>python3</code> による <code>pypi.org</code> へのアクセスがいずれも <code>200</code> で正常に成功しました。これにより、除外処理によって正規の通信環境を損なっていないことが実証されました。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-homebrew-で-git-や-curl-を最新にアップデートしたのになぜ古い証明書が使われるのですか">Q. Homebrew で git や curl を最新にアップデートしたのに、なぜ古い証明書が使われるのですか？</h3>
+<p><strong>A.</strong> Homebrew の git が macOS システム標準の libcurl を使用するようにビルドされており、システムの <code>/etc/ssl/cert.pem</code> を直接参照する構成になっているためです。ツール本体のバイナリが最新であっても、動的リンク先のライブラリが参照する証明書ストアが更新されていなければ、システム側の古い証明書が有効なままとなります。</p>
+<h3 id="q-証明書バンドルを手動で修正した後に気をつけるべき注意点は何ですか">Q. 証明書バンドルを手動で修正した後に気をつけるべき注意点は何ですか？</h3>
+<p><strong>A.</strong> macOS のソフトウェアアップデートを実行すると、<code>/etc/ssl/cert.pem</code> が Apple 標準のファイルで上書きされて元に戻る点です。Dennis Jackson 氏の検証でも、手動修正後にリリースされた <code>macOS 27.2</code> へのアップデートによって修正が初期化され、再度脆弱な状態に戻ってしまった事実が報告されています<sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。OS のアップデートを適用した後は、該当の証明書が再度混入していないか確認し、必要に応じて除外処理を再実行する必要があります。</p>
+<h3 id="q-陰性対照negative-controlの確認はなぜ必要なのですか">Q. 陰性対照（negative control）の確認はなぜ必要なのですか？</h3>
+<p><strong>A.</strong> 遮断対策の過程で証明書バンドルを誤って破損させたり、必要な正規ルート証明書まで削除してしまったりする「過剰遮断（巻き添えによる通信障害）」を即座に検知するためです。テスト用ホストで拒否されること（陽性確認）と、GitHub や PyPI などの正規ホストへ正常に接続できること（陰性対照）を 1 回の確認にセットで入れることで、安全に運用を継続できることが保証されます。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li><strong>申告ベースやバージョン番号の「更新した」を過信しない</strong>: ツールのバージョンを上げただけでは不十分であり、PATH 上の実行体ごとに実際の接続先証明書ストアを実測で特定する必要があります。</li>
+<li><strong>Mac の信頼ストアは多重構造であることを意識する</strong>: キーチェーンだけでなく、<code>/etc/ssl/cert.pem</code>、Homebrew の <code>ca-certificates</code>、Python のビルド時埋め込みパス、言語内蔵ストアが分散して存在しており、特に Homebrew の Git や mise の Python はシステムの <code>/etc/ssl/cert.pem</code> を見続ける盲点があります。</li>
+<li><strong>セキュリティ遮断の検証には必ず陰性対照をセットにする</strong>: テストホストでの遮断（陽性）だけでなく、業務に必要な正規ホストへの疎通（陰性対照）を 1 回の確認に組み込むことで、過剰遮断による事故を防ぎます。</li>
+<li><strong>手作業の修正は OS アップデートごとの再点検を前提にする</strong>: システムの <code>/etc/ssl/cert.pem</code> を手動修正した場合、macOS のアップデートによって上書きされるリスクがあるため、定期的なヘルスチェックの仕組みを整えることが大切です。</li>
+</ul>
+<p>開発環境や運用パイプラインのセキュリティ点検、ツールチェーンのヘルスチェック設計に関するご相談は、<a href="/#contact">コンタクトフォーム</a> よりお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://scotthelme.co.uk/eight-bits-of-trust-emudhras-ca-keys-cracked-in-milliseconds/">Eight Bits of Trust; eMudhra’s CA keys cracked in milliseconds</a> Scott Helme、2026年10月公開 技術解析記事。中間 CA 秘密鍵のエントロピー不足（255 ステップ以内の計算で復元可能だった事実）、および非ブラウザ TLS クライアントが CRL/OCSP/CT を検証しない構造的弱点。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://emudhra.com/en/press-release/emudhra-to-exit-global-ssl-tls-certificate-business">eMudhra to Exit global SSL/TLS Certificate Business</a> eMudhra Limited、2026年10月22日 プレスリリース。eMudhra 社によるグローバル SSL/TLS 証明書事業からの自主的撤退発表。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://gihyo.jp/article/2026/10/emudhra-ca-key-compromise-dev-tools-fixes">eMudhraの中間CAの秘密鍵が公開された証明書から復元可能と判明、pip・uvなどの開発ツールに修正版</a> 技術評論社（gihyo.jp）、2026年10月公開 ニュース解説記事。Python ツール群（pip, uv, certifi 等）の修正版リリース、動的失効配信の欠如、およびアプリケーション実接続確認の重要性。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://emudhra.we-have-a-problem.com/">eMudhra Intermediate CA Compromise</a> Dennis Jackson 他、2026年10月公開。侵害された中間 CA 8 件の背景、ブラウザ向け動的失効配信（OneCRL, CRLite, CRLSets）、診断用テストホストの提供、および <code>/etc/ssl/cert.pem</code> の一括手動除外 awk スクリプト。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://support.apple.com/en-us/149555">About the compromised eMudhra intermediate CAs</a> Apple Inc.、2026年10月公開、Support Document HT149555。Apple セキュリティフレームワークと <code>/etc/ssl/cert.pem</code> の検証乖離、macOS 付属 CLI ツール（curl, git, python3 等）が OS 自動ブロックの対象外である事実、および Apple による <code>/etc/ssl/cert.pem</code> の手動削除手順（DN 全体を指定した個別除外コマンド）。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://emudhra.we-have-a-problem.com/apple.html">Apple’s git still trusts the compromised eMudhra certificates</a> Dennis Jackson、2026年10月公開。Apple への通知経緯、macOS 付属 git/curl/python3 が侵害証明書を信頼し続けていた事実、OS アップデート（macOS 27.2）による手動修正の上書き。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://docs.python.org/3/library/ssl.html">ssl — TLS/SSL wrapper for socket objects</a> Python Software Foundation、Python 3 Documentation。<code>ssl.get_default_verify_paths()</code> の仕様、戻り値の <code>DefaultVerifyPaths</code> フィールド（<code>cafile</code>, <code>capath</code> 等）と OpenSSL デフォルトパスの参照構造。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://git-scm.com/docs/git-config">Git - git-config Documentation</a> Git Community、Official Documentation。<code>http.sslCAInfo</code>, <code>http.sslCAPath</code>, 環境変数 <code>GIT_SSL_CAINFO</code> の仕様、および libcurl 既定パスの参照動作。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://curl.se/docs/sslcerts.html">curl - SSL CA Certificates</a> Daniel Stenberg / curl project、Official Documentation。curl における CA 証明書探索順序、環境変数 <code>CURL_CA_BUNDLE</code> / <code>SSL_CERT_FILE</code> の仕様。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

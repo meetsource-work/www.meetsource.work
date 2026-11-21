@@ -1,0 +1,195 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>AI エージェントの多段パイプラインで起きる「完了の偽陽性」とは？承認ログと検収を分離する設計 | Meetsource</title><meta name="description" content="AI エージェントの多段パイプラインで起きる完了の偽陽性とは、承認ログ上は成功・承認済みなのに成果物が謝罪文や未完成コードになっている状態です。自作エージェント実験の一次記録をもとに原因と決定論的検証・承認分離の対策を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/ai-agent-false-positive-completion"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="承認ログは「修正なし」、できたファイルは AI の謝罪文だった ── 多段パイプラインの完了の偽陽性"><meta property="og:description" content="ファイルもコミットも「✅ 承認（修正なし）」も揃っていたのに、モジュールの中身はモデルの謝罪文だった。自作エージェント実験の一次記録から、原因と防ぐ仕組みを整理します。"><meta property="og:url" content="https://www.meetsource.work/blog/ai-agent-false-positive-completion"><meta property="og:image" content="https://www.meetsource.work/blog/ai-agent-false-positive-completion-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-13T15:09:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="承認ログは「修正なし」、できたファイルは AI の謝罪文だった ── 多段パイプラインの完了の偽陽性"><meta name="twitter:description" content="ファイルもコミットも「✅ 承認（修正なし）」も揃っていたのに、モジュールの中身はモデルの謝罪文だった。自作エージェント実験の一次記録から、原因と防ぐ仕組みを整理します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/ai-agent-false-positive-completion-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"AI エージェントの多段パイプラインで起きる「完了の偽陽性」とは？承認ログと検収を分離する設計","description":"AI エージェントの多段パイプラインで起きる完了の偽陽性とは、承認ログ上は成功・承認済みなのに成果物が謝罪文や未完成コードになっている状態です。自作エージェント実験の一次記録をもとに原因と決定論的検証・承認分離の対策を解説します。","datePublished":"2026-11-13T15:09:00.000Z","image":"https://www.meetsource.work/blog/ai-agent-false-positive-completion-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/ai-agent-false-positive-completion"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"AI エージェントの「完了の偽陽性」とは何ですか？","acceptedAnswer":{"@type":"Answer","text":"実行ログや承認履歴の上では「完了」「承認済み」と記録されているにもかかわらず、実際の成果物が未完成であったり、AI の謝罪文やエラー報告がそのまま書き込まれていたりする状態を指します。人間のチェックをすり抜けて、壊れた成果物が次段へ渡るため、手戻りや品質低下の原因になります。"}},{"@type":"Question","name":"承認ログが「承認済み」なのに成果物が壊れるのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"多くのパイプラインでは、承認ステップが「処理が成功フラグを返した」「人間または自動フラグが承認を通した」というプロセス通過だけを記録しており、成果物の中身を検証していないためです。さらに、頻繁な確認プロンプトによる承認疲労（ゴム印承認）や、先頭文字列一致のような脆いエラー判定が重なると、不良品がそのまま通過します。"}},{"@type":"Question","name":"LLM が謝罪文をファイルに書き込むのを防ぐにはどうすればよいですか？","acceptedAnswer":{"@type":"Answer","text":"ファイルへの書き込み直前やコミット前に、言語の構文チェッカ（例: perl -c）、Linter、スキーマ検証などの決定論的検証をフックとして組み込むのが最も確実です。プロンプトでの禁止指示や特定のエラー文言の除外ではなく、成果物が満たすべき形式を機械的に判定し、不合格なら非ゼロの終了コードでブロックしてエージェントへ差し戻します。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-13T15:09:00.000Z" data-astro-cid-7jjqptxk> 2026.11.14 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span><span class="tag" data-astro-cid-7jjqptxk>#perl</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>AI エージェントの多段パイプラインで起きる「完了の偽陽性」とは？承認ログと検収を分離する設計</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/ai-agent-false-positive-completion-hero.webp" alt="AI エージェントの多段パイプラインで起きる「完了の偽陽性」とは？承認ログと検収を分離する設計" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>AI エージェントに計画・実装・承認の多段パイプラインを組ませるとき、人間が最初に警戒するのは「実際には作業していないのに完了と報告する嘘」です。当ブログでも過去に、<a href="/blog/ai-agent-completion-evidence">証跡の提示を義務づけて未実施報告を防ぐ設計</a> や、逆向きにエージェントが未開始と報告しながら実際には作業を終えていた <a href="/blog/ai-agent-false-negative-completion">完了の偽陰性への対処</a> を取り上げました。</p>
+<p>しかし実務では、ファイルもコミットも、さらに「✅ 承認（修正なし）」という承認ログまですべて揃っているのに、中身を開けるとモデルの謝罪文だったという別の事故が起きます。<strong>完了の偽陽性（False Positive）</strong> とは、AI エージェントの多段パイプラインにおいて、実行や承認のログ上は「成功・承認済み」と記録されているにもかかわらず、実際の成果物の中身が未完成やエラー報告、謝罪文など、期待された要件を満たしていない状態を指します。</p>
+<p>この事故は、プロンプトの指示を増やしたり、人間の承認ステップを挟んだりするだけでは防げません。段の出力をファイルへ書き込む前に構文などの性質を機械で確かめる「決定論的検証」と、「承認の記録（プロセスの通過）」と「成果物の検収（中身・品質の確認）」を別物として切り離す設計が必要です。</p>
+<h2 id="承認ログは修正なし中身は-ai-の謝罪文だった実例">承認ログは「修正なし」、中身は AI の謝罪文だった実例</h2>
+<p>この問題は机上の空論ではなく、私自身が自作エージェントの実験で踏み抜いた事故から見えてきたものです<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。2026年2月、個人で開発していたタスク実行ツール（以下、実験ツールA）を使い、Perl モジュール生成用の実験リポジトリ（以下、実験リポジトリA）で JSON-RPC 2.0 の値オブジェクト（<code>Request</code> / <code>Response</code> / <code>Error</code> / <code>Notification</code>）を実装させるタスクを 3 回連続で実行しました。</p>
+<p>実験ツールAでは、上流の計画フェーズ（3 件）に上位の推論モデルを、各実装ステップ（保存された記録で 14 件）に軽量・高速なモデルを割り当てていました。実行後に残された 4 件のエピソード記録（3 タスク目のみ 9 秒差で 2 件記録）を確認すると、4 件すべてが「結果: ✅ 承認」「ユーザーフィードバック: 承認（修正なし）」と記録されていました。</p>
+<p>ところが、実際に生成・コミットされたファイルの中身を開くと、実態はまるで異なっていました。保存されていた実装ステップ 14 件のうち 4 件で、実装を担当したモデルが Perl コードではなく <code>AMBIGUITY:</code>（ツールが利用できないなどの曖昧性・エラー報告）を返していたのです。</p>
+<p>実際に <code>Notification.pm</code> としてコミットされたファイルの中身を確認します。このコードは、実験リポジトリA に残された実物（全 3 行）の逐語引用です。</p>
+<p>引用元: 実験リポジトリA（非公開）の Notification.pm</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>再度申し訳ありません。利用可能なツールについて誤解しているようです。`write_file` や `run_shell_command` が直接利用できないため、指示されたファイルの作成や変更を実行できません。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>AMBIGUITY: `write_file` および `run_shell_command` ツールが利用できないため、新しいファイルを直接作成したり、既存のファイルを変更したりすることができません。このため、指示された実装ステップ（`lib/JSONRPC/Notification.pm` および `t/04_notification.t` の作成）を実行できません。ツールの利用可能性について、追加の指示が必要です。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><code>Notification.pm</code> には Perl コードが 1 行も含まれておらず、自然言語の謝罪文とツール不足の報告だけがモジュールファイルとしてコミットされていました。さらに <code>Error.pm</code>（224 行）のファイル先頭にも「<code>run_shell_command</code> ツールが利用できないため…」という報告と <code>AMBIGUITY:</code> が書き込まれており、<code>Request.pm</code> や <code>Response.pm</code> には、先頭に <code>File: ...</code> や Markdown のコードフェンス、末尾に <code>use Test::More;</code> を含むテストコードがそのまま混入していました（コミットされた <code>.pm</code> ファイルと実装ステップの応答がバイト単位で一致することを 6 組確認しています）。</p>
+<p>なぜ <code>AMBIGUITY:</code> の報告がファイル書き込みをすり抜けたのでしょうか。当時の実験ツールAの実装（<code>runner.ts</code>）では、モデルの応答が特定の接頭辞で始まる場合のみ書き込みをスキップする処理を入れていました。</p>
+<p>引用元: 実験ツールA（非公開）の runner.ts</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#9CA0B0;font-style:italic">    // AIの回答が AMBIGUITY: で始まる場合は、ファイルへの書き込みをスキップする</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> (text</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">trim</span><span style="color:#4C4F69">()</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">startsWith</span><span style="color:#4C4F69">(</span><span style="color:#40A02B">'AMBIGUITY:'</span><span style="color:#4C4F69">)) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#4C4F69">      console</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">warn</span><span style="color:#4C4F69">(</span><span style="color:#40A02B">`⚠️ Skipped applying changes because AI reported ambiguity.`</span><span style="color:#4C4F69">)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">      return</span><span style="color:#7C7F93"> {</span><span style="color:#4C4F69"> text </span><span style="color:#7C7F93">};</span></span>
+<span class="line"><span style="color:#7C7F93">    }</span></span>
+<span class="line"></span></code></pre>
+<p>このコードは、応答の先頭行が <code>AMBIGUITY:</code> で始まるケースだけを想定していました。保存された 4 件の <code>AMBIGUITY:</code> 応答のうち 3 件は先頭がこの文字列だったためスキップされ、残る 1 件の <code>Error.pm</code>（3 タスク目の <code>step_1</code>）は 1 行目にツール不可の説明が置かれて 3 行目に <code>AMBIGUITY:</code> が現れたため判定を素通りしました。さらに、<code>Notification.pm</code> を生成したステップの初回実行時（リトライ時にメタデータが上書きされ、リトライ時は <code>AMBIGUITY:</code> 先頭で上書きがスキップされたため初回分だけが残存）も同様に 1 行目が謝罪文で 3 行目が <code>AMBIGUITY:</code> だったため、そのままファイルへ書き込まれていました。</p>
+<p>さらに、承認ログの仕組みを後から確認したところ、実験ツールAの承認コマンド（<code>review.ts</code>）には、実験開始の約 23 分前に追加された非対話の自動承認オプション（<code>-y, --yes</code>）と、対話プロンプトで <code>y</code> を入力する 2 通りの経路がありました。どちらの経路でも <code>.pm</code> ファイルの構文や中身を検査する処理は一切なく、<code>episode.ts</code> は実行の成功フラグだけを見て「✅ 承認」「承認（修正なし）」という文言を無条件で書き出す仕様になっていました。なお、当日の 4 件の承認ログが自動承認オプションで記録されたか、人間が対話で承認したかは当時の実行ログが残っておらず確定できませんが、いずれの経路であっても中身を検証しない仕組みだった点に変わりはありません。</p>
+<h2 id="なぜ承認の記録は成果物の中身を保証しないのか">なぜ「承認の記録」は成果物の中身を保証しないのか</h2>
+<p>この事故は特定のツールや古いモデルに限った話ではなく、多段パイプラインが抱える 3 つの構造的な要因が重なって起きています。</p>
+<h3 id="1-llm-の出力エラーと表層的な文字列判定の脆さ">1. LLM の出力エラーと表層的な文字列判定の脆さ</h3>
+<p>プログラムの関数であれば、前提条件を満たせないときに例外を投げて異常終了します。しかし LLM はツールが利用できないと判断したときでも、例外を投げずに自然言語の謝罪文や説明文を正常な応答として返します。文法的に正しいが意味や形式が期待と異なる出力は「セマンティックエラー」と呼ばれ、スキーマ検証などの出力ガードレールで防ぐ必要があると指摘されています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。今回の謝罪文混入は Perl として構文エラーになる点で厳密には異なりますが、プロセスが異常終了せず期待外のテキストが次段へ流れる構造は共通しています。</p>
+<p>また、LLM エージェントはルールに違反していても操作の成功をハルシネーションすることがあります<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。実験ツールAのように「特定の失敗文字列（<code>AMBIGUITY:</code>）で始まる出力を弾く」という表層的なチェックは、モデルが前置きを 1 行足すだけで簡単に突破されます。</p>
+<h3 id="2-承認ステップの形骸化と承認疲労">2. 承認ステップの形骸化と承認疲労</h3>
+<p>「承認ステップが存在すること」と「判断が存在すること」は同じではありません<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。Anthropic の報告では、手動の権限確認プロンプトに対してユーザーが承認疲労（Approval Fatigue）に陥り、実際にはプロンプトの 93% がそのまま承認されている実態が挙げられています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。また同社の別調査でも、経験を積んだユーザー（750 セッション時点）は新規ユーザー（50 セッション未満）の約 20% に対して 40% 超のセッションで <code>full auto-approve</code> を有効にする傾向が報告されています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>変更対象の差分や検証結果が見えない低コンテキストな承認要求が繰り返されると、人間は確認作業を単なる「ゴム印承認（Rubber-stamping）」として処理するようになります<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup><sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。自動承認フラグを使うか人間がボタンを押すかにかかわらず、検収の裏付けを持たない承認ログは「承認の通過」という事実しか保証しません。</p>
+<h3 id="3-予防と検収の混同と過剰な自律性">3. 予防と検収の混同と過剰な自律性</h3>
+<p>OWASP の <code>LLM06:2025</code>（Excessive Agency）は、過剰な機能・過剰な権限・過剰な自律性が、曖昧または予期しない出力による誤った変更を引き起こすリスクを指摘しています<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。ここで重要になるのが、「予防」と「検収」の設計対象の違いです。</p>
+<p>原因の空間に対して設計する予防（たとえば「<code>AMBIGUITY:</code> で始まる出力を弾く」）は、失敗パターンの種類が無限にあるため、どれだけ条件を足しても必ず漏れが生じます。一方で、結果の空間に対して設計する検収（たとえば「Perl として構文が通るか」）は、成果物が満たすべき性質の数だけ検査を書けば閉じます。多段パイプラインの完了判定は、どちらの空間を検査しているかによって信頼性が大きく変わります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方式</th><th>検証の対象（空間）</th><th>謝罪文混入への耐性</th><th>運用負荷・承認疲労</th><th>主なリスク</th></tr></thead><tbody><tr><td><strong>承認ログのみ（従来型）</strong></td><td>プロセスの通過記録</td><td>低い（無検証で通過）</td><td>高い（または形骸化）</td><td>ゴム印承認・自動通過による完了の偽陽性</td></tr><tr><td><strong>表層フィルタ（先頭文字列一致等）</strong></td><td>特定の失敗パターン（原因の空間）</td><td>低い（前置き 1 行で突破）</td><td>中程度</td><td>想定外の出力形式への取りこぼし</td></tr><tr><td><strong>決定論的検収ゲート＋承認分離</strong></td><td>成果物の必須性質（結果の空間）</td><td>高い（構文・スキーマ等で遮断）</td><td>低い（機械検証後に人へ渡す）</td><td>意味的妥当性の見落とし（後述の限界）</td></tr></tbody></table>
+<p>表層的な文字列フィルタに頼るのではなく、成果物が満たすべき結果の空間を決定論的に検査し、承認ログとは別レイヤーで管理する必要があります。</p>
+<h2 id="ai-エージェントの多段パイプラインに組み込む-2-つの決定論的対策">AI エージェントの多段パイプラインに組み込む 2 つの決定論的対策</h2>
+<p>完了の偽陽性を防ぐためにパイプラインへ組み込むべき対策は、次の 2 点です。</p>
+<h3 id="対策-1-ファイル書き込みコミット前の決定論的検証">対策 1: ファイル書き込み・コミット前の決定論的検証</h3>
+<p>プロンプトや Markdown のルール文書に「コード以外は出力しない」「謝罪文を書くな」と追記しても、それは LLM にとって「制約」ではなく「推奨事項」に過ぎず、守られないリスクが残ります<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup><sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。エージェントの挙動を確実に縛るには、ツール実行の前後やファイル書き込み処理の直前に、構文チェッカ（<code>perl -c</code>）や Linter、スキーマ検証など、pass/fail を決定論的に返すスクリプトを組み込みます。</p>
+<p>たとえば Claude Code を利用している場合、<code>PostToolUse</code> フックを使い、<code>.pm</code> ファイルが書き込まれた直後に <code>perl -c</code> を実行する仕組みを作れます<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。次のスクリプトは <code>jq</code> と <code>perl</code> を使用し、構文エラーがあれば終了コード <code>2</code> と標準エラー出力を返してエージェントへ差し戻します。</p>
+<p>ファイル: .claude/hooks/check-perl-syntax.sh</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#EA76CB;font-style:italic">#!/bin/bash</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">set</span><span style="color:#40A02B"> -euo</span><span style="color:#40A02B"> pipefail</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">input</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">file_path</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">jq</span><span style="color:#40A02B"> -r</span><span style="color:#40A02B"> '.tool_input.file_path // empty'</span><span style="color:#179299"> &#x3C;&#x3C;&#x3C;</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">$input</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#7C7F93"> [[</span><span style="color:#179299"> -z</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$file_path</span><span style="color:#40A02B">"</span><span style="color:#179299"> ||</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$file_path</span><span style="color:#40A02B">"</span><span style="color:#179299"> !=</span><span style="color:#179299"> *</span><span style="color:#4C4F69">.pm </span><span style="color:#179299">||</span><span style="color:#179299"> !</span><span style="color:#179299"> -f</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$file_path</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> ]];</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  exit</span><span style="color:#FE640B"> 0</span></span>
+<span class="line"><span style="color:#8839EF">fi</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#179299"> !</span><span style="color:#4C4F69"> err</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">perl</span><span style="color:#40A02B"> -c</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$file_path</span><span style="color:#40A02B">"</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#7C7F93">);</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  echo</span><span style="color:#40A02B"> "Syntax error in </span><span style="color:#4C4F69">$file_path</span><span style="color:#40A02B">: </span><span style="color:#4C4F69">$err</span><span style="color:#40A02B">"</span><span style="color:#179299"> >&#x26;2</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  exit</span><span style="color:#FE640B"> 2</span></span>
+<span class="line"><span style="color:#8839EF">fi</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">exit</span><span style="color:#FE640B"> 0</span></span>
+<span class="line"></span></code></pre>
+<p>作成したスクリプトには実行権限（<code>chmod +x .claude/hooks/check-perl-syntax.sh</code>）を付与し、<code>.claude/settings.json</code> の <code>PostToolUse</code> フックへ登録します<sup><a href="#user-content-fn-11" id="user-content-fnref-11-2" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。</p>
+<p>ファイル: .claude/settings.json</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#7C7F93">  "</span><span style="color:#1E66F5">hooks</span><span style="color:#7C7F93">"</span><span style="color:#7C7F93">:</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#7C7F93">    "</span><span style="color:#1E66F5">PostToolUse</span><span style="color:#7C7F93">"</span><span style="color:#7C7F93">:</span><span style="color:#7C7F93"> [</span></span>
+<span class="line"><span style="color:#7C7F93">      {</span></span>
+<span class="line"><span style="color:#7C7F93">        "</span><span style="color:#1E66F5">matcher</span><span style="color:#7C7F93">"</span><span style="color:#7C7F93">:</span><span style="color:#40A02B"> "Write|Edit"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">        "</span><span style="color:#1E66F5">hooks</span><span style="color:#7C7F93">"</span><span style="color:#7C7F93">:</span><span style="color:#7C7F93"> [</span></span>
+<span class="line"><span style="color:#7C7F93">          {</span></span>
+<span class="line"><span style="color:#7C7F93">            "</span><span style="color:#1E66F5">type</span><span style="color:#7C7F93">"</span><span style="color:#7C7F93">:</span><span style="color:#40A02B"> "command"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">            "</span><span style="color:#1E66F5">command</span><span style="color:#7C7F93">"</span><span style="color:#7C7F93">:</span><span style="color:#40A02B"> "</span><span style="color:#EA76CB">\"</span><span style="color:#40A02B">$CLAUDE_PROJECT_DIR</span><span style="color:#EA76CB">\"</span><span style="color:#40A02B">/.claude/hooks/check-perl-syntax.sh"</span></span>
+<span class="line"><span style="color:#7C7F93">          }</span></span>
+<span class="line"><span style="color:#7C7F93">        ]</span></span>
+<span class="line"><span style="color:#7C7F93">      }</span></span>
+<span class="line"><span style="color:#7C7F93">    ]</span></span>
+<span class="line"><span style="color:#7C7F93">  }</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span></code></pre>
+<p><code>PostToolUse</code> はファイル書き込み自体が完了した後に発火しますが、終了コード <code>2</code> を返すことで標準エラー出力の内容がモデルへフィードバックされ、次のターンで謝罪文の残存や構文エラーを自己修正させる契機になります<sup><a href="#user-content-fn-11" id="user-content-fnref-11-3" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。もしファイルへの書き込み自体やコミットを未然に止めたい場合は、パイプラインの書き込み関数内で一時ファイルに対して <code>perl -c</code> を通すか、Git の <code>pre-commit</code> フックで同様に非ゼロ終了させる構成を採ります。</p>
+<h3 id="対策-2-承認の記録と成果物の検収の分離">対策 2: 「承認の記録」と「成果物の検収」の分離</h3>
+<p>もう 1 つの対策は、承認ログを成果物の品質保証として扱わないことです。承認ログはあくまで「承認プロセスを通過した」という履歴にとどめ、構文チェックや型検査、自動テストなどの決定論的検収は別のゲートとして設けます。</p>
+<p>可逆な修正や形式エラーは結果の空間を見る機械的検収で拾って自動的に差し戻し、異常が解消しないときだけ処理を停止して人間へ通知します。そのうえで、人間の確認や承認は「決定論的検証をすべて通過した成果物」に対してのみ要求する設計にすれば、設計意図や要件との整合といった機械で検証できない判断だけに人間の集中力を温存できます<sup><a href="#user-content-fn-4" id="user-content-fnref-4-3" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7-2" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<h2 id="メリットの裏にあるトレードオフと適用限界">メリットの裏にあるトレードオフと適用限界</h2>
+<p>決定論的検証と承認分離の導入は万能ではなく、運用上のトレードオフと適用限界を把握しておく必要があります。</p>
+<h3 id="検証失敗によるリトライ連鎖とコスト増">検証失敗によるリトライ連鎖とコスト増</h3>
+<p><code>perl -c</code> や Linter 自体の実行時間は一瞬ですが、モデルが「ツールが使えない」と誤認したまま謝罪文を返し続ける状態で機械的エラーを繰り返し差し戻すと、無駄なリトライが連鎖してトークン消費と待ち時間が膨らみます。決定論的検証を組み込む際は、「同一の構文エラーや検証失敗が一定回数連続したら停止して人間にエスカレーションする」という上限設計（サーキットブレーカー）をセットで設ける必要があります。</p>
+<h3 id="非コード成果物への適用方法">非コード成果物への適用方法</h3>
+<p>設計書や Markdown 記事のような自然言語の成果物には、プログラミング言語の構文チェッカをそのまま適用できません。しかし、出力形式に応じた決定論的チェックへの置き換えは可能です。たとえば JSON 出力であればスキーマ検証<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>、Markdown であれば必須見出しの有無や、<code>AMBIGUITY:</code>・「申し訳ありません」といったメタ報告パターンの検査に置き換えることで、同様の素通りを防げます。</p>
+<h3 id="構文が通っても正しい実装とは限らない">構文が通っても「正しい実装」とは限らない</h3>
+<p>決定論的検証は「最低限の形式を満たしていない不良品」を遮断するための床であり、仕様やビジネスロジックの正しさまで保証するものではありません。実際、実験リポジトリAの <code>Request.pm</code> では末尾にテストコードが混入していましたが、Perl の構文としてエラーにならなければ <code>perl -c</code> 単体では通過してしまいます。</p>
+<p>また、Anthropic が報告した分類器モデルによる確率的なガードレール（Claude Code の <code>auto mode</code>）でも、実セッションで記録された過剰動作（n=52）に対する見逃し率は 17%（誤検知率は 0.4%、合成データ流出テスト n=1,000 の見逃し率は 5.7%）とされています<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。決定論的な構文・形式チェック、確率的なレビュー、自動テストを多層で組み合わせる前提を崩さないことが重要です。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>今後、モデルのツール呼び出し精度やエージェント基盤のツール認識が向上すれば、「利用可能なツールを誤認してテキストで謝罪文を返す」といった初歩的な失敗は減っていくと考えられます。</p>
+<p>また、開発者がツールに習熟するにつれて、アクションごとの事前承認を減らし、自律実行させたうえで必要に応じて割り込む運用（Human-on-the-loop）へ移行する傾向も見られます。Anthropic の調査では、経験ユーザー（750 セッション時点）の <code>full auto-approve</code> 利用率が 40% を超える一方、ユーザーによるターンあたりの割り込み率（interrupt rate）も初期（約 10 セッション時点）の約 5% から 750 セッション時点の約 9% へ上昇しています<sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>しかし、技術や運用スタイルが進化しても、「LLM は失敗時に例外ではなく自然言語のテキストを返しうる」「承認プロセスの通過記録と成果物の実体は別物である」という構造自体は変わりません。むしろ人間が事前承認を減らして自律実行を広げるほど、中身を見ないまま承認ログだけが残るリスクは高まります。そのため、結果の空間を機械的に検査する決定論的検収ゲートをパイプラインに常設し、人間は異常時の介入と最終判断に集中する設計の重要性は、今後さらに高まっていきます。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-ai-エージェントの完了の偽陽性とは何ですか">Q. AI エージェントの「完了の偽陽性」とは何ですか？</h3>
+<p><strong>A.</strong> 実行ログや承認履歴の上では「完了」「承認済み」と記録されているにもかかわらず、実際の成果物が未完成であったり、AI の謝罪文やエラー報告がそのまま書き込まれていたりする状態を指します。人間のチェックをすり抜けて、壊れた成果物が次段へ渡るため、手戻りや品質低下の原因になります。</p>
+<h3 id="q-承認ログが承認済みなのに成果物が壊れるのはなぜですか">Q. 承認ログが「承認済み」なのに成果物が壊れるのはなぜですか？</h3>
+<p><strong>A.</strong> 多くのパイプラインでは、承認ステップが「処理が成功フラグを返した」「人間または自動フラグが承認を通した」というプロセス通過だけを記録しており、成果物の中身を検証していないためです。さらに、頻繁な確認プロンプトによる承認疲労（ゴム印承認）や、先頭文字列一致のような脆いエラー判定が重なると、不良品がそのまま通過します。</p>
+<h3 id="q-llm-が謝罪文をファイルに書き込むのを防ぐにはどうすればよいですか">Q. LLM が謝罪文をファイルに書き込むのを防ぐにはどうすればよいですか？</h3>
+<p><strong>A.</strong> ファイルへの書き込み直前やコミット前に、言語の構文チェッカ（例: <code>perl -c</code>）、Linter、スキーマ検証などの決定論的検証をフックとして組み込むのが最も確実です。プロンプトでの禁止指示や特定のエラー文言の除外ではなく、成果物が満たすべき形式を機械的に判定し、不合格なら非ゼロの終了コードでブロックしてエージェントへ差し戻します。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li>多段パイプラインでは、ファイル・コミット・承認ログの 3 点が揃っていても、成果物の中身がモデルの謝罪文やエラー報告である「完了の偽陽性」が起きます。</li>
+<li>「<code>AMBIGUITY:</code> で始まる出力を弾く」といった原因の空間を絞る表層的なガードは、モデルが前置きを 1 行添えるだけで容易に突破されます。</li>
+<li>ファイル書き込み前やコミット前に構文チェック・スキーマ検証などの決定論的検証（結果の空間の検査）を挟み、不合格時は非ゼロ終了でブロックする設計が不可欠です。</li>
+<li>承認の記録（プロセスの通過履歴）と成果物の検収（品質・妥当性の保証）は別物として分離し、人間は機械的検証を通過した後の判断に集中する運用へ切り替える必要があります。</li>
+</ul>
+<p>AI エージェントを組み込んだ開発パイプラインの設計や、決定論的検証・品質ゲートの導入についてお悩みの方は、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p>筆者による自作エージェント実験の一次記録（2026年2月24日〜25日、非公開）。3 タスクのモデル構成、エピソード記録 4 件の「✅ 承認 / 承認（修正なし）」、保存された実装ステップ 14 件中 4 件の <code>AMBIGUITY:</code> 応答と <code>runner.ts</code> の <code>startsWith</code> 素通り、<code>Notification.pm</code> 等の謝罪文・テスト混入とバイト一致、<code>review.ts</code> / <code>episode.ts</code> の承認仕様に基づく。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://qiita.com/0h-n0/items/bb08673a8bfc15a42123">AIエージェントのエラーハンドリング実践ガイド：99.9%の可用性を実現する5つの戦略</a> 0h-n0（Qiita）、2026年2月25日。LLM が文法的に正しいが意味的に誤った出力を生成する「セマンティックエラー」の概念は「2. セマンティックエラー（Semantic Errors）」節、スキーマ検証による出力ガードレールは「Pydanticによるスキーマ検証」節。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://dev.to/aws/ai-agent-guardrails-rules-that-llms-cannot-bypass-596d">AI Agent Guardrails: Rules That LLMs Cannot Bypass</a> Elizabeth Fuentes L（DEV Community / AWS）、2026年3月10日。AI エージェントがルール違反のまま操作成功をハルシネーションする指摘は冒頭および「The Problem: Prompts Are Suggestions, Not Constraints」節、ツール実行前フックによる決定論的ガードレールは「The Solution: Neurosymbolic Validation with Strands Hooks」節。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://blog.icme.io/human-in-the-loop-alternatives-how-to-keep-control-of-ai-agents-without-approving-every-action/">Human-in-the-Loop Alternatives: How to Keep Control of AI Agents Without Approving Every Action</a> Wyatt Benno（ICME Labs Blog）、2026年7月15日。「承認ステップの存在と判断が存在することは同じではない」という指摘は冒頭段落、頻繁な確認が人間をゴム印（rubber stamp）化する構造は「Why HITL breaks down」節。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-4-3" data-footnote-backref="" aria-label="Back to reference 4-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://anthropic.com/engineering/claude-code-auto-mode">How we built Claude Code auto mode</a> Anthropic、2026年3月25日。手動権限プロンプトの 93% がそのまま承認されている実態は冒頭段落、分類器による 2 段階フィルタの誤検知率 0.4%・real overeager actions（n=52）に対する見逃し率 17%・合成データ流出テスト（n=1,000）の見逃し率 5.7% は「Results」節。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://www.anthropic.com/research/measuring-agent-autonomy">Measuring AI agent autonomy in practice</a> Anthropic、2026年2月18日。50 セッション未満の約 20% から 750 セッション時点の 40% 超への <code>full auto-approve</code> 利用率増加、約 10 セッション時点の約 5% から 750 セッション時点の約 9% へのターンあたり割り込み率上昇は、冒頭要約および「Experienced users in Claude Code auto-approve more frequently, but interrupt more often」節。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://makeyouragent.ai/blog/prevent-ai-agent-approval-fatigue-review-queues">Prevent AI Agent Approval Fatigue in Review Queues</a> Make Your Agent、2026年11月9日。低コンテキストな承認要求が承認疲労とゴム印化を加速させ、検証なき承認が素通りを生む構造は冒頭および「Why an approval gate stops protecting the product」節。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-7-2" data-footnote-backref="" aria-label="Back to reference 7-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://www.techtarget.com/news/Human-in-the-loop-shouldnt-rubber-stamp-decisions/846522/">Human-in-the-loop shouldn’t rubber-stamp decisions</a> Jim O’Donnell（TechTarget）、2026年6月4日。Human-in-the-loop が自律エージェントの出力をそのままゴム印承認（rubber-stamping）する形骸化に陥るリスクは「AI agent use may lead to cognitive atrophy」節。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://genai.owasp.org/llmrisk/llm06/">LLM06:2025 Excessive Agency</a> OWASP Gen AI Security Project、2024年4月10日公開。Excessive Agency の 3 要素（excessive functionality / excessive permissions / excessive autonomy）は冒頭、検証・権限分離なしの自律性による意図しない変更リスクは「6. Excessive Autonomy」節。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://dev.to/dannwaneri/dont-write-markdown-files-for-your-coding-agent-write-scripts-j00">Don’t Write Markdown Files for Your Coding Agent. Write Scripts.</a> Daniel Nwaneri（DEV Community）、2026年11月5日。Markdown 文書は制約ではなく推奨事項に過ぎず、lint やテストスクリプトの pass/fail で決定論的に検証すべきという指摘は本文冒頭〜中盤（<code>Markdown documents aren't constraints. They're recommendations.</code> の段）。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://code.claude.com/docs/en/hooks">Hooks reference</a> Anthropic（Claude Code Docs）。<code>PostToolUse</code> 入力の JSON 構造（<code>tool_input.file_path</code>）、終了コード <code>2</code> で標準エラー出力をエージェントへ返す仕様は「Hook input and output」配下の「Exit code 2」「Exit code 2 behavior per event」および「PostToolUse」節。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-11-2" data-footnote-backref="" aria-label="Back to reference 11-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-11-3" data-footnote-backref="" aria-label="Back to reference 11-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

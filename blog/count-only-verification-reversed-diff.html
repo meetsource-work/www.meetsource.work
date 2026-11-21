@@ -1,0 +1,280 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>件数チェックと実文字列照合の違い：git diff の向きが7件中6件逆のまま7工程を通過した記録と両側照合のやり方 | Meetsource</title><meta name="description" content="件数チェック（件数検算）は対象ファイル数や行数・hunk 数の一致しか確かめないため、git diff の変更前（-）と変更後（+）が逆転した誤りを止められず、両側の実文字列照合と切り分けて実装する必要があります。当ブログの執筆パイプラインで2ファイル・7行・6 hunk の一致だけで検証済みとなり、7件中6件の向きが逆のまま7工程を通過して企画からやり直した実測をもとに、- 側と + 側の代表文字列を別々に照合する検証スクリプトの作り方とトレードオフを解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/count-only-verification-reversed-diff"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="件数検算は全件合格していたのに、diff の向きが7件中6件逆のまま7工程を通って企画からやり直した"><meta property="og:description" content="2ファイル・7行・6 hunk の件数はすべて一致して「検証済み」が付いていたにもかかわらず、変更前と変更後が逆になった記録が最終校閲まで素通りしました。何を見落とすと起きるのか、再検算で組み直した確認方法とともに振り返ります。"><meta property="og:url" content="https://www.meetsource.work/blog/count-only-verification-reversed-diff"><meta property="og:image" content="https://www.meetsource.work/blog/count-only-verification-reversed-diff-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-17T00:30:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="件数検算は全件合格していたのに、diff の向きが7件中6件逆のまま7工程を通って企画からやり直した"><meta name="twitter:description" content="2ファイル・7行・6 hunk の件数はすべて一致して「検証済み」が付いていたにもかかわらず、変更前と変更後が逆になった記録が最終校閲まで素通りしました。何を見落とすと起きるのか、再検算で組み直した確認方法とともに振り返ります。"><meta name="twitter:image" content="https://www.meetsource.work/blog/count-only-verification-reversed-diff-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"件数チェックと実文字列照合の違い：git diff の向きが7件中6件逆のまま7工程を通過した記録と両側照合のやり方","description":"件数チェック（件数検算）は対象ファイル数や行数・hunk 数の一致しか確かめないため、git diff の変更前（-）と変更後（+）が逆転した誤りを止められず、両側の実文字列照合と切り分けて実装する必要があります。当ブログの執筆パイプラインで2ファイル・7行・6 hunk の一致だけで検証済みとなり、7件中6件の向きが逆のまま7工程を通過して企画からやり直した実測をもとに、- 側と + 側の代表文字列を別々に照合する検証スクリプトの作り方とトレードオフを解説します。","datePublished":"2026-11-17T00:30:00.000Z","image":"https://www.meetsource.work/blog/count-only-verification-reversed-diff-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/count-only-verification-reversed-diff"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"git diff のファイル数・行数・hunk 数が一致していれば、差分に基づく記録は正しいと言えますか？","acceptedAnswer":{"@type":"Answer","text":"いいえ、件数の一致だけでは差分に基づく記録の正しさは保証されません。ファイル数や変更行数、hunk 数は差分の規模が一致していることしか示さないため、変更前（- 側）と変更後（+ 側）を取り違えて記録していても件数は一致し、検算は通過してしまいます。向きや対応関係を根拠にする記録では、件数確認に加えて両側の実文字列を照合する必要があります。"}},{"@type":"Question","name":"diff や変更前後比較表の検算コマンドで、向きの取り違えを防ぐには何を確認すればよいですか？","acceptedAnswer":{"@type":"Answer","text":"コミットメッセージやファイルヘッダ（--- / +++）を除いたパッチ本文に対して、変更前を示す ^- 行に旧表現があることと、変更後を示す ^\\+ 行に新表現があることを左右別々に照合します。さらに旧表現が + 側に、新表現が - 側に混入していないことも併せて確認すると、選定した代表項目における左右の入れ替わりを防げます。変更前後比較表の記述を検算する場合も、表の「変更前」「変更後」それぞれの列に書いた表現を一次資料の ^- 行集合と ^\\+ 行集合へ対応づけて照合します。"}},{"@type":"Question","name":"変更された全行を検証コマンドに含めると保守が重くなりませんか？","acceptedAnswer":{"@type":"Answer","text":"全行を含める必要はありません。広いアサーションは周辺の軽微な編集でも壊れやすくなるため、結論や主張を左右する「左右が入れ替われば前提が崩れる代表文字列」だけを - 側と + 側から 1〜数件ずつ選んで照合します。これにより、保守コストを抑えつつ向きの逆転を防げます。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-17T00:30:00.000Z" data-astro-cid-7jjqptxk> 2026.11.17 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span><span class="tag" data-astro-cid-7jjqptxk>#testing</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span><span class="tag" data-astro-cid-7jjqptxk>#git</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>件数チェックと実文字列照合の違い：git diff の向きが7件中6件逆のまま7工程を通過した記録と両側照合のやり方</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/count-only-verification-reversed-diff-hero.webp" alt="件数チェックと実文字列照合の違い：git diff の向きが7件中6件逆のまま7工程を通過した記録と両側照合のやり方" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>計測ログや <code>git diff</code> の出力を根拠に技術記事や障害報告書を書く際、対象ファイル数や変更行数を検証コマンドで確かめ、「再現できた」と判断して先へ進める運用は珍しくありません。しかし、Martin Fowler が Assertion Free Testing の議論で指摘しているとおり、すべてのテストが通過して緑のバーや 100% のコードカバレッジが揃っていても、アサーションが欠けていればカバレッジなどの数値の解釈には注意が必要です<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。同じように、差分の集計値が一致することと、変更前後の向きや内容が一致することはまったく別の検査です。</p>
+<p><strong>件数検算（件数チェック）</strong> とは、対象ファイル数・変更行数・<code>hunk</code>（変更箇所の塊）数などの集計値の一致を確かめる検査です。これに対し <strong>両側の実文字列照合</strong> とは、<code>git diff</code> の <code>unified diff</code> 形式や変更前後比較表において、削除・変更前を表す <code>-</code> 側と追加・変更後を表す <code>+</code> 側それぞれの具体的な文字列と対応関係を一次資料と突き合わせる検査を指します。</p>
+<p>私が運用する当ブログの執筆パイプライン（非公開）では、まさにこの切り分けが抜けていたことで大きな手戻りが発生しました。件数一致だけを確かめる検証コマンドが全件合格して一次記録に「検証済み」のラベルが付いた結果、diff の「変更前（<code>-</code> 側）／変更後（<code>+</code> 側）」が 7 件中 6 件で逆転した記録が後続の 7 工程（事前調査・企画・調査・設計・設計検証・執筆・挿絵）をすべて通過したのです。最終的に、最終校閲での差し戻しを経て企画の結論（看板）からやり直す事態になりました。</p>
+<p>本記事では、この実測記録と再検算で組み直した検証手順をもとに、件数検算がなぜ向きの逆転を通過させたのかを解剖し、向きや対応関係のある記録で左右の取り違えを防ぐ両側照合コマンドの設計とトレードオフを整理します。</p>
+<h2 id="2ファイル7行6-hunkの件数検算が向きの逆転を通した背景">「2ファイル・7行・6 hunk」の件数検算が向きの逆転を通した背景</h2>
+<p>件数の集計値が完全に一致していても、変更前と変更後の向きが逆になったまま後続工程を通過してしまう構造は、1 回目の検証コマンドが見ていた範囲と、パイプライン各工程の参照関係を追うと見えてきます。</p>
+<h3 id="7件中6件が逆転した3段の差分と件数のみの検算が見ていた範囲">7件中6件が逆転した3段の差分と、件数のみの検算が見ていた範囲</h3>
+<p>発端は、プロンプトを否定形から肯定形へ書き換えたときの適用範囲ドリフトを扱った <a href="/blog/prompt-positive-rewrite-scope-drift">先行記事</a> の一次計測ログ（<code>hands-on-log.md</code>）でした。この記録では、私が運用する別リポジトリ（非公開、以下リポジトリA）で実施されたセルフレビューの修正差分（2 ファイル・置換された行数 7・diff <code>hunk</code> 数 6）を根拠にしていました。</p>
+<p>リポジトリAの改訂作業は、「元の文面（否定形） → 肯定形への書き換え → セルフレビュー後の修正」という 3 段で構成されていました。Git のパッチ出力では、通常、変更前の行が <code>-</code>、変更後の行が <code>+</code>、未変更のコンテキスト行が空白で表されます<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。<code>unified diff</code> の仕様上も、2 つのファイル A と B を比較するとき、<code>-</code> は「A に現れ B で削除された行」、<code>+</code> は「A には無く B で追加された行」を示します<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。したがって、セルフレビューのコミット差分では <code>-</code> 側が「肯定形化後の文面」、<code>+</code> 側が「セルフレビュー後の文面」でした。</p>
+<p>ところが、一次記録の 1 回目の検証コマンドは「対象ファイル数が 2」「削除・置換された行数が 7」「<code>hunk</code> 数が 6」という件数の一致しか見ていませんでした。集計値そのものは実際のコミットと完全に一致していたため、検算は全件合格となり、一次計測ログには <code>status: 検証済み</code> が付きました。</p>
+<p>実際には、全 7 件のうち向きが正しかったのは 1 件だけで、残る 6 件（7 件中 6 件）で「変更前（<code>-</code> 側、肯定形化後）」と「変更後（<code>+</code> 側、セルフレビュー後）」が逆に記録されていました。以下は、リポジトリAの実際の改訂差分から抜き出した 4 行です。</p>
+<p>コードの目的: 7 件中 6 件の向き逆転が起きた対象差分から、<code>-</code> 側（肯定形化側）と <code>+</code> 側（セルフレビュー後）の実際の文面対照を示します。</p>
+<p>引用元: リポジトリA（筆者が運用する非公開リポジトリ）の改訂差分</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="diff"><code><span class="line"><span style="color:#7C7F93"><span style="user-select: none;">-</span></span><span style="color:#D20F39">    *   **検証用のテストは、標準ライブラリだけの純粋な Go（`go test`）で書く。** 時計・乱数の種・実行順は注入して固定し、テスト自体を毎回同じ結果にする</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">    *   **検証用のテストは、`go test` だけで動く純粋な Go で書く**（delve・rr 等の道具が無くても通る）。 時計・乱数の種・実行順は注入して固定し、テスト自体を毎回同じ結果にする</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">-</span></span><span style="color:#D20F39">    *   第4幕の終わり方（「再現テストを書いて終わる」形は、回ごとに別の終わり方と入れ替える）</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">    *   第4幕の終わり方（「再現テストを書いて終わる」は使う回を選び、ほかの回は別の終わり方にする）</span></span>
+<span class="line"></span></code></pre>
+<p>重要箇所の解説: <code>-</code> 側に「標準ライブラリだけの純粋な Go」「回ごとに別の終わり方と入れ替える」があり、<code>+</code> 側に「<code>go test</code> だけで動く純粋な Go」「使う回を選び、ほかの回は別の終わり方にする」が並んでいます。差し戻し前の記録はこの <code>-</code> と <code>+</code> を逆に取り違え、「セルフレビューで『だけの』が脱落した」「義務が任意化した」と正反対に記述していました。</p>
+<p>最終校閲時の照合表で確認された代表 4 項目を「元の文面 → 肯定形化後（<code>-</code> 側） → セルフレビュー後（<code>+</code> 側）」の 3 段で並べると、取り違えによる意味の反転がより明確になります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>項目</th><th>元の文面（否定形）</th><th>肯定形化後（<code>-</code> 側）</th><th>セルフレビュー後（<code>+</code> 側）</th><th>差し戻し前の誤った記録</th></tr></thead><tbody><tr><td><strong>登場人物構成</strong></td><td>名前のある登場人物にしない</td><td>登場人物Aと語り部の二人だけ</td><td>役職で呼ぶ背景として描く</td><td>「二人だけ」が脱落したと逆記録</td></tr><tr><td><strong>検証用テスト</strong></td><td>外部の道具に依存しない純粋な Go</td><td>標準ライブラリだけの純粋な Go</td><td><code>go test</code> だけで動く純粋な Go</td><td>「だけの」が脱落したと逆記録</td></tr><tr><td><strong>第4幕の終わり方</strong></td><td>毎回「再現テストを書いて終わる」にしない</td><td>回ごとに別の終わり方と入れ替える</td><td>使う回を選び、ほかの回は別の終わり方にする</td><td>義務が任意化したと逆記録</td></tr><tr><td><strong>トーン管理</strong></td><td>惨事として描写しない。重さは残された人の現在の姿で示す</td><td>残された人の現在の姿で示す</td><td>残された人の現在の姿だけで示す</td><td>「だけで」が混入したと逆記録</td></tr></tbody></table>
+<p>なぜ 1 回目の検証コマンドがこのような逆転を素通りさせたのかは、件数一致のみを検査する最小スクリプトの構造を見るとはっきりします。</p>
+<p>コードの目的: ファイル数・置換行数・<code>hunk</code> 数の一致だけを確かめる検算パターンが、<code>-</code> と <code>+</code> を取り違えた記録に対しても合格（終了コード 0）になる構造を再現します。</p>
+<p>ファイル: <code>verify-count-only.sh</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#EA76CB;font-style:italic">#!/usr/bin/env bash</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">set</span><span style="color:#40A02B"> -euo</span><span style="color:#40A02B"> pipefail</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">COMMIT</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#E64553;font-style:italic">${1</span><span style="color:#179299">:-</span><span style="color:#4C4F69">HEAD</span><span style="color:#E64553;font-style:italic">}</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#4C4F69">EXPECTED_FILES</span><span style="color:#179299">=</span><span style="color:#40A02B">2</span></span>
+<span class="line"><span style="color:#4C4F69">EXPECTED_MINUS</span><span style="color:#179299">=</span><span style="color:#40A02B">7</span></span>
+<span class="line"><span style="color:#4C4F69">EXPECTED_HUNKS</span><span style="color:#179299">=</span><span style="color:#40A02B">6</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">patch</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">git</span><span style="color:#40A02B"> show --format= --patch "</span><span style="color:#4C4F69">$COMMIT</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#4C4F69">body</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#D20F39;font-style:italic">printf</span><span style="color:#40A02B"> '%s\n' "</span><span style="color:#4C4F69">$patch</span><span style="color:#40A02B">" </span><span style="color:#179299">|</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> -vE '^(---|\+\+\+) ' </span><span style="color:#179299">||</span><span style="color:#D20F39;font-style:italic"> true</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">actual_files</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#D20F39;font-style:italic">printf</span><span style="color:#40A02B"> '%s\n' "</span><span style="color:#4C4F69">$patch</span><span style="color:#40A02B">" </span><span style="color:#179299">|</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> -c '^diff --git ' </span><span style="color:#179299">||</span><span style="color:#D20F39;font-style:italic"> true</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#4C4F69">actual_minus</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#D20F39;font-style:italic">printf</span><span style="color:#40A02B"> '%s\n' "</span><span style="color:#4C4F69">$body</span><span style="color:#40A02B">" </span><span style="color:#179299">|</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> -c '^-' </span><span style="color:#179299">||</span><span style="color:#D20F39;font-style:italic"> true</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#4C4F69">actual_hunks</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#D20F39;font-style:italic">printf</span><span style="color:#40A02B"> '%s\n' "</span><span style="color:#4C4F69">$body</span><span style="color:#40A02B">" </span><span style="color:#179299">|</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> -c '^@@' </span><span style="color:#179299">||</span><span style="color:#D20F39;font-style:italic"> true</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#7C7F93"> [[</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$actual_files</span><span style="color:#40A02B">"</span><span style="color:#179299"> -ne</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$EXPECTED_FILES</span><span style="color:#40A02B">"</span><span style="color:#179299"> ||</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$actual_minus</span><span style="color:#40A02B">"</span><span style="color:#179299"> -ne</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$EXPECTED_MINUS</span><span style="color:#40A02B">"</span><span style="color:#179299"> ||</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$actual_hunks</span><span style="color:#40A02B">"</span><span style="color:#179299"> -ne</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$EXPECTED_HUNKS</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> ]];</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  echo</span><span style="color:#40A02B"> "NG: files=</span><span style="color:#4C4F69">${actual_files}</span><span style="color:#40A02B">/</span><span style="color:#4C4F69">${EXPECTED_FILES}</span><span style="color:#40A02B">, minus=</span><span style="color:#4C4F69">${actual_minus}</span><span style="color:#40A02B">/</span><span style="color:#4C4F69">${EXPECTED_MINUS}</span><span style="color:#40A02B">, hunks=</span><span style="color:#4C4F69">${actual_hunks}</span><span style="color:#40A02B">/</span><span style="color:#4C4F69">${EXPECTED_HUNKS}</span><span style="color:#40A02B">"</span><span style="color:#179299"> >&#x26;2</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  exit</span><span style="color:#FE640B"> 1</span></span>
+<span class="line"><span style="color:#8839EF">fi</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> "OK: files=</span><span style="color:#4C4F69">${actual_files}</span><span style="color:#40A02B">, minus=</span><span style="color:#4C4F69">${actual_minus}</span><span style="color:#40A02B">, hunks=</span><span style="color:#4C4F69">${actual_hunks}</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span></code></pre>
+<p>実行コマンド:</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">bash</span><span style="color:#40A02B"> verify-count-only.sh</span><span style="color:#40A02B"> HEAD</span></span>
+<span class="line"></span></code></pre>
+<p>重要箇所の解説: <code>git show --format= --patch</code> でコミットメッセージを除いたパッチ本体を取り出し<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>、<code>grep -vE '^(---|\+\+\+) '</code> でファイルヘッダを落とした上で、<code>^diff --git </code>・<code>^-</code>・<code>^@@</code> の各行数を期待値と比較しています。ここでは 1 行置換を前提に <code>^-</code> の行数を置換行数として数えており、純粋な追加や削除が混ざる差分では <code>+</code> 行数（<code>^\+</code>）も併せて比較する必要があります。また、<code>grep -c</code> は一致が 0 件のとき終了コード 1 を返すため、<code>set -euo pipefail</code> 下で途中終了しないよう <code>|| true</code> を付けています。この構造では、対象コミットのファイル数・<code>-</code> 行数・<code>hunk</code> 数さえ一致すれば常に合格となるため、記録上で <code>-</code> 側と <code>+</code> 側が丸ごと入れ替わっていても原理的に検出できません。</p>
+<h3 id="設計検証でも高が出ながら7工程を通って看板改訂まで戻った経緯">設計検証でも「高」が出ながら、7工程を通って看板改訂まで戻った経緯</h3>
+<p>誤った一次記録に <code>status: 検証済み</code> が付いたあと、企画は後続の 7 工程（事前調査 → 企画 → 調査 → 設計 → 設計検証 → 執筆 → 挿絵）をすべて通過し、最終校閲まで到達しました。</p>
+<p>注目すべき点は、設計検証が一次記録（<code>hands-on-log.md</code>）を正本として設計書との整合性を確かめる工程であるにもかかわらず、誤りが下流へ流れたことです。途中の設計検証（1 周目）では同じ節に対して重要度「高」の指摘が出され、設計書の該当箇所を修正して「その場で解消」と記録されていました。しかし正本である <code>hands-on-log.md</code> 自体が「検証済み」の印付きで逆向きの記録を持っていたため、設計書を一次記録に合わせ直しても誤りは解消されず、そのまま執筆と挿絵へ進みました。</p>
+<p>さらに影響が大きかったのは、誤った向きが記事全体の結論（看板）に組み込まれていた点です。差し戻し前のドラフトは、「上限・排他（〜だけ）は否定形で残せ」という結論を掲げ、第 2 章の解説から第 3 章の比較表・FAQ・まとめまでを一貫して構成していました。しかし実際の向きでは「〜だけ」は肯定形化の側でも入っており、最終校閲の読者レビューが「<code>-</code>/<code>+</code> の向きが本文の説明と照合できない」と重要度「高」を出し、一次記録との照合を経て記事が差し戻された時点で、局所修正だけでは閉じなくなりました。</p>
+<p>結果として、一次計測ログ（<code>hands-on-log.md</code>）の向き訂正 → 企画書（<code>plan.md</code>）の看板改訂 → 調査改訂 → 設計・設計検証（2 周目）→ 執筆 → 挿絵という工程をやり直し、差し戻しと同日（2026年11月10日）に公開まで至りました。なお、この追加 1 周にかかった時間やトークン数は振り返りの記録で「記録なし」とされており、定量的な追加コストの算出は行えません。また、この 1 事例だけでは、別の作業者や別工程での発見率や、一次記録の訂正と看板改訂のどちらが後続の修正量に効いたかまでは切り分けられません。</p>
+<p>この経過は、検査設計における 2 つの教訓を示しています。1 つは、予防は無限に起こり得る原因の空間に対して組むため漏れが生じやすいのに対し、出力側の検査は守りたい結果の性質の数だけ条件を書けば閉じられるという点です。もう 1 つは、検査が合格（緑）であることをそのまま仕様遵守の証拠とみなさず、検査自体が弱い条件しか見ていない可能性を疑う姿勢が必要だという点です。今回の件数検算は「規模の一致」という 1 つの性質しか見ておらず、「向きの正しさ」という守りたい性質を事後の検査条件に入れていませんでした。</p>
+<p>なお、当ブログではこれまでにも、一次計測ログを検証する工程自体がパイプラインに存在しなかった構造的盲点を扱った <a href="/blog/primary-log-verification-blind-spot">生データ検証の盲点に関する記事</a> や、人手の集計表で矢印数を 2 セル数え間違えた経験から静的検査スクリプトへ移行した <a href="/blog/image-gen-mermaid-element-limits">Mermaid 要素数上限の記事</a> を公開しています。さらに、文章レビューと一次ソース再集計の違いを扱った <a href="/blog/llm-as-verifier-not-judge">検算の役割に関する記事</a> や、本件と同じ元事象の言い換え手順側を扱った <a href="/blog/prompt-positive-rewrite-scope-drift">肯定形書き換えのドリフト記事</a> もあります。本事例はこれらと異なり、自動検算コマンドを実行して「検証済み」まで付いていたにもかかわらず、検算コマンド自体の検査軸から向きが抜けていたという別の死角を示しています。</p>
+<h2 id="git-diff-の追加行と削除行-の向きをコマンドで自動検証するやり方">git diff の追加行（+）と削除行（-）の向きをコマンドで自動検証するやり方</h2>
+<p>2026年11月10日の再検算では、向きを見るコマンドを追加して検証コマンド一式を全件実走し、代表項目（肯定形化側 <code>-</code> 3 件、セルフレビュー後 <code>+</code> 3 件、元の文面 4 件）それぞれの実文字列を <code>grep -E</code> で照合して、7 件の記録を 3 段の比較へ訂正しました。</p>
+<p>テストフレームワークの世界でも、総数や長さだけを見る検査と中身・順序まで見る検査は明確に区別されています。Python の <code>unittest</code> では、順序を無視して各要素の出現回数の一致を確かめる <code>assertCountEqual</code> と、順序の対応を含めてシーケンスの一致を確かめる <code>assertSequenceEqual</code> が別メソッドとして用意されています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。Jest でも同様に、オブジェクトの <code>.length</code> プロパティが指定数値に等しいかを確認する <code>.toHaveLength</code> と、全プロパティや要素を再帰的に比較する <code>.toEqual</code> が分けられています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。さらに XUnit Patterns では、実行後の状態を期待値と比べる <code>State Verification</code> に対し、実行前後の状態差分に基づいてアサーションを書くパターンを <code>Delta Assertion</code> として区別しています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>当ブログの <a href="/blog/code-excerpt-provenance-line-matching">行単位照合スクリプトの設計記事</a> では、本文中のコード抜粋が一次資料に実在するかどうかだけを調べるため、一次資料側の <code>+</code>/<code>-</code> 接頭辞を 1 段外して照合する設計を採りました。これとは逆に、<strong>向きの取り違えを防ぐ検算では接頭辞 <code>-</code> と <code>+</code> を剥がさずに保持したまま、<code>-</code> 行集合と <code>+</code> 行集合を左右別々に照合する</strong> のが設計の核になります。</p>
+<p>集計値（合計数）だけを確かめても要素間の入れ替わりはすり抜けるため、確認したい要素ごとの検査を切り出す必要があります。さらに、バグ修正後などに後から検算コマンドを追加する場合は最初から合格しやすいため、わざと左右の期待文字列を入れ替えたときに失敗（赤）になるかを確かめる逆検証を入れておくと、弱い条件しか見ていない見落としを防げます。</p>
+<p>以下は、先ほどの引用例を題材に、件数確認に加えて <code>-</code> 側と <code>+</code> 側の代表文字列、および逆側への非混入を一括で確かめる最小の実装例です。実務で使う際は、一次記録（<code>hands-on-log.md</code> 等）や記事の比較表に書き起こした「変更前」と「変更後」の表現そのものを、それぞれ <code>OLD_PATTERNS</code> と <code>NEW_PATTERNS</code> に転記して実行します。こうすることで、記録上の向きと一次資料の <code>-</code>／<code>+</code> 行の向きが食い違った瞬間にコマンドが失敗し、逆転を下流へ流す前に止められます。</p>
+<p>コードの目的: ファイル数・置換行数・<code>hunk</code> 数の集計値一致に加え、<code>-</code> 側に旧表現があり <code>+</code> 側に旧表現が混入していないこと、かつ <code>+</code> 側に新表現があり <code>-</code> 側に新表現が混入していないことを検証するスクリプトを示します。冒頭の変数と配列を差し替えれば他リポジトリでも流用できます。</p>
+<p>ファイル: <code>verify-diff-direction.sh</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#EA76CB;font-style:italic">#!/usr/bin/env bash</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">set</span><span style="color:#40A02B"> -euo</span><span style="color:#40A02B"> pipefail</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">COMMIT</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#E64553;font-style:italic">${1</span><span style="color:#179299">:-</span><span style="color:#4C4F69">HEAD</span><span style="color:#E64553;font-style:italic">}</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#4C4F69">EXPECTED_FILES</span><span style="color:#179299">=</span><span style="color:#40A02B">2</span></span>
+<span class="line"><span style="color:#4C4F69">EXPECTED_MINUS</span><span style="color:#179299">=</span><span style="color:#40A02B">7</span></span>
+<span class="line"><span style="color:#4C4F69">EXPECTED_HUNKS</span><span style="color:#179299">=</span><span style="color:#40A02B">6</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 純粋な追加や削除が混ざる場合は EXPECTED_PLUS も定義し、^\+ 行数と併せて比較する</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 変更前（- 側）に存在するはずの代表表現</span></span>
+<span class="line"><span style="color:#4C4F69">OLD_PATTERNS</span><span style="color:#179299">=</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#40A02B">  '標準ライブラリだけの純粋な Go'</span></span>
+<span class="line"><span style="color:#40A02B">  '回ごとに別の終わり方と入れ替える'</span></span>
+<span class="line"><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 変更後（+ 側）に存在するはずの代表表現</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># バッククォートを含むパターンはコマンド置換を防ぐため必ずシングルクォートで定義する</span></span>
+<span class="line"><span style="color:#4C4F69">NEW_PATTERNS</span><span style="color:#179299">=</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#40A02B">  '`go test` だけで動く'</span></span>
+<span class="line"><span style="color:#40A02B">  '使う回を選び'</span></span>
+<span class="line"><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">patch</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">git</span><span style="color:#40A02B"> show --format= --patch "</span><span style="color:#4C4F69">$COMMIT</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#4C4F69">body</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#D20F39;font-style:italic">printf</span><span style="color:#40A02B"> '%s\n' "</span><span style="color:#4C4F69">$patch</span><span style="color:#40A02B">" </span><span style="color:#179299">|</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> -vE '^(---|\+\+\+) ' </span><span style="color:#179299">||</span><span style="color:#D20F39;font-style:italic"> true</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">actual_files</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#D20F39;font-style:italic">printf</span><span style="color:#40A02B"> '%s\n' "</span><span style="color:#4C4F69">$patch</span><span style="color:#40A02B">" </span><span style="color:#179299">|</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> -c '^diff --git ' </span><span style="color:#179299">||</span><span style="color:#D20F39;font-style:italic"> true</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#4C4F69">actual_minus</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#D20F39;font-style:italic">printf</span><span style="color:#40A02B"> '%s\n' "</span><span style="color:#4C4F69">$body</span><span style="color:#40A02B">" </span><span style="color:#179299">|</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> -c '^-' </span><span style="color:#179299">||</span><span style="color:#D20F39;font-style:italic"> true</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#4C4F69">actual_hunks</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#D20F39;font-style:italic">printf</span><span style="color:#40A02B"> '%s\n' "</span><span style="color:#4C4F69">$body</span><span style="color:#40A02B">" </span><span style="color:#179299">|</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> -c '^@@' </span><span style="color:#179299">||</span><span style="color:#D20F39;font-style:italic"> true</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#7C7F93"> [[</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$actual_files</span><span style="color:#40A02B">"</span><span style="color:#179299"> -ne</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$EXPECTED_FILES</span><span style="color:#40A02B">"</span><span style="color:#179299"> ||</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$actual_minus</span><span style="color:#40A02B">"</span><span style="color:#179299"> -ne</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$EXPECTED_MINUS</span><span style="color:#40A02B">"</span><span style="color:#179299"> ||</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$actual_hunks</span><span style="color:#40A02B">"</span><span style="color:#179299"> -ne</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$EXPECTED_HUNKS</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> ]];</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  echo</span><span style="color:#40A02B"> "NG (count): files=</span><span style="color:#4C4F69">${actual_files}</span><span style="color:#40A02B">/</span><span style="color:#4C4F69">${EXPECTED_FILES}</span><span style="color:#40A02B">, minus=</span><span style="color:#4C4F69">${actual_minus}</span><span style="color:#40A02B">/</span><span style="color:#4C4F69">${EXPECTED_MINUS}</span><span style="color:#40A02B">, hunks=</span><span style="color:#4C4F69">${actual_hunks}</span><span style="color:#40A02B">/</span><span style="color:#4C4F69">${EXPECTED_HUNKS}</span><span style="color:#40A02B">"</span><span style="color:#179299"> >&#x26;2</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  exit</span><span style="color:#FE640B"> 1</span></span>
+<span class="line"><span style="color:#8839EF">fi</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">minus_lines</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#D20F39;font-style:italic">printf</span><span style="color:#40A02B"> '%s\n' "</span><span style="color:#4C4F69">$body</span><span style="color:#40A02B">" </span><span style="color:#179299">|</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> '^-' </span><span style="color:#179299">||</span><span style="color:#D20F39;font-style:italic"> true</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#4C4F69">plus_lines</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">$(</span><span style="color:#D20F39;font-style:italic">printf</span><span style="color:#40A02B"> '%s\n' "</span><span style="color:#4C4F69">$body</span><span style="color:#40A02B">" </span><span style="color:#179299">|</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> '^\+' </span><span style="color:#179299">||</span><span style="color:#D20F39;font-style:italic"> true</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#4C4F69"> pat </span><span style="color:#8839EF">in</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">${OLD_PATTERNS</span><span style="color:#7C7F93">[</span><span style="color:#179299">@</span><span style="color:#7C7F93">]</span><span style="color:#4C4F69">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#179299"> !</span><span style="color:#D20F39;font-style:italic"> printf</span><span style="color:#40A02B"> '%s\n'</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$minus_lines</span><span style="color:#40A02B">"</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> -E</span><span style="color:#40A02B"> --</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$pat</span><span style="color:#40A02B">"</span><span style="color:#179299"> ></span><span style="color:#40A02B">/dev/null</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    echo</span><span style="color:#40A02B"> "NG (direction): '-' 側に旧表現が見つかりません: </span><span style="color:#4C4F69">$pat</span><span style="color:#40A02B">"</span><span style="color:#179299"> >&#x26;2</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    exit</span><span style="color:#FE640B"> 1</span></span>
+<span class="line"><span style="color:#8839EF">  fi</span></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#D20F39;font-style:italic"> printf</span><span style="color:#40A02B"> '%s\n'</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$plus_lines</span><span style="color:#40A02B">"</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> -E</span><span style="color:#40A02B"> --</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$pat</span><span style="color:#40A02B">"</span><span style="color:#179299"> ></span><span style="color:#40A02B">/dev/null</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    echo</span><span style="color:#40A02B"> "NG (direction): '+' 側に旧表現が混入しています: </span><span style="color:#4C4F69">$pat</span><span style="color:#40A02B">"</span><span style="color:#179299"> >&#x26;2</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    exit</span><span style="color:#FE640B"> 1</span></span>
+<span class="line"><span style="color:#8839EF">  fi</span></span>
+<span class="line"><span style="color:#8839EF">done</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#4C4F69"> pat </span><span style="color:#8839EF">in</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">${NEW_PATTERNS</span><span style="color:#7C7F93">[</span><span style="color:#179299">@</span><span style="color:#7C7F93">]</span><span style="color:#4C4F69">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#179299"> !</span><span style="color:#D20F39;font-style:italic"> printf</span><span style="color:#40A02B"> '%s\n'</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$plus_lines</span><span style="color:#40A02B">"</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> -E</span><span style="color:#40A02B"> --</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$pat</span><span style="color:#40A02B">"</span><span style="color:#179299"> ></span><span style="color:#40A02B">/dev/null</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    echo</span><span style="color:#40A02B"> "NG (direction): '+' 側に新表現が見つかりません: </span><span style="color:#4C4F69">$pat</span><span style="color:#40A02B">"</span><span style="color:#179299"> >&#x26;2</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    exit</span><span style="color:#FE640B"> 1</span></span>
+<span class="line"><span style="color:#8839EF">  fi</span></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#D20F39;font-style:italic"> printf</span><span style="color:#40A02B"> '%s\n'</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$minus_lines</span><span style="color:#40A02B">"</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> grep</span><span style="color:#40A02B"> -E</span><span style="color:#40A02B"> --</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$pat</span><span style="color:#40A02B">"</span><span style="color:#179299"> ></span><span style="color:#40A02B">/dev/null</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    echo</span><span style="color:#40A02B"> "NG (direction): '-' 側に新表現が混入しています: </span><span style="color:#4C4F69">$pat</span><span style="color:#40A02B">"</span><span style="color:#179299"> >&#x26;2</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    exit</span><span style="color:#FE640B"> 1</span></span>
+<span class="line"><span style="color:#8839EF">  fi</span></span>
+<span class="line"><span style="color:#8839EF">done</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> "OK: files=</span><span style="color:#4C4F69">${actual_files}</span><span style="color:#40A02B">, minus=</span><span style="color:#4C4F69">${actual_minus}</span><span style="color:#40A02B">, hunks=</span><span style="color:#4C4F69">${actual_hunks}</span><span style="color:#40A02B"> (direction verified)"</span></span>
+<span class="line"></span></code></pre>
+<p>実行コマンド:</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">chmod</span><span style="color:#40A02B"> +x</span><span style="color:#40A02B"> verify-diff-direction.sh</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#1E66F5;font-style:italic"> ./verify-diff-direction.sh</span><span style="color:#40A02B"> HEAD</span></span>
+<span class="line"></span></code></pre>
+<p>特定の過去コミットを対象にする場合は、引数にコミット指定を渡します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">bash</span><span style="color:#40A02B"> verify-diff-direction.sh</span><span style="color:#179299"> &#x3C;</span><span style="color:#40A02B">commi</span><span style="color:#4C4F69">t</span><span style="color:#179299">></span></span>
+<span class="line"></span></code></pre>
+<p>重要箇所の解説: まず <code>git show --format= --patch</code> でコミットメッセージ本文を除外し<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>、メッセージ内の箇条書き <code>- </code> による誤検出を防ぎます。続いて <code>grep -vE '^(---|\+\+\+) '</code> でファイルヘッダを除いた上で、<code>^-</code> と <code>^\+</code> に分離して検査します。特に <code>`go test` だけで動く</code> のようにバッククォートを含む文字列は、ダブルクォートで囲むとシェルがコマンド置換として解釈してしまうため、配列定義でも <code>grep -E '...'</code> を直接書く場合でも必ずシングルクォートで囲みます。また、括弧 <code>(</code> <code>)</code> や <code>*</code> など正規表現のメタ文字を含む文字列をそのまま照合したい場合は、<code>grep -E</code> の代わりに固定文字列検索の <code>grep -F</code> を使うとエスケープ漏れによる誤判定を防げます。今回のように「元の文面 → 肯定形化 → セルフレビュー後」という 3 段に跨る変更を検算する場合は、それぞれの段に対応するコミットに対しても同様に <code>-</code> 側と <code>+</code> 側の代表文字列を当てます。</p>
+<h2 id="全行を照合すべきか代表文字列に絞るかトレードオフと適用限界">全行を照合すべきか、代表文字列に絞るか：トレードオフと適用限界</h2>
+<p>差分記録をコマンドで検算する設計には主に 3 つの方式があり、誤りの検出力と保守コストのバランスは「何を照合対象にするか」で決まります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>検算パターン</th><th>検証対象</th><th>検出できる誤り</th><th>見逃す誤り</th><th>記述・保守コスト</th></tr></thead><tbody><tr><td><strong>件数のみの検算</strong></td><td>ファイル数・変更行数・<code>hunk</code> 数</td><td>対象ファイル漏れ・行数の増減ミス</td><td><code>-</code> と <code>+</code> の向き逆転・記述内容の取り違え</td><td>低い（数値比較のみ）</td></tr><tr><td><strong>接頭辞除去または片側のみの確認</strong></td><td><code>-</code>/<code>+</code> を剥がした行、または片側だけの語句</td><td>記録した文字列が差分内に全く存在しない誤り</td><td><code>-</code> 側と <code>+</code> 側の左右入れ替わり・役割の逆転</td><td>中（片側の語句指定）</td></tr><tr><td><strong>件数＋両側（<code>-</code>/<code>+</code>）の実文字列照合</strong></td><td>集計値＋ <code>-</code> 側・<code>+</code> 側の代表文字列</td><td>件数ズレと選定した代表項目の向き逆転</td><td>代表文字列外の取り違え・同コミット内の別 <code>hunk</code> 間移動・左右同一文字列・combined diff・文脈妥当性</td><td>中〜高（左右の代表文字列選定が必要）</td></tr></tbody></table>
+<p>向きの逆転を防ぎつつ過剰な保守コストを避けるには、「件数＋両側（<code>-</code>/<code>+</code>）の代表文字列照合」を採り、照合する文字列を結論に直結する代表例へ絞るのが実務上の有効な均衡点になります。</p>
+<p>ここで、「変更された全行を検証コマンドに書くと冗長で壊れやすくならないか」という反論が考えられます。Google Testing Blog でも指摘されているとおり、複雑な対象全体を丸ごと比較する広いアサーション（broad assertions）は、無関係な変更でも失敗して頻繁な修正を強いられる脆いテスト（brittle tests）を生みやすいため、テストしたい振る舞いに関係する部分だけを確認する狭いアサーション（narrow assertions）が推奨されています<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。同記事では、検証対象を必要な部分集合に絞る手段として、Java の <code>.comparingExpectedFieldsOnly()</code> や Go（<code>protocmp</code>）の <code>protocmp.FilterField</code> が挙げられています<sup><a href="#user-content-fn-8" id="user-content-fnref-8-2" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<p>diff の検算も同様で、変更行すべてを固定文字列として列挙する必要はありません。<strong>「左右が入れ替われば記事や報告書の結論・主張が成立しなくなる代表文字列」を <code>-</code> 側・<code>+</code> 側から 1〜数件ずつ選んで照合すれば</strong>、無関係な周辺表現の微調整による脆さを避けつつ、選定した代表項目について向きの逆転を検知できます。なお、同一行の一部だけが書き換わる箇所では、変更前後で共通する語句を含めると反対側の非混入検査が失敗するため、差異が表れる固有のフレーズ（たとえば「標準ライブラリだけ」と「<code>go test</code> だけで動く」）を代表文字列に選びます。</p>
+<p>一方で、この手法には以下の適用限界と一次情報上の留保があります。</p>
+<ul>
+<li><strong>1 事例からの過度な一般化はできない</strong>: 本実測 1 件のみから「件数検算一般が無効である」「件数検算が誤りを引き起こした」とまでは言えません。件数一致は対象漏れや行数ズレを素早く弾く一次検査として有用であり、向き照合と組み合わせて使うものです。</li>
+<li><strong>マージコミットの combined diff 形式にはそのまま使えない</strong>: マージコミットに対する <code>git show</code> は単一列の <code>-</code>/<code>+</code> ではなく、複数の親コミットに対する複数列の combined diff（<code>@@@</code> チャンクヘッダや <code>++</code>・<code>--</code> 列など）を出力します<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4-3" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。単純な <code>^-</code> / <code>^\+</code> 照合をマージコミットへ当てると意図どおりに動かないため、比較対象を通常コミットに絞るか、2 点間を比較する <code>git diff</code> コマンドで単一列の差分を取得する必要があります。</li>
+<li><strong>代表外の変更行・同コミット内の移動・部分一致は拾い切れない</strong>: 全行照合ではなく代表文字列に絞る以上、選ばなかった変更行の取り違えは検出できません。また、同じコミット内の別 <code>hunk</code> 間で文言が移動した場合は旧表現が <code>+</code> 側にも現れるため、反対側の非存在確認が偽陽性を起こし得ます。識別力の弱い短い部分文字列を指定した場合も、左右の対応関係が崩れた別箇所の一致までは切り分けられません。</li>
+<li><strong>意味的妥当性までは判定できない</strong>: <code>-</code> 側と <code>+</code> 側の文字列が仕様どおりに実在していても、それを根拠に執筆者が組み立てた因果推論や解釈が妥当かどうかまでは、文字列照合コマンドでは判定できません。</li>
+</ul>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>将来的に、差分の記録を <code>git diff</code> のテキストから正規表現で読み解くのではなく、変更前・変更後の構造を <code>before</code> / <code>after</code> といった明示的なキーを持つ構造化データ（AST 差分やスキーマ付き JSON 等）として自動生成し、そのまま比較表や検証テストへ流し込めるツールチェーンが整えば、シェルスクリプトで <code>^-</code> や <code>^\+</code> を手書きで照合する工程の比重は下がります。</p>
+<p>ただし、ツールがテキスト差分から構造化データや AI エージェントによる自動抽出に置き換わったとしても、「件数・総数といった集計値の一致」と「変更前後の対応関係（写像の向き）の一致」が別の検査軸であるという設計原則自体は変わりません。どれほど高度な仕組みを使っても、集計値が一致しただけで中身と向きまで合っているとみなす検算設計を採る限り、同じ盲点が残り続けます。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-git-diff-のファイル数行数hunk-数が一致していれば差分に基づく記録は正しいと言えますか">Q. git diff のファイル数・行数・hunk 数が一致していれば、差分に基づく記録は正しいと言えますか？</h3>
+<p><strong>A.</strong> いいえ、件数の一致だけでは差分に基づく記録の正しさは保証されません。ファイル数や変更行数、<code>hunk</code> 数は差分の規模が一致していることしか示さないため、変更前（<code>-</code> 側）と変更後（<code>+</code> 側）を取り違えて記録していても件数は一致し、検算は通過してしまいます。向きや対応関係を根拠にする記録では、件数確認に加えて両側の実文字列を照合する必要があります。</p>
+<h3 id="q-diff-や変更前後比較表の検算コマンドで向きの取り違えを防ぐには何を確認すればよいですか">Q. diff や変更前後比較表の検算コマンドで、向きの取り違えを防ぐには何を確認すればよいですか？</h3>
+<p><strong>A.</strong> コミットメッセージやファイルヘッダ（<code>---</code> / <code>+++</code>）を除いたパッチ本文に対して、変更前を示す <code>^-</code> 行に旧表現があることと、変更後を示す <code>^\+</code> 行に新表現があることを左右別々に照合します。さらに旧表現が <code>+</code> 側に、新表現が <code>-</code> 側に混入していないことも併せて確認すると、選定した代表項目における左右の入れ替わりを防げます。変更前後比較表の記述を検算する場合も、表の「変更前」「変更後」それぞれの列に書いた表現を一次資料の <code>^-</code> 行集合と <code>^\+</code> 行集合へ対応づけて照合します。</p>
+<h3 id="q-変更された全行を検証コマンドに含めると保守が重くなりませんか">Q. 変更された全行を検証コマンドに含めると保守が重くなりませんか？</h3>
+<p><strong>A.</strong> 全行を含める必要はありません。広いアサーションは周辺の軽微な編集でも壊れやすくなるため、結論や主張を左右する「左右が入れ替われば前提が崩れる代表文字列」だけを <code>-</code> 側と <code>+</code> 側から 1〜数件ずつ選んで照合します。これにより、保守コストを抑えつつ向きの逆転を防げます。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li><strong>件数一致と向き一致は別の検査である</strong>: ファイル数・行数・<code>hunk</code> 数の集計値が一致しても、差分の向き（変更前と変更後の対応関係）が正しいことは保証されません。</li>
+<li><strong>「検証済み」の誤った一次記録は下流の検証も素通りし得る</strong>: 一次記録自体に検証済みの印が付いて逆向きのまま残ると、設計検証を含む後続工程も誤った正本を参照するため、最終校閲での差し戻しや企画の看板からのやり直しにつながります。</li>
+<li><strong>件数に加えて <code>-</code> 側と <code>+</code> 側の実文字列を別々に照合する</strong>: 向きや対応関係を持つ記録を検算する際は、集計値だけでなく、行頭記号 <code>-</code> と <code>+</code> を保持したまま両側の具体的な文字列を独立して照合するコマンドを組みます。</li>
+<li><strong>全行ではなく結論を左右する代表文字列に絞る</strong>: 変更行すべてを列挙するのではなく、左右が入れ替われば主張が成立しなくなる代表的な文字列を両側で 1〜数件ずつ照合することで、保守負荷を抑えつつ向きの逆転を防げます。</li>
+</ul>
+<p>AI 開発・自動化パイプラインにおける検証コマンドの設計や品質ゲートの見直しについて、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://martinfowler.com/bliki/AssertionFreeTesting.html">bliki: Assertion Free Testing</a> Martin Fowler, martinfowler.com、2004年8月3日公開、2026年11月17日確認。全テストの通過や緑のテストバー・100% コードカバレッジがあってもアサーションが欠けていればカバレッジ等の解釈に注意が要る点は本文第3〜5段落および Notes 節。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://git-scm.com/docs/git-diff">Git - git-diff Documentation</a> Git Project, git-diff last updated in 2.56.0、2026年11月17日確認。<code>OPTIONS</code> 節の <code>--output-indicator-new=</code> / <code>--output-indicator-old=</code> / <code>--output-indicator-context=</code>（通常それぞれ <code>+</code>・<code>-</code>・<code>' '</code> で出力）、<code>--unified=&#x3C;n></code>（既定値 <code>diff.context</code> または 3）、<code>--shortstat</code> / <code>--numstat</code>（集計出力仕様）。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://git-scm.com/docs/diff-format">Git - diff-format Documentation</a> Git Project, diff-format last updated in 2.55.0、2026年11月17日確認。<code>Generating patch text with -p</code> 節の項目 4（変更前 <code>file1</code> と変更後 <code>file2</code> の対応）、および <code>Combined diff format</code> 節（伝統的な unified diff における <code>-</code>＝A に現れ B で削除・<code>+</code>＝A に無く B で追加・空白＝未変更の定義、ならびにマージコミット向け combined diff の <code>@@@</code> チャンクヘッダと複数列プレフィックス）。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://git-scm.com/docs/git-show">Git - git-show Documentation</a> Git Project, git-show last updated in 2.56.0、2026年11月17日確認。<code>DESCRIPTION</code> 節（コミットのログメッセージとテキスト差分表示、マージコミットの <code>git diff-tree --cc</code> 形式表示）、<code>OPTIONS</code> 節（<code>--format=</code> によるログ出力形式制御）、<code>DIFF FORMATTING</code> 節（<code>--patch</code>）。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-4-3" data-footnote-backref="" aria-label="Back to reference 4-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://docs.python.org/3/library/unittest.html">unittest — Unit testing framework</a> Python documentation（Source code 参照先は 3.15）、2026年11月17日確認。<code>Test cases</code> 節内の <code>assertCountEqual</code>（順序を無視して各要素の出現回数を検証）および <code>assertSequenceEqual</code>（順序を含めて 2 つのシーケンスが等しいかを検証）。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://jestjs.io/docs/expect">Expect · Jest</a> Jest、Version 30.5、2026年8月28日公開、2026年11月17日確認。<code>.toHaveLength(number)</code> 節（オブジェクトの <code>.length</code> プロパティが指定数値に等しいことを確認）および <code>.toEqual(value)</code> 節（オブジェクトや配列の全プロパティ・要素を再帰的に比較）。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="http://xunitpatterns.com/Result%20Verification%20Patterns.html">Result Verification Patterns at XUnitPatterns.com</a> Gerard Meszaros, XUnitPatterns.com、Copyright 2003-2008 / 2011年2月9日生成ページ（表内の項目日付 2007年2月18日）、2026年11月17日確認。<code>Recent Changes</code> 節の一覧表にある <code>State Verification</code>（実行後の SUT 状態と期待状態の比較）および <code>Delta Assertion</code>（実行前後の状態差分に基づくアサーション）。なお本ページには一覧表の 1 文による定義要約のみが掲載されている。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://testing.googleblog.com/2024/04/prefer-narrow-assertions-in-unit-tests.html">Prefer Narrow Assertions in Unit Tests</a> Kai Kent, Google Testing Blog、2024年4月4日公開（Testing on the Toilet からの改編記事）、2026年11月17日確認。全体等価比較などの <code>Broad assertions</code> が無関係な変更で壊れる <code>brittle tests</code> を生む問題、関連する振る舞いだけを確認する <code>narrow assertions</code> の推奨、および検証対象を必要な部分集合に絞る手段としての <code>.comparingExpectedFieldsOnly()</code>（Java）と <code>protocmp.FilterField</code>（Go <code>protocmp</code>）。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-8-2" data-footnote-backref="" aria-label="Back to reference 8-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

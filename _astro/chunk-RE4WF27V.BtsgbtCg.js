@@ -1,0 +1,1 @@
+import{_ as i}from"./render-O7CIS3YK.CyYePrsb.js";import{_ as s}from"./mermaid-layout-elk.core.C7YgWsA-.js";var a=class{static{s(this,"ImperativeState")}constructor(t){this.init=t,this.records=this.init()}static{i(this,"ImperativeState")}reset(){this.records=this.init()}};export{a as I};

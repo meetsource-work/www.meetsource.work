@@ -1,0 +1,197 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>「クリックしたのに違う場所に飛ぶ」の正体──Whiteboard のリンクは全部正しく、ずれていたのはラベルだった | Meetsource</title><meta name="description" content="AI に描かせた図からコードへ飛ぶ Whiteboard で「違う場所に飛ぶ」と感じた原因を、22 の行範囲（延べ 30 参照）の照合と確認用の図で切り分けました。誤った参照はゼロで、ずれていたのはリンクのラベルでした。"><link rel="canonical" href="https://www.meetsource.work/blog/whiteboard-link-label-mismatch"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="「クリックしたのに違う場所に飛ぶ」の正体──Whiteboard のリンクは全部正しく、ずれていたのはラベルだった | Meetsource"><meta property="og:description" content="AI に描かせた図からコードへ飛ぶ Whiteboard で「違う場所に飛ぶ」と感じた原因を、22 の行範囲（延べ 30 参照）の照合と確認用の図で切り分けました。誤った参照はゼロで、ずれていたのはリンクのラベルでした。"><meta property="og:url" content="https://www.meetsource.work/blog/whiteboard-link-label-mismatch"><meta property="og:image" content="https://www.meetsource.work/blog/whiteboard-link-label-mismatch-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-09-28T20:00:12.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="「クリックしたのに違う場所に飛ぶ」の正体──Whiteboard のリンクは全部正しく、ずれていたのはラベルだった | Meetsource"><meta name="twitter:description" content="AI に描かせた図からコードへ飛ぶ Whiteboard で「違う場所に飛ぶ」と感じた原因を、22 の行範囲（延べ 30 参照）の照合と確認用の図で切り分けました。誤った参照はゼロで、ずれていたのはリンクのラベルでした。"><meta name="twitter:image" content="https://www.meetsource.work/blog/whiteboard-link-label-mismatch-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"「クリックしたのに違う場所に飛ぶ」の正体──Whiteboard のリンクは全部正しく、ずれていたのはラベルだった","description":"AI に描かせた図からコードへ飛ぶ Whiteboard で「違う場所に飛ぶ」と感じた原因を、22 の行範囲（延べ 30 参照）の照合と確認用の図で切り分けました。誤った参照はゼロで、ずれていたのはリンクのラベルでした。","datePublished":"2026-09-28T20:00:12.000Z","image":"https://www.meetsource.work/blog/whiteboard-link-label-mismatch-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/whiteboard-link-label-mismatch"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Whiteboard の図から違う場所に飛ぶのは、不具合ですか？","acceptedAnswer":{"@type":"Answer","text":"確かめた範囲では、登録した行どおりに飛んでいました。参照（延べ 30 件、22 の行範囲）はすべて、図を描いた Claude の意図どおりの行を指していました。違う場所に見えたのは、関数名やファイル名をラベルにしたリンクが、その関数の定義ではなく、文で説明している別の行を指していたためです。"}},{"@type":"Question","name":"コードに紐付いた図なら、AI が描いたものでも信用してよいですか？","acceptedAnswer":{"@type":"Answer","text":"行番号が正しいことと、図が読む人に正しく伝わることは別です。Whiteboard が入力の時点で止めることを確かめられたのは参照の書式の誤りで、行番号が意図どおりか、ラベルが飛び先を名指ししているかは、図を描くエージェントに任されています（2026-09-29 時点のコードとツール定義から読み取れる範囲）。"}},{"@type":"Question","name":"AI に図を描かせるとき、リンクのずれを防ぐにはどうすればよいですか？","acceptedAnswer":{"@type":"Answer","text":"ラベルを飛び先の行そのものを表す語句にするよう、指示に1行足します。関数名やファイル名をラベルにするのは、関数全体やファイル全体へ飛ばすときだけにします。ただし、この指示で効果が出るかはまだ測っていません。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-09-28T20:00:12.000Z" data-astro-cid-7jjqptxk> 2026.09.29 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#code-review</span><span class="tag" data-astro-cid-7jjqptxk>#whiteboard</span><span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>「クリックしたのに違う場所に飛ぶ」の正体──Whiteboard のリンクは全部正しく、ずれていたのはラベルだった</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/whiteboard-link-label-mismatch-hero.webp" alt="「クリックしたのに違う場所に飛ぶ」の正体──Whiteboard のリンクは全部正しく、ずれていたのはラベルだった" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>Whiteboard で Claude に描かせたコード解説の図から、関数名 <code>load_atom</code> のリンクをクリックしました。開いたのは、その関数の定義ではなく、関数の途中にある <code>splitn(...)</code> の行でした。</p>
+<p><strong>Whiteboard とは、Claude Code や Codex などのコーディングエージェントにシーケンス図や call stack をキャンバスへ描かせ、図の各要素から該当するコード行へ飛べるようにする、オープンソース（MIT ライセンス）のデスクトップアプリです。</strong> 開発しているのは YC W26 のチームで（リポジトリは <a href="https://github.com/devdotfast/whiteboard">devdotfast/whiteboard</a>）、Show HN で公開されたのは 2026-09-24 です。</p>
+<p>Hacker News のスレッドで紹介用の図の正確さを問われた作者は、 <code>Real diagrams are all linked to code, so hallucinations don’t really happen in practice</code>（実際の図はすべてコードに紐付いているので、でたらめは現実にはまず起きない）と答えています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。では、違う場所に飛んだのはツールの不具合なのか、AI のでたらめなのか。</p>
+<p>結論から書くと、どちらでもありませんでした。図の中のコードへの参照（延べ 30 件、重複を除いて 22 の行範囲）を Claude に照合させると、誤ったものは 1 件もありませんでした。違う場所に飛ぶように見えた原因は、ジャンプの不具合でも参照の誤りでもなく、リンクの <strong>ラベル</strong> の付け方でした。以下では、その切り分けの手順と、ラベルをどう書けばよいかを示します。</p>
+<p>Geoffrey Litt は <code>Working with AI, it's easy for the loop to run faster than the speed of human understanding.</code>（AI と作業していると、ループが人間の理解の速さを追い越しやすい）と書いています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。AI に図を描かせる道具は、この「理解が追いつかない」問題への答えの一つとして出てきたものです。では、その図を読むときには何を確かめればよいのでしょうか。</p>
+<h2 id="検証環境と範囲">検証環境と範囲</h2>
+<ul>
+<li><strong>ツール</strong>: Whiteboard v0.1.3（macOS 版。v0.1.3 の公開は 2026-09-26）<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup></li>
+<li><strong>題材</strong>: 私が作って公開している Tauri 製アプリ clara の、コミット <code>421cc57</code> 時点の <strong>全体解説</strong> を 1 枚。差分の無いリポジトリだったため、Whiteboard 本来の用途である差分レビューではありません</li>
+<li><strong>図の作成</strong>: 図を作ったのは Claude（Claude Code）です。Whiteboard に付属する CLI（<code>whiteboard api</code>）だけで描かせ、Claude Code 用のプラグインは入れていません</li>
+<li><strong>範囲外</strong>: 意味 diff（AST を使った差分の要約）と判断ログは、差分が無いため一度も動かしていません</li>
+<li><strong>実施日</strong>: 2026-09-28〜29</li>
+</ul>
+<p>用語を2つ決めておきます。「参照」は図や本文に埋め込んだコードへのリンク1本、「行範囲」は（ファイル, 開始行, 終了行）の組です。また、参照先が書いた側の意図と違うことを「誤り」、読む側がクリックして「違う場所だ」と感じることを「ずれ」と呼び、この2語を区別して使います。</p>
+<h2 id="whiteboard-の図はどこでコードとつながっているか">Whiteboard の図はどこでコードとつながっているか</h2>
+<p>Whiteboard の図には、コードとつながる部品が4種類あります。本文中のリンク、シーケンス図のステップ、call stack のフレーム、code peek（コード片の埋め込み）です。このうち、コードへの参照を必ず求めるのは2種類だけです。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>部品</th><th>コードへの参照</th><th>根拠（Whiteboard のツール定義・執筆指示の原文）</th></tr></thead><tbody><tr><td>本文中のリンク</td><td>任意（書式の指定のみ）</td><td><code>Link repository code as [label](review-source:head/src/file.ts#L10-L24)</code></td></tr><tr><td>シーケンス図のステップ</td><td>任意（参照・説明・コード片のどれか1つ）</td><td><code>each needs exactly one of source, explanation, or code</code></td></tr><tr><td>call stack のフレーム</td><td>必須</td><td><code>Each frame requires source</code></td></tr><tr><td>code peek</td><td>必須</td><td>スキーマで <code>source</code> が必須</td></tr></tbody></table>
+<p>参照を持たせるかどうかは部品によって違い、参照の <strong>中身</strong>（何行目を指すか、何というラベルを付けるか）は、図を描くエージェントが指定する値で決まります。Whiteboard がエージェントに渡す執筆指示は <code>verified line numbers</code>（確認済みの行番号）を使うよう求めていますが、ラベルの書き方には触れていません。</p>
+<p>実装側も見ました（2026-09-29 時点の main ブランチ。v0.1.3 との差分は見ていません）。参照を解析するテスト <code>source-links.test.ts</code> が検査しているのは書式で、行番号が 0 のもの、範囲が逆順のもの、行指定を欠くもの、<code>head</code> / <code>base</code> 以外を指すものなどを弾きます。同じテストには、ラベルだけが違う2本のリンクを同じ参照として扱うケースがあります<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。<strong>ラベルは参照の一部として扱われていない</strong> わけです。ただしこれはテスト・ツール定義・執筆指示から読み取れることで、Whiteboard が公式にそう明記しているわけではありません。</p>
+<p>私は Whiteboard を、AI と協業して成果物を作る道具だと受け取っています。正しさを握っているのは AI です。どこへ飛ぶかも AI が指定する値次第で、図とコードが機械的に接続されているわけではありません。</p>
+<h2 id="違う場所に飛んだように見えた3本のリンク">違う場所に飛んだように見えた3本のリンク</h2>
+<p>ずれて見えたのは、Claude が描いた解説図の「読んでいて気になった点」の節と、「Implementation：コードの読み順」の節にあるリンクです。名前にして2つ（<code>load_atom</code> と <code>lib.rs</code>）、リンクにして3本です（<code>load_atom</code> が2本）。</p>
+<p>図の本文には、たとえば次の文がありました。</p>
+<blockquote><p>[load_atom] は <code>splitn(3, "---")</code> で frontmatter を切り出す。YAML の値（タイトル等）に <code>---</code> が入ると、パースに失敗する。</p></blockquote>
+<p>この <code>[load_atom]</code> の部分がリンクです。3本のリンクは、図に書き込まれた Markdown のリンク記法としては次のとおりです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#7287FD">[</span><span style="color:#7287FD">load_atom</span><span style="color:#7287FD">]</span><span style="color:#7C7F93">(</span><span style="color:#1E66F5">review-source:head/src-tauri/src/commands.rs#L125-L128</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#7287FD">[</span><span style="color:#7287FD">load_atom</span><span style="color:#7287FD">]</span><span style="color:#7C7F93">(</span><span style="color:#1E66F5">review-source:head/src-tauri/src/commands.rs#L122-L122</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#7287FD">[</span><span style="color:#7287FD">lib.rs</span><span style="color:#7287FD">]</span><span style="color:#7C7F93">(</span><span style="color:#1E66F5">review-source:head/src-tauri/src/lib.rs#L14-L24</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span></code></pre>
+<p>それぞれの飛び先の1行目は、clara のコミット <code>421cc57</code> では次の内容です。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>リンクのラベル</th><th>飛び先</th><th>飛び先の1行目</th></tr></thead><tbody><tr><td><code>load_atom</code></td><td><code>commands.rs</code> 125 行目</td><td><code>let parts: Vec&#x3C;&#x26;str> = content.splitn(3, "---").collect();</code></td></tr><tr><td><code>load_atom</code></td><td><code>commands.rs</code> 122 行目</td><td><code>if file_name.starts_with(&#x26;id) &#x26;&#x26; file_name.ends_with(".md") {</code></td></tr><tr><td><code>lib.rs</code></td><td><code>lib.rs</code> 14 行目</td><td><code>.invoke_handler(tauri::generate_handler![</code></td></tr></tbody></table>
+<p>関数 <code>load_atom</code> そのものは、<code>commands.rs</code> の 111 行目から始まります。</p>
+<p>画面では、<code>load_atom</code> をクリックしたのに、表示されたのはその文の続きで説明している <code>splitn</code> や <code>starts_with</code> の方でした。<code>lib.rs</code> をクリックしたときも、表示されたのは <code>generate_handler!</code> の部分でした。</p>
+<p>このとき私は、保存されたデータは正しいのに、表示の段階でジャンプがずれているのだろうと考えました。</p>
+<h2 id="ジャンプの不具合ではなかった2段階の切り分け">ジャンプの不具合ではなかった──2段階の切り分け</h2>
+<p>切り分けは2段階で行いました。</p>
+<p><strong>(1) 全参照の照合</strong>。図の中のコードへの参照は延べ 30 件（本文中のリンク 10、call stack のフレーム 10、シーケンス図のステップ 9、code peek 1）で、重複を除くと 22 の行範囲になります。Claude に、22 の行範囲それぞれについて開始行と終了行をソースから表示させ、意図した関数・ブロックの始まりと終わりに一致するかを判定させました。結果は 22 件すべて一致です。</p>
+<p>この方法には限界が3つあります。見たのは開始行と終了行で、範囲の中身全体は比べていません。照合したのは図を描いたのと同じ Claude Code の会話の中で、意図を別に記録しておいたわけではなく、描いた本人が照合の時点で判定した自己照合です。そして、ここでの「一致」は <strong>Claude が意図した箇所と</strong> の一致で、ラベルから読む側が想像する箇所との一致ではありません。AI に確かめさせるときは意見を言わせるより元のデータに戻らせる、という考え方は<a href="/blog/llm-as-verifier-not-judge">AI レビューの使いどころを書いた記事</a>でも扱いましたが、元のデータに戻らせても、照合の基準が「書いた側の意図」である限り、読む側のずれは測れません。</p>
+<p><strong>(2) 確認用の図</strong>。Claude に、4種類の部品（本文中のリンク、シーケンス図のステップ、call stack のフレーム、code peek）を1つずつ入れた確認用の図を作らせました。各参照の横には、正しい飛び先（ファイル・行・その行の中身）を書き添えさせています。私が画面で順にクリックすると、4種類とも正しい場所に飛びました。</p>
+<p>ジャンプの仕組みにも、参照の行番号にも問題はありませんでした。違う場所に見えたのは、前の節の3本のリンクの <strong>ラベル</strong> のせいです。「表示の段階でずれる」という最初の読みは、この切り分けで撤回しました。</p>
+<h2 id="誤りとずれの違い">「誤り」と「ずれ」の違い</h2>
+<p>原因は、リンクの向け方と読み方の食い違いです。Claude は、リンクを「その文で言っている箇所」に向けました。「<code>load_atom</code> は <code>splitn(3, "---")</code> で frontmatter を切り出す」という文の <code>load_atom</code> を、<code>splitn</code> の行にリンクしたわけです。一方、読む側の私は、クリックした名前（関数名・ファイル名）の定義や先頭に飛ぶと思っていました。クリックした名前を探してしまうので、ずれているように感じたのです。</p>
+<p>作者の主張は「誤り」については当たっていました。ずれは別の種類の問題です。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th></th><th>誤り</th><th>ずれ</th></tr></thead><tbody><tr><td>何が起きているか</td><td>参照先が、書いた側の意図と違う</td><td>参照先は意図どおりだが、ラベルが別のものを名指ししている</td></tr><tr><td>今回の件数</td><td>0 件（22 の行範囲を照合）</td><td>3 本（読む側が気づいたもの）</td></tr><tr><td>行番号の確認で見つかるか</td><td>見つかる</td><td>見つからない</td></tr><tr><td>Whiteboard が入力時に止めるか</td><td>書式の誤り（行番号が 0、範囲が逆順など）は止める</td><td>テストとツール定義の範囲では、ラベルは検査の対象外</td></tr></tbody></table>
+<p>「3 本」は私が画面で気づいたものの数で、全 30 参照を「ずれ」の観点で数え直したものではありません。</p>
+<p>ずれは、行番号をいくら確かめても見つかりません。「紐付いているので、でたらめは起きない」は、この試用の範囲では当たっていました。Claude の自己照合で見るかぎり、意図と違う行を指す参照はゼロです。そのうえで、でたらめとは別の種類のずれが残りました。</p>
+<p>「コードに紐付けさせる」仕組みは正しく働いていました。延べ 30 件の参照（22 の行範囲）は全部、書いた側の意図どおりの行を指していました。それでも読む側にはずれて見えたので、紐付けの強制が守っているのは「図の正しさ」ではなく「行番号の正しさ」だと私は受け取っています。</p>
+<h2 id="リンクのラベルの書き方飛び先そのものを名指しする">リンクのラベルの書き方：飛び先そのものを名指しする</h2>
+<p>リンクのラベルは、読む側がクリックする前に「どこへ飛ぶか」を予告するものです。だから、書いた側の文脈ではなく、飛び先そのものの名前にするべきだと考えます。</p>
+<p>Web アクセシビリティの基準 WCAG 2.2 にも、リンクの文言からリンクの目的が分かるようにする達成基準（2.4.4 Link Purpose (In Context)、2.4.9 Link Purpose (Link Only)）があり、その解説文書は <code>provide link text that identifies the purpose of the link</code>（リンクの目的が分かるリンクテキストにする）ことを勧めています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。コードへのリンクを想定した基準ではありませんが、考え方は同じです。</p>
+<p>先の文を書き換えると、次のようになります。図に書き込むリンク記法の変更前と変更後です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#9CA0B0;font-style:italic">&#x3C;!-- 変更前: ラベルが「文の主語」を指している --></span></span>
+<span class="line"><span style="color:#7287FD">[</span><span style="color:#7287FD">load_atom</span><span style="color:#7287FD">]</span><span style="color:#7C7F93">(</span><span style="color:#1E66F5">review-source:head/src-tauri/src/commands.rs#L125-L128</span><span style="color:#7C7F93">)</span><span style="color:#4C4F69"> は </span><span style="color:#40A02B">`splitn(3, "---")`</span><span style="color:#4C4F69"> で frontmatter を切り出す。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">&#x3C;!-- 変更後: ラベルが飛び先そのものを指している --></span></span>
+<span class="line"><span style="color:#40A02B">`load_atom`</span><span style="color:#4C4F69"> は </span><span style="color:#7287FD">[</span><span style="color:#40A02B">`splitn(3, "---")`</span><span style="color:#7287FD"> の行</span><span style="color:#7287FD">]</span><span style="color:#7C7F93">(</span><span style="color:#1E66F5">review-source:head/src-tauri/src/commands.rs#L125-L128</span><span style="color:#7C7F93">)</span><span style="color:#4C4F69"> で frontmatter を切り出す。</span></span>
+<span class="line"></span></code></pre>
+<p>逆に、<code>load_atom</code> というラベルのまま関数そのものへ飛ばしたいなら、範囲を関数の定義（111 行目から）に直します。ラベルと範囲のどちらかを、もう一方に合わせればよいのです。</p>
+<p>AI に図を描かせるときは、エージェントへの指示に次の1行を足すことを提案します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>コードへのリンクのラベルには、飛び先の行そのものを表す語句を使う。関数名やファイル名をラベルにするのは、その関数の定義全体やファイル全体へ飛ばすときだけにする。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>ラベルを直した版で「ずれ」の感覚が消えるかは、まだ試していません。上の指示はずれの原因に対応させた提案で、効果を測ったものではありません。入力に制約はあっても、うまい図を作るには何度か実行して調整する必要がありそうだ、というのが1回の試用での印象です。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-whiteboard-の図から違う場所に飛ぶのは不具合ですか">Q. Whiteboard の図から違う場所に飛ぶのは、不具合ですか？</h3>
+<p><strong>A.</strong> 確かめた範囲では、登録した行どおりに飛んでいました。参照（延べ 30 件、22 の行範囲）はすべて、図を描いた Claude の意図どおりの行を指していました。違う場所に見えたのは、関数名やファイル名をラベルにしたリンクが、その関数の定義ではなく、文で説明している別の行を指していたためです。</p>
+<h3 id="q-コードに紐付いた図ならai-が描いたものでも信用してよいですか">Q. コードに紐付いた図なら、AI が描いたものでも信用してよいですか？</h3>
+<p><strong>A.</strong> 行番号が正しいことと、図が読む人に正しく伝わることは別です。Whiteboard が入力の時点で止めることを確かめられたのは参照の書式の誤りで、行番号が意図どおりか、ラベルが飛び先を名指ししているかは、図を描くエージェントに任されています（2026-09-29 時点のコードとツール定義から読み取れる範囲）。</p>
+<h3 id="q-ai-に図を描かせるときリンクのずれを防ぐにはどうすればよいですか">Q. AI に図を描かせるとき、リンクのずれを防ぐにはどうすればよいですか？</h3>
+<p><strong>A.</strong> ラベルを飛び先の行そのものを表す語句にするよう、指示に1行足します。関数名やファイル名をラベルにするのは、関数全体やファイル全体へ飛ばすときだけにします。ただし、この指示で効果が出るかはまだ測っていません。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li>Whiteboard で Claude に描かせた図では、延べ 30 件の参照（22 の行範囲）がすべて意図どおりの行を指していた。それでも、ラベルが飛び先を名指ししていない 3 本は、読む側には違う場所に飛ぶように見えた</li>
+<li>参照が正しいかは行番号で決まり、読む人に正しく伝わるかはラベルで決まる。行番号の確認では、ラベルのずれは見つからない</li>
+<li>Whiteboard が入力時に止めることを確かめられたのは参照の書式の誤りで、行番号とラベルの中身は図を描くエージェントが決めている</li>
+<li>リンクのラベルは、飛び先そのものを名指しする語句にする。関数名やファイル名をラベルにするなら、範囲を関数全体・ファイル全体にする</li>
+</ul>
+<p>図に多少のずれがあったとしても、コードの理解には役に立ちます。トークンは使いますが、図を描かせるためのプロンプトを自分で考えるよりは良いものができたと思っています。</p>
+<p>AI エージェントに生成させたコード・説明・図を、チームのレビュー工程にどう組み込むか。確認の観点の設計からご相談に乗ります。お気軽に <a href="/#contact">コンタクトフォーム</a> からご連絡ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://news.ycombinator.com/item?id=49836577">sidharthkmenon のコメント（Show HN: Whiteboard (YC W26) – An open-source IDE for thoughtful software design）</a> Hacker News、2026-09-24（UTC）。Show HN の投稿者である sidharthkmenon が、紹介用 GIF の図の正確さを指摘した 8organicbits のコメントに返答したもの。引用した1文は同コメントの第2段落。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://www.geoffreylitt.com/2026/07/02/understanding-is-the-new-bottleneck">Understanding is the new bottleneck</a> Geoffrey Litt、2026-07-02。講演の書き起こし。引用した1文は「A quiz is a speed regulator.」の段落にある。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://github.com/devdotfast/whiteboard/releases/tag/v0.1.3">Release v0.1.3</a> devdotfast/whiteboard、GitHub、2026-09-26T03:13:47Z 公開（リリース名は「Review Desktop 0.1.3」）。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://github.com/devdotfast/whiteboard/blob/3a52207/packages/review/src/review-api/source-links.test.ts">packages/review/src/review-api/source-links.test.ts</a> devdotfast/whiteboard、コミット <code>3a52207</code>（2026-09-29 に参照した main）。ラベルだけが違うリンク（<code>[new label]</code>）を既存の参照と同じ id として扱うテストは L33〜35、書式の誤った参照先を弾くテスト（<code>rejects malformed source destinations</code>）は L38〜47。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://www.w3.org/WAI/WCAG22/Understanding/link-purpose-in-context.html">Understanding Success Criterion 2.4.4: Link Purpose (In Context)</a> W3C、WCAG 2.2 Understanding Docs。<code>provide link text that identifies the purpose of the link</code> は Intent 節にある。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

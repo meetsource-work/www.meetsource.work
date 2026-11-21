@@ -1,0 +1,233 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>取得に失敗しても「0件」と表示され、「無い」と読まれる ── 2週間で4か所直した「未確認」と「0件」の区別 | Meetsource</title><meta name="description" content="外部コマンドの取得失敗を空リストへフォールバックさせると、「データが 0 件（正常）」と「取得失敗による未確認（異常）」が混同され、サイレントフェイルを招きます。Bash のプロセス置換や Python での実務トラブル 4 例をもとに、即座の停止（Fail Fast）と未確認への 3 値化設計を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/command-failure-silent-zero-count"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="取得に失敗しても「0件」と表示され、「無い」と読まれる ── 2週間で4か所直した「未確認」と「0件」の区別 | Meetsource"><meta property="og:description" content="外部コマンドの取得失敗を空リストへフォールバックさせると、「データが 0 件（正常）」と「取得失敗による未確認（異常）」が混同され、サイレントフェイルを招きます。Bash のプロセス置換や Python での実務トラブル 4 例をもとに、即座の停止（Fail Fast）と未確認への 3 値化設計を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/command-failure-silent-zero-count"><meta property="og:image" content="https://www.meetsource.work/blog/command-failure-silent-zero-count-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-01T00:00:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="取得に失敗しても「0件」と表示され、「無い」と読まれる ── 2週間で4か所直した「未確認」と「0件」の区別 | Meetsource"><meta name="twitter:description" content="外部コマンドの取得失敗を空リストへフォールバックさせると、「データが 0 件（正常）」と「取得失敗による未確認（異常）」が混同され、サイレントフェイルを招きます。Bash のプロセス置換や Python での実務トラブル 4 例をもとに、即座の停止（Fail Fast）と未確認への 3 値化設計を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/command-failure-silent-zero-count-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"取得に失敗しても「0件」と表示され、「無い」と読まれる ── 2週間で4か所直した「未確認」と「0件」の区別","description":"外部コマンドの取得失敗を空リストへフォールバックさせると、「データが 0 件（正常）」と「取得失敗による未確認（異常）」が混同され、サイレントフェイルを招きます。Bash のプロセス置換や Python での実務トラブル 4 例をもとに、即座の停止（Fail Fast）と未確認への 3 値化設計を解説します。","datePublished":"2026-11-01T00:00:00.000Z","image":"https://www.meetsource.work/blog/command-failure-silent-zero-count-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/command-failure-silent-zero-count"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Bash の set -e を設定していればプロセス置換のエラーも検知できますか？","acceptedAnswer":{"@type":"Answer","text":"検知できません。Bash のプロセス置換 < <(cmd) は非同期サブシェルとして実行される単語展開の一種であり、その終了ステータスは呼び出し元のパイプラインや set -e に伝播しません。出力を一度変数代入 list=$(cmd) で受けることで、コマンド置換の終了ステータスに対して set -e を効かせることができます。"}},{"@type":"Question","name":"外部コマンドの失敗を空リストでフォールバックさせるとなぜ危険なのですか？","acceptedAnswer":{"@type":"Answer","text":"「データが 0 件である（正常）」という状態と、「取得に失敗して存在を確認できていない（異常）」という状態が同じ表現になり、障害が隠蔽されるからです。特に自動化スクリプトや AI エージェント連携では、「差分なし」「競合なし」と安全側に誤認され、破壊的操作や誤判定を引き起こす原因になります。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-01T00:00:00.000Z" data-astro-cid-7jjqptxk> 2026.11.01 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#shell-script</span><span class="tag" data-astro-cid-7jjqptxk>#bash</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span><span class="tag" data-astro-cid-7jjqptxk>#automation</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>取得に失敗しても「0件」と表示され、「無い」と読まれる ── 2週間で4か所直した「未確認」と「0件」の区別</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/command-failure-silent-zero-count-hero.webp" alt="取得に失敗しても「0件」と表示され、「無い」と読まれる ── 2週間で4か所直した「未確認」と「0件」の区別" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>シェルスクリプトに <code>set -e</code> を指定したり、Python で簡単な集計スクリプトを書いたりする際、「外部コマンドが失敗したらスクリプトは止まるはずだ」「とりあえず空リストを返しておけば後続のループ処理が安全に動くだろう」と思い込みがちです。</p>
+<p>しかし、外部コマンドの取得失敗が空リストや空文字に化けてしまうと、「対象データが 0 件である（正常・未処理なし・安全）」という状態と、「取得そのものに失敗して存在を確認できていない（異常）」という状態が、まったく同じ表示になってしまいます。</p>
+<p>外部コマンド集計における「偽の 0 件」とは、コマンドの異常終了や出力のパース失敗が空配列や空文字列へフォールバックされることで、実際には「取得に失敗した」状態であるにもかかわらず「対象データが 0 件（正常・安全・未処理なし）」と誤認される現象です。</p>
+<p>筆者が個人で開発・運用しているツール集（claude-skills）において、2026年10月下旬の実働 6 日間（2 暦週にまたがる期間）に、まったく同じ型の修正が 4 か所の別々のスクリプトに入りました。あるスクリプトでは Bash のプロセス置換が終了コードを捨てていたために「未処理タスク 0 件」と誤読され、別のスクリプトでは Python の例外処理やフォールバック構文がエラーを握りつぶし、安全側に誤認されていました。</p>
+<p>本記事では、Bash のプロセス置換 <code>&#x3C; &#x3C;(cmd)</code> や Python の例外処理で実際に発生した 4 つのコード差分と実測検証をもとに、なぜ人間も AI もこの罠に落ちるのか、そして「未確認」と「0 件」を分ける 3 値化設計と即座の停止（Fail Fast）の規律を解説します。</p>
+<h2 id="なぜ空へのフォールバックを選んでしまうのか実務での-4-つの失敗パターン">なぜ「空へのフォールバック」を選んでしまうのか：実務での 4 つの失敗パターン</h2>
+<p>スクリプトを書く際、途中でエラーが発生したときに処理をクラッシュさせず、空リスト <code>[]</code> や空文字列 <code>""</code> を返して後続の処理をそのまま流したくなる誘惑があります。エラーで処理を止めるよりも、デフォルト値を与えて処理を継続させた方が「落ちにくい堅牢なコード」に見えるからです。</p>
+<p>しかし、これはソフトウェア工学で「failing slowly（ゆっくりと壊れる）」と呼ばれるアンチパターンです<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。問題をその場で表面化させず自動的に回避しようとすると、不正な状態のまま処理が継続し、後から原因究明が極めて困難な奇妙な故障を引き起こします。とりわけ集計や検査のスクリプトでこれが起きると、異常が正常な「0 件」として偽装され、最も危険な「安全側の誤認」を生み出します。</p>
+<p>筆者の環境で発生した 4 つの実務事例を順に見ていきます。</p>
+<h3 id="1-プロセス置換が終了コードを握りつぶすbash-での-open-0-件化">1. プロセス置換が終了コードを握りつぶす：Bash での open 0 件化</h3>
+<p>タスクや意思決定記録（adrs）の open 一覧を取得して優先度順に並べるシェルスクリプト <code>list_open.sh</code> で発生した事例です。</p>
+<p>修正前のスクリプトは、外部コマンドから 1 行ずつ読み出すために、Bash のプロセス置換 <code>&#x3C; &#x3C;(...)</code> を使ってループを回していました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 修正前の構造イメージ</span></span>
+<span class="line"><span style="color:#8839EF">while</span><span style="color:#4C4F69"> IFS</span><span style="color:#179299">=</span><span style="color:#D20F39;font-style:italic"> read</span><span style="color:#40A02B"> -r</span><span style="color:#40A02B"> line</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  ...</span></span>
+<span class="line"><span style="color:#8839EF">done</span><span style="color:#179299"> &#x3C;</span><span style="color:#40A02B"> &#x3C;(</span><span style="color:#1E66F5;font-style:italic">adrs</span><span style="color:#40A02B"> --ng -C "</span><span style="color:#4C4F69">$INBOX</span><span style="color:#40A02B">" list --status open)</span></span>
+<span class="line"></span></code></pre>
+<p>この書き方には致命的な盲点があります。<code>adrs</code> コマンドが何らかのエラー（例: 設定不備や引数ミスによる <code>exit 3</code>）で失敗して標準出力が空になった場合でも、プロセス置換 <code>&#x3C; &#x3C;(...)</code> 内の終了コードは、呼び出し元のパイプラインや <code>while</code> ループの終了ステータスには反映されません<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。<code>while</code> ループの成否はループ条件である <code>read</code> コマンドが EOF に達した結果（正常終了、<code>rc=0</code>）によって決まります。さらに、単語展開の過程で実行されたサブシェル環境でエラーが発生しても、<code>set -e</code> によってシェルが終了しないことが POSIX 仕様でも定められています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>その結果、スクリプトの先頭で <code>set -e</code> を宣言していても何のエラーも出さずに <code>rc=0</code> で完了し、出力結果が空になります。外部の呼び出し元からは「open なレコードが 0 件だった」のか「取得に失敗した」のか区別がつきませんでした。</p>
+<p>これを最小限のコードで再現したのが以下の検証です。</p>
+<p>引用元: 検証スクリプト（hands-on-log.md §5）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">bash</span><span style="color:#40A02B"> -c</span><span style="color:#40A02B"> 'set -e; while IFS= read -r line; do echo "line: $line"; done &#x3C; &#x3C;(exit 1); echo "finished with rc=$?"'</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">bash</span><span style="color:#40A02B"> -c</span><span style="color:#40A02B"> 'set -e; list=$(exit 1); echo "finished"'</span><span style="color:#179299"> ||</span><span style="color:#D20F39;font-style:italic"> echo</span><span style="color:#40A02B"> "stopped with rc=</span><span style="color:#4C4F69">$?</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span></code></pre>
+<p>実行結果は以下のようになります。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>finished with rc=0</span></span>
+<span class="line"><span>stopped with rc=1</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>1 行目のプロセス置換では、内部で <code>exit 1</code> が起きているにもかかわらず <code>finished with rc=0</code> となり、ループを素通りして正常終了しています。一方、2 行目のように一度変数代入 <code>list=$(...)</code> を経由させると、コマンド置換の終了ステータスが代入文全体のステータスとなるため<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>、<code>set -e</code> が即座に検知して <code>stopped with rc=1</code> で停止します。</p>
+<p>この挙動を踏まえ、<code>list_open.sh</code> ではプロセス置換をやめ、一度変数に出力を受けてからヒアストリング（Here String）<code>&#x3C;&#x3C;&#x3C;"$list"</code> でループに流し込む形に変更しました<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>引用元: 個人で開発しているツール集（claude-skills）の list_open.sh</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># プロセス置換 &#x3C; &#x3C;(adrs …) だと adrs の失敗が捨てられ、rc=0・出力空で open 0 件と区別できない。先に変数へ取って set -e を効かせる</span></span>
+<span class="line"><span style="color:#4C4F69">list</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">adrs</span><span style="color:#40A02B"> --ng</span><span style="color:#40A02B"> -C</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$INBOX</span><span style="color:#40A02B">"</span><span style="color:#40A02B"> list</span><span style="color:#40A02B"> --status</span><span style="color:#40A02B"> open</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">while</span><span style="color:#4C4F69"> IFS</span><span style="color:#179299">=</span><span style="color:#D20F39;font-style:italic"> read</span><span style="color:#40A02B"> -r</span><span style="color:#40A02B"> line</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span></span>
+<span class="line"><span style="color:#7C7F93">  [</span><span style="color:#179299"> -n</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$line</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> ]</span><span style="color:#179299"> ||</span><span style="color:#8839EF"> continue</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  ...</span></span>
+<span class="line"><span style="color:#8839EF">done</span><span style="color:#179299"> &#x3C;&#x3C;&#x3C;</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">$list</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span></code></pre>
+<p>これにより、<code>adrs</code> コマンドが非 0 で失敗した場合は <code>list=$(...)</code> の代入時点で <code>set -e</code> により即座にスクリプトが停止し、「偽の 0 件」を出力する余地を排除できました。</p>
+<h3 id="2-例外の握りつぶしが招く検査すり抜けpython-での-0-件化">2. 例外の握りつぶしが招く「検査すり抜け」：Python での 0 件化</h3>
+<p>サブエージェントのログファイル（JSON Lines 形式）を走査し、「外向きの書き込みツール呼び出しが 0 件であること」を検査する Python スクリプト <code>subagent_tools.py</code> で発生した事例です。</p>
+<p>修正前のコードでは、各行のパース時に発生する例外を安易にスキップしていました。</p>
+<p>引用元: 個人で開発しているツール集（claude-skills）の subagent_tools.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 修正前（83d8947^）</span></span>
+<span class="line"><span style="color:#8839EF">try</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">    content </span><span style="color:#179299">=</span><span style="color:#7C7F93"> (</span><span style="color:#4C4F69">json</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">loads</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">line</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"message"</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> or</span><span style="color:#7C7F93"> {}).</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"content"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">except</span><span style="color:#7C7F93"> (</span><span style="color:#FE640B;font-style:italic">ValueError</span><span style="color:#7C7F93">,</span><span style="color:#FE640B;font-style:italic"> AttributeError</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#8839EF">    continue</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 修正後（83d8947）</span></span>
+<span class="line"><span style="color:#8839EF">try</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">    content </span><span style="color:#179299">=</span><span style="color:#7C7F93"> (</span><span style="color:#4C4F69">json</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">loads</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">line</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"message"</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> or</span><span style="color:#7C7F93"> {}).</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"content"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">except</span><span style="color:#7C7F93"> (</span><span style="color:#FE640B;font-style:italic">ValueError</span><span style="color:#7C7F93">,</span><span style="color:#FE640B;font-style:italic"> AttributeError</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#4C4F69">    unreadable</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">append</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">n</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    continue</span></span>
+<span class="line"><span style="color:#4C4F69">...</span></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#4C4F69"> unreadable</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#1E66F5">    stop</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"</span><span style="color:#EA76CB">{</span><span style="color:#E64553;font-style:italic">found</span><span style="color:#7C7F93">[</span><span style="color:#FE640B;font-style:italic">0</span><span style="color:#7C7F93">]</span><span style="color:#EA76CB">}</span><span style="color:#40A02B"> の </span><span style="color:#EA76CB">{</span><span style="color:#FE640B;font-style:italic">len</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">unreadable</span><span style="color:#7C7F93">)</span><span style="color:#EA76CB">}</span><span style="color:#40A02B"> 行（行 </span><span style="color:#EA76CB">{</span><span style="color:#40A02B">','</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">join</span><span style="color:#7C7F93">(</span><span style="color:#FE640B;font-style:italic">map</span><span style="color:#7C7F93">(</span><span style="color:#FE640B;font-style:italic">str</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> unreadable</span><span style="color:#7C7F93">))</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">）が JSON として読めず数えられていない。"</span></span>
+<span class="line"><span style="color:#40A02B;font-style:italic">         f</span><span style="color:#40A02B">"読めた行の集計は </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">summary</span><span style="color:#EA76CB">}</span><span style="color:#40A02B"> だが、外向きの書き込みが 0 件の確認には使えない"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span></code></pre>
+<p>途中でプロセスのクラッシュやネットワーク切断によってログが途切れると、不完全な JSON 行が発生することがあります。修正前のコードは、そうした読めない行を <code>continue</code> で読み飛ばして残りの行だけで集計を継続していました。</p>
+<p>もしスキップされた行に外向きの書き込みツール呼び出しが含まれていた場合、集計結果は <code>(none)</code>（0 件）となり、「外向きの書き込みは行われなかった」と誤認されます。これはセキュリティ検査や品質ゲートにおいて、エラーを検知しながら適切な対処を行わず握りつぶしてしまう重大な弱点です（CWE-390）<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。Python のスタイルガイド（PEP 8）でも、過剰な例外捕捉は潜在的なバグを隠蔽するため避けるべきだと強く戒められています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>修正後は、JSON として読めない行が 1 行でもあれば <code>unreadable</code> リストに記録し、集計結果を破棄して未読行番号を添えた上で <code>STOP:</code> を出力して <code>exit 1</code> で即座に終了させるように改修しました。実環境のログ 466 本を用いた検証でも、正常なログを誤って停止させることなく、破損行を確実に検知できることが確認されています。</p>
+<h3 id="3-空配列へのフォールバックと未確認への-3-値化タスク差分と競合検出">3. 空配列へのフォールバックと「未確認」への 3 値化：タスク差分と競合検出</h3>
+<p>タスク管理ツール（Taskwarrior）の export 出力を集計する 2 つのスクリプト（<code>actor_diff.py</code> と <code>float.py</code>）でも、同種のフォールバックに起因する不具合が発生しました。</p>
+<p>1 つ目の <code>actor_diff.py</code> は、分類ルールの変更前後にタスクを export して差分を検証するスクリプトです。修正前は、外部コマンドの実行結果を保持する関数 <code>tasks()</code> において、コマンド成功時のみ結果を格納し、失敗時は単に空リスト <code>[]</code> を返していました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 修正前: コマンドが失敗すると空リストが返る</span></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> tasks</span><span style="color:#7C7F93">():</span></span>
+<span class="line"><span style="color:#4C4F69">    out </span><span style="color:#179299">=</span><span style="color:#7C7F93"> []</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> flt </span><span style="color:#8839EF">in</span><span style="color:#7C7F93"> ([</span><span style="color:#40A02B">"status:pending"</span><span style="color:#7C7F93">],</span><span style="color:#7C7F93"> [</span><span style="color:#40A02B">"status:completed"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "end.after:now-30d"</span><span style="color:#7C7F93">]):</span></span>
+<span class="line"><span style="color:#4C4F69">        r </span><span style="color:#179299">=</span><span style="color:#4C4F69"> subprocess</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">run</span><span style="color:#7C7F93">([</span><span style="color:#40A02B">"task"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "rc.verbose=nothing"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "rc.json.array=on"</span><span style="color:#7C7F93">,</span><span style="color:#179299"> *</span><span style="color:#4C4F69">flt</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "export"</span><span style="color:#7C7F93">],</span><span style="color:#E64553;font-style:italic"> capture_output</span><span style="color:#179299">=</span><span style="color:#8839EF">True</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> text</span><span style="color:#179299">=</span><span style="color:#8839EF">True</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">        if</span><span style="color:#4C4F69"> r</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">returncode </span><span style="color:#179299">==</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">            out </span><span style="color:#179299">+=</span><span style="color:#4C4F69"> json</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">loads</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">r</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">stdout</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> strict</span><span style="color:#179299">=</span><span style="color:#8839EF">False</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#4C4F69"> out</span></span>
+<span class="line"></span></code></pre>
+<p>Python の <code>subprocess.run</code> は、デフォルトではコマンドが非 0 で失敗しても例外を送出しません<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。そのため、終了コードの検査から漏れた分岐がそのまま <code>[]</code> を返してしまうと、戻り値の未検査（CWE-252）<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup> により、後続の差分比較ロジックが「差分 0 件（変更なし）」と誤った結論を出してしまいます。</p>
+<p>そこで修正後は、1 本でも export に失敗した場合は取得できたデータも含めて一覧を破棄し、失敗理由を返してメイン処理で明示的に「未確認」と出力して終了する設計に変更しました。</p>
+<p>引用元: 個人で開発しているツール集（claude-skills）の actor_diff.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 修正後（db0ff34）</span></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> tasks</span><span style="color:#7C7F93">():</span></span>
+<span class="line"><span style="color:#40A02B">    """(task 一覧, 失敗の説明)。1 本でも export に失敗したら一覧は捨てる: 取れた分だけで「0 件」と出すと、検査していないのに差分なしと読まれる"""</span></span>
+<span class="line"><span style="color:#4C4F69">    out </span><span style="color:#179299">=</span><span style="color:#7C7F93"> []</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> flt </span><span style="color:#8839EF">in</span><span style="color:#7C7F93"> ([</span><span style="color:#40A02B">"status:pending"</span><span style="color:#7C7F93">],</span><span style="color:#7C7F93"> [</span><span style="color:#40A02B">"status:completed"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "end.after:now-30d"</span><span style="color:#7C7F93">]):</span></span>
+<span class="line"><span style="color:#4C4F69">        r </span><span style="color:#179299">=</span><span style="color:#4C4F69"> subprocess</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">run</span><span style="color:#7C7F93">([</span><span style="color:#40A02B">"task"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "rc.verbose=nothing"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "rc.json.array=on"</span><span style="color:#7C7F93">,</span><span style="color:#179299"> *</span><span style="color:#4C4F69">flt</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "export"</span><span style="color:#7C7F93">],</span><span style="color:#E64553;font-style:italic"> capture_output</span><span style="color:#179299">=</span><span style="color:#8839EF">True</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> text</span><span style="color:#179299">=</span><span style="color:#8839EF">True</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">        if</span><span style="color:#4C4F69"> r</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">returncode </span><span style="color:#179299">!=</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">            return</span><span style="color:#7C7F93"> [],</span><span style="color:#40A02B;font-style:italic"> f</span><span style="color:#40A02B">"</span><span style="color:#EA76CB">{</span><span style="color:#40A02B">' '</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">join</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">flt</span><span style="color:#7C7F93">)</span><span style="color:#EA76CB">}</span><span style="color:#40A02B"> の export が exit </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">r</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">returncode</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">r</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">stderr</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">strip</span><span style="color:#7C7F93">()[:</span><span style="color:#FE640B">120</span><span style="color:#7C7F93">]</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#8839EF">        try</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">            out </span><span style="color:#179299">+=</span><span style="color:#4C4F69"> json</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">loads</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">r</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">stdout</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> strict</span><span style="color:#179299">=</span><span style="color:#8839EF">False</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">        except</span><span style="color:#FE640B;font-style:italic"> ValueError</span><span style="color:#8839EF"> as</span><span style="color:#4C4F69"> e</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">            return</span><span style="color:#7C7F93"> [],</span><span style="color:#40A02B;font-style:italic"> f</span><span style="color:#40A02B">"</span><span style="color:#EA76CB">{</span><span style="color:#40A02B">' '</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">join</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">flt</span><span style="color:#7C7F93">)</span><span style="color:#EA76CB">}</span><span style="color:#40A02B"> の export が JSON でない: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">e</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#4C4F69"> out</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> ""</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> main</span><span style="color:#7C7F93">():</span></span>
+<span class="line"><span style="color:#4C4F69">    ...</span></span>
+<span class="line"><span style="color:#4C4F69">    data</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> why </span><span style="color:#179299">=</span><span style="color:#1E66F5"> tasks</span><span style="color:#7C7F93">()</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> why</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"actor_diff: TW の export に失敗したので未確認（</span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">why</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">）"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">        return</span></span>
+<span class="line"></span></code></pre>
+<p>もう 1 つの <code>float.py</code>（<code>running_peers</code> 関数）は、並行して動いている他のタスクを取得し、作業対象ファイルが重複していないか（<code>overlap=</code>）を判定するスクリプトです。</p>
+<p>ここでは Python でよく見られる <code>r.stdout or "[]"</code> というイディオムが使われていました。</p>
+<p>引用元: 個人で開発しているツール集（claude-skills）の float.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 修正後（853b63e）</span></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> running_peers</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">repo</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> uuid</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> u8s</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#4C4F69">    r </span><span style="color:#179299">=</span><span style="color:#1E66F5"> run</span><span style="color:#7C7F93">([</span><span style="color:#40A02B">"task"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "rc.verbose=nothing"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "rc.json.array=on"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "status:pending"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "export"</span><span style="color:#7C7F93">])</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # 非 0 で stdout が空だと `or "[]"` が 0 件に化け、overlap 行が出ず「重ならない」と読まれる（completed_recent と同じ）</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> r</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">returncode </span><span style="color:#179299">!=</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">        raise</span><span style="color:#FE640B;font-style:italic"> RuntimeError</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"pending の取得に失敗（task が rc=</span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">r</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">returncode</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">）: "</span><span style="color:#179299"> +</span><span style="color:#40A02B"> " "</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">join</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">r</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">stderr</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">split</span><span style="color:#7C7F93">())[:</span><span style="color:#FE640B">160</span><span style="color:#7C7F93">])</span></span>
+<span class="line"><span style="color:#8839EF">    try</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">        tasks </span><span style="color:#179299">=</span><span style="color:#4C4F69"> json</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">loads</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">r</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">stdout </span><span style="color:#8839EF">or</span><span style="color:#40A02B"> "[]"</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> strict</span><span style="color:#179299">=</span><span style="color:#8839EF">False</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span></code></pre>
+<p><code>task export</code> が異常終了して標準出力が空文字列 <code>""</code> だった場合、<code>r.stdout or "[]"</code> は評価結果として <code>"[]"</code> を返します。その結果、何のエラーも出ずに空リストとしてパースされ、走っている並行タスクが「0 件」と見なされてしまいます。本来であれば警告すべき重複チェックが行われず、「他のタスクと重なっていない（安全）」と誤認される状態でした。</p>
+<p>修正後は、<code>r.returncode != 0</code> の場合に即座に <code>RuntimeError</code> を送出させ、呼び出し元でそれをキャッチして <code>overlap=未確認</code> を出力するように変更しました。</p>
+<h2 id="すべてを静的型付け言語で書けば解決するのか軽量言語との付き合い方">すべてを静的型付け言語で書けば解決するのか：軽量言語との付き合い方</h2>
+<h3 id="型による強制とワンライナーのトレードオフ">型による強制とワンライナーのトレードオフ</h3>
+<p>これらの問題に直面したとき、「そもそもすべてのスクリプトを Rust のような静的型付け言語で書けば解決するのではないか？」という疑問が湧くかもしれません。</p>
+<p>Rust では回復可能なエラーを <code>Result&#x3C;T, E></code> 型で表現し、コンパイル時にエラーハンドリングを明示的に行うことが強制されます<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。未処理のエラーを放置したままデータを取り出すことは構文レベルで防がれるため、こうしたサイレントな見落としを激減させることができます。確実性や変なエラーの少なさを最優先するなら、静的な型を持つ言語を選ぶのが合理的であり、筆者自身も何か本格的なツールを作る際は Rust を選ぶことが多くあります。</p>
+<p>しかし、日常の開発業務や AI との対話の中でちょっとした集計スクリプトやワンライナーを書かせる用途に、Rust は向いていません。コンパイルの手間や依存関係の定義、厳密な型合わせのオーバーヘッドが大きすぎるためです。結局のところ、現場ではシェルスクリプトや Python といった軽量言語を使い続けることになります。</p>
+<p>問題は、型による強制が効かない軽量言語を使う場面ほど、雑な書き方や安易なエラーの握りつぶしが発生しやすいという点です。「動けばいい」と書いた小さなスクリプトが、いつの間にか自動化パイプラインの中核に組み込まれ、サイレントフェイルの温床になっていきます。言語の型システムに頼れないからこそ、スクリプトを書く際の明確な規律と設計思想が求められます。</p>
+<h3 id="人間も-ai-も同じ罠に落ちるエラー考慮漏れの共通構造">人間も AI も同じ罠に落ちる：エラー考慮漏れの共通構造</h3>
+<p>今回修正した 4 か所のコードは人間が書いたものですが、AI エージェントにコードを生成させた場合にも、まったく同じパターンで空フォールバックや例外の握りつぶしが頻出します。</p>
+<p>AI が生成するコードに変なエラー処理が混ざるのは、人間が日常的に書いているコードの中に同種の間違い（エラー考慮漏れや安易なデフォルト値への逃げ）が無数に存在しているからではないかと筆者は考えています。人間が値の 0、空配列、null の違いを明確に意識せずに雑なスクリプトを書くのと同じように、AI もまたそれらを安易に同一視してコードを組み立ててしまいます。</p>
+<p>人間が間違えやすい箇所は、AI も同じように間違えます。人間が間違える以上、AI が間違えるのも当然のことであり、それを過度に一般化して嘆く必要はありません。重要なのは「AI がバグを出した」とツールを非難することではなく、人間自身が長年無意識に行ってきた「空値への安易なフォールバック」という悪習を自覚し、エラーを握りつぶさない構造を仕組みとして構築することです。</p>
+<h2 id="エージェント連携で跳ね上がる偽の-0-件のリスク">エージェント連携で跳ね上がる「偽の 0 件」のリスク</h2>
+<h3 id="0-件と未確認を分ける-3-値化設計">「0 件」と「未確認」を分ける 3 値化設計</h3>
+<p>人間がターミナルで対話的にスクリプトを実行している段階であれば、「出力が空だが、処理時間が一瞬すぎた」「何となく違和感がある」と気づいて手動で再実行できる余地があります。</p>
+<p>しかし、自律型 AI エージェントや自動化パイプラインにスクリプトの出力を渡す場合、リスクの次元が根本から変わります。AI エージェントにとって「0 件」という出力は、「競合タスクなし」「書き込み違反なし」「変更差分なし」という、次のアクションへ進むための強力な <strong>安全シグナル</strong> として解釈されます。</p>
+<p>取得失敗のエラーが空リストに化けてしまうと、エージェントは「安全が確認された」と確信し、破壊的な処理や誤ったタスク完了判定へと突き進んでしまいます。したがって、自動化やエージェント連携を前提とする出力インターフェースは、「有」と「無」の 2 値（ブール値）ではなく、「有」「無」「未確認（エラー）」の <strong>3 値</strong> として明示的に設計しなければなりません。</p>
+<h3 id="失敗時の即座の停止fail-fastと未確認表示の使い分け">失敗時の即座の停止（Fail Fast）と未確認表示の使い分け</h3>
+<p>ただし、すべての異常で単にスクリプトを異常終了（クラッシュ）させれば良いわけではありません。用途に応じて「即座の停止」と「未確認の 3 値化表示」を使い分ける必要があります。</p>
+<ul>
+<li><strong>即座の停止（Fail Fast）</strong>: セキュリティ検査や品質ゲート（例: <code>subagent_tools.py</code> の外向きツール呼び出し検査）など、後続の処理を実行してはならない不可逆・クリティカルな場面では、1 行のパースエラーでも即座に <code>exit 1</code> や <code>STOP:</code> で停止させます。中途半端な集計結果を絶対に外部へ漏らさないことが最優先です。</li>
+<li><strong>未確認（Unchecked）の 3 値化表示</strong>: ダッシュボードの表示や作業候補の提示（例: <code>actor_diff.py</code> や <code>float.py</code>）のように、全体の状況を可視化しつつ人間の判断や再試行を仰ぎたい場面では、一覧を空にするのではなく「未確認（エラー理由）」という状態を出力して安全側に倒します。</li>
+</ul>
+<p>外部コマンドやデータ取得を伴うスクリプトにおいて、異常終了やパースエラーをどのように処理すべきか、代表的な 3 つのアプローチを比較します。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方式</th><th>異常時の挙動</th><th>メリット</th><th>最大のリスク</th><th>推奨されるユースケース</th></tr></thead><tbody><tr><td><strong>空配列フォールバック</strong></td><td><code>[]</code> や <code>""</code> を返し正常終了</td><td>後続処理がクラッシュせず流れる</td><td>失敗が「0 件（正常・安全）」に偽装される</td><td>欠落が業務上まったく無害な装飾的表示のみ</td></tr><tr><td><strong>即座の停止（Fail Fast）</strong></td><td>例外送出や <code>exit 1</code> で中断</td><td>異常の拡大や誤認を確実に阻止できる</td><td>バッチや対話パイプライン全体が止まる</td><td>セキュリティ検査、CI/CD ゲート、破壊的操作の手前</td></tr><tr><td><strong>3 値化表示（未確認）</strong></td><td><code>未確認（理由）</code> を出力して継続</td><td>異常を可視化しつつ判断材料を提供できる</td><td>呼び出し元で 3 値を解釈するロジックが必要</td><td>タスク一覧、並行ワーカー競合検知、ダッシュボード</td></tr></tbody></table>
+<p>自律エージェントや自動化パイプラインにデータを渡すインターフェースでは、空配列フォールバックを原則禁止とし、不可逆なゲートには即座の停止、状況把握には 3 値化表示を選択するのが安全な設計基準となります。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-bash-の-set--e-を設定していればプロセス置換のエラーも検知できますか">Q. Bash の set -e を設定していればプロセス置換のエラーも検知できますか？</h3>
+<p><strong>A.</strong> 検知できません。Bash のプロセス置換 <code>&#x3C; &#x3C;(cmd)</code> は非同期サブシェルとして実行される単語展開の一種であり、その終了ステータスは呼び出し元のパイプラインや <code>set -e</code> に伝播しません。出力を一度変数代入 <code>list=$(cmd)</code> で受けることで、コマンド置換の終了ステータスに対して <code>set -e</code> を効かせることができます。</p>
+<h3 id="q-外部コマンドの失敗を空リストでフォールバックさせるとなぜ危険なのですか">Q. 外部コマンドの失敗を空リストでフォールバックさせるとなぜ危険なのですか？</h3>
+<p><strong>A.</strong> 「データが 0 件である（正常）」という状態と、「取得に失敗して存在を確認できていない（異常）」という状態が同じ表現になり、障害が隠蔽されるからです。特に自動化スクリプトや AI エージェント連携では、「差分なし」「競合なし」と安全側に誤認され、破壊的操作や誤判定を引き起こす原因になります。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本記事で解説した集計スクリプトの設計規律をまとめます。</p>
+<ul>
+<li><strong>空配列・空文字フォールバックを疑う</strong>: 外部コマンドやパースの失敗を安易に空値で受けると、正常な 0 件と未確認の異常が混同され、サイレントフェイルを引き起こします。</li>
+<li><strong>Bash のプロセス置換は変数代入で受ける</strong>: <code>&#x3C; &#x3C;(cmd)</code> は <code>set -e</code> を素通りするため、変数代入 <code>list=$(cmd)</code> とヒアストリング <code>&#x3C;&#x3C;&#x3C;"$list"</code> の組み合わせで安全にループへ渡します。</li>
+<li><strong>エージェント連携の出力は 3 値化する</strong>: 自律エージェントに渡す集計結果は、有・無の 2 値だけでなく「未確認（エラー）」を含めた 3 値としてインターフェースを設計します。</li>
+<li><strong>軽量言語ほどエラー規律を徹底する</strong>: 型システムによる強制が効かないシェルスクリプトや Python だからこそ、Fail Fast の即座停止と戻り値検査を明示的に組み込む規律が不可欠です。</li>
+</ul>
+<p>開発プロセスの標準化、自動化パイプラインの品質ゲート設計、AI Operations 導入に関するご相談は、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://martinfowler.com/ieeeSoftware/failFast.pdf">Fail Fast</a> Jim Shore（編集: Martin Fowler）、IEEE Software, September/October 2004, pp. 21-25。エラーを隠蔽して後から異常が発生する “failing slowly” の問題点は pp. 21-22、即座かつ可視的に失敗させる Fail Fast の原則は p. 21。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://www.gnu.org/software/bash/manual/html_node/Process-Substitution.html">GNU Bash Reference Manual: Process Substitution</a> Free Software Foundation、Bash Reference Manual Edition 5.2, 2022年9月更新。プロセス置換 &#x3C;(list) が非同期サブシェルとして実行され単語展開として扱われる仕様。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html">POSIX.1-2024 Shell Command Language §2.15 Special Built-In Utilities (set)</a> The Open Group / IEEE Std 1003.1-2024, 2024年版。単語展開中のサブシェルエラーが -e で終了しない仕様および while 条件評価中の挙動。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html">GNU Bash Reference Manual: The Set Builtin</a> Free Software Foundation、Bash Reference Manual Edition 5.2, 2022年9月更新。-e（errexit）オプションの仕様および変数代入文におけるコマンド置換終了ステータスの伝播。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://www.gnu.org/software/bash/manual/html_node/Here-Strings.html">GNU Bash Reference Manual: Here Strings</a> Free Software Foundation、Bash Reference Manual Edition 5.2, 2022年9月更新。&#x3C;&#x3C;&#x3C;word による標準入力供給仕様。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://cwe.mitre.org/data/definitions/390.html">CWE-390: Detection of Error Condition Without Action</a> MITRE Corporation、Common Weakness Enumeration, 2006年策定。エラーを検知しながら適切な対処を行わず握りつぶす脆弱性。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://peps.python.org/pep-0008/">PEP 8 – Style Guide for Python Code</a> Guido van Rossum, Barry Warsaw, Nick Coghlan、2001年策定（Programming Recommendations）。裸の except: 節や過剰な例外捕捉がバグを隠蔽（masking bugs）するリスクの指摘。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://docs.python.org/3/library/subprocess.html">Python 3 Documentation: subprocess — Subprocess management</a> Python Software Foundation、2026年更新。subprocess.run の戻り値 CompletedProcess と returncode による終了コード検査仕様。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://cwe.mitre.org/data/definitions/252.html">CWE-252: Unchecked Return Value</a> MITRE Corporation、Common Weakness Enumeration, 2006年策定。関数の戻り値・終了コードを検査しないことによる不正状態の伝播。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://doc.rust-lang.org/book/ch09-00-error-handling.html">The Rust Programming Language: Chapter 9 – Error Handling</a> Steve Klabnik and Carol Nichols, with contributions from the Rust Community、2023年更新。Result&#x3C;T, E> によるコンパイル時のエラー処理強制。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

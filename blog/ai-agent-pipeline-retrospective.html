@@ -1,0 +1,160 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>AIパイプライン運用における「振り返り」の設計論──事故をルールに沈殿させ、過剰規制を防ぐメタプロセス | Meetsource</title><meta name="description" content="LLMエージェントによる自動化パイプラインにおいて、障害やハルシネーションを単発のプロンプト修復で終わらせず、システム仕様へ還元する「振り返り」の設計論。In-Loop/Out-of-Loopの二層構造、ルール沈殿、過剰規制（Constraint Tax）の防止策を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/ai-agent-pipeline-retrospective"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="AIパイプライン運用における「振り返り」の設計論──事故をルールに沈殿させ、過剰規制を防ぐメタプロセス | Meetsource"><meta property="og:description" content="LLMエージェントによる自動化パイプラインにおいて、障害やハルシネーションを単発のプロンプト修復で終わらせず、システム仕様へ還元する「振り返り」の設計論。In-Loop/Out-of-Loopの二層構造、ルール沈殿、過剰規制（Constraint Tax）の防止策を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/ai-agent-pipeline-retrospective"><meta property="og:image" content="https://www.meetsource.work/blog/ai-agent-pipeline-retrospective-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-07-26T16:41:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="AIパイプライン運用における「振り返り」の設計論──事故をルールに沈殿させ、過剰規制を防ぐメタプロセス | Meetsource"><meta name="twitter:description" content="LLMエージェントによる自動化パイプラインにおいて、障害やハルシネーションを単発のプロンプト修復で終わらせず、システム仕様へ還元する「振り返り」の設計論。In-Loop/Out-of-Loopの二層構造、ルール沈殿、過剰規制（Constraint Tax）の防止策を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/ai-agent-pipeline-retrospective-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"AIパイプライン運用における「振り返り」の設計論──事故をルールに沈殿させ、過剰規制を防ぐメタプロセス","description":"LLMエージェントによる自動化パイプラインにおいて、障害やハルシネーションを単発のプロンプト修復で終わらせず、システム仕様へ還元する「振り返り」の設計論。In-Loop/Out-of-Loopの二層構造、ルール沈殿、過剰規制（Constraint Tax）の防止策を解説します。","datePublished":"2026-07-26T16:41:00.000Z","image":"https://www.meetsource.work/blog/ai-agent-pipeline-retrospective-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/ai-agent-pipeline-retrospective"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-07-26T16:41:00.000Z" data-astro-cid-7jjqptxk> 2026.07.27 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AI</span><span class="tag" data-astro-cid-7jjqptxk>#agentic-workflow</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#retrospective</span><span class="tag" data-astro-cid-7jjqptxk>#process-design</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>AIパイプライン運用における「振り返り」の設計論──事故をルールに沈殿させ、過剰規制を防ぐメタプロセス</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/ai-agent-pipeline-retrospective-hero.webp" alt="AIパイプライン運用における「振り返り」の設計論──事故をルールに沈殿させ、過剰規制を防ぐメタプロセス" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>LLM（大規模言語モデル）やAIエージェントを自律的に連続動作させる「Agentic Workflow」や業務自動化パイプラインの導入が広がる中で、多くの開発者や技術リーダーが共通の壁に直面しています。</p>
+<p>「エージェントがハルシネーションを起こした」「指示と異なるコードを出力した」といった問題が発生した際、その場限りのシステムプロンプト改修（Ad-hoc Patching）を行っても、しばらくすると別の形で似たような事故が再発してしまうという現象です。</p>
+<p>プロンプトに禁止事項や注意書きを継ぎはぎし続けるアプローチは、従来のソフトウェア開発でいう「スパゲティコード」の量産に他なりません。どれだけ指示を追加しても問題は根本解決せず、かえってプロンプト全体の整合性が崩れていくことになります。</p>
+<p>本記事では、過去の自動化パイプライン構築記 <sup><a href="#user-content-fn-blog-dev" id="user-content-fnref-blog-dev" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> やオーケストレーター移行事例 <sup><a href="#user-content-fn-blog-orch" id="user-content-fnref-blog-orch" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup> などの実践を踏まえ、AIパイプライン運用においてなぜ「振り返り（レトロスペクティブ / ポストモーテム）」という行為そのものの設計が不可欠なのかを解説します。単なる精神論としての反省ではなく、失敗体験をシステム仕様へ持続的に還元し、かつ過剰規制の罠を防ぐメタプロセスの設計論を提示します。</p>
+<hr>
+<h2 id="1-はじめになぜ単発のプロンプト修復ではaiパイプラインの事故を防げないのか">1. はじめに：なぜ単発のプロンプト修復ではAIパイプラインの事故を防げないのか</h2>
+<p>AIエージェントの運用において事故が発生した際、最も手軽な対処法は「次からは〇〇しないでください」「必ず〇〇を確認すること」といった一文をシステムプロンプトに加筆することです。しかし、この単発修正には深刻な構造的限界が存在します。</p>
+<p>まず、発生したエラーに対する「対症療法」に終始するため、エラーを引き起こしたプロセスの根本原因（Root Cause）が放置されます。さらに、修正のたびに文脈や背景の異なるプロンプト記述が無秩序に継ぎ足されることで、ルール同士の優先順位が曖昧になり、プロンプトの「継ぎはぎ化」が進行します。</p>
+<p>ソフトウェアエンジニアリングの世界では、障害が発生した際に個人の注意不足に帰帰させるのではなく、プロセスやテスト機構、システム設計へ恒久対策を組み込む「SRE（Site Reliability Engineering）の障害振り返り（Post-mortem Culture）」 <sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> が標準とされています。</p>
+<p>AIパイプラインにおいても全く同じアプローチが必要です。個別のプロンプト文字列をいじるのではなく、「なぜそのエラーをパイプラインの途中で検知できなかったのか」「どの工程の入力定義やガイドラインが不十分だったのか」を構造的に振り返るメタプロセス（Out-of-Loop Retrospective）の設計こそが、持続可能な自動化の鍵となります。</p>
+<hr>
+<h2 id="2-二層のフィードバック構造in-loop-reflection-と-out-of-loop-retrospective">2. 二層のフィードバック構造：In-Loop Reflection と Out-of-Loop Retrospective</h2>
+<p>エージェントシステムにおける自己修復およびフィードバック機構は、適用される時間軸と適用レイヤーによって、大きく <strong>「In-Loop Self-Reflection」</strong> と <strong>「Out-of-Loop Retrospective」</strong> の 2 つに分類されます。この 2 層の役割の違いを正しく理解し、分離して設計することが極めて重要です。</p>
+<h3 id="in-loop-self-reflection-実行中自律修復">In-Loop Self-Reflection (実行中自律修復)</h3>
+<p><em>In-Loop Self-Reflection</em> は、単一のタスク実行セッション内部でリアルタイムに行われるフィードバック構造です。代表的な学術研究である <em>Reflexion</em> <sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup> に見られるように、エージェントが実行結果を受け取り、言語による批評（Verbal Reflection）を生成して即座に再試行します。</p>
+<ul>
+<li><strong>特徴</strong>: セッション内での即時修復、動的な試行錯誤が可能。</li>
+<li><strong>限界</strong>: 獲得された反省内容は Episodic Memory（一時記憶）に留まるため、セッション終了とともに消滅します。また、試行錯誤のラリーが増えるほどコンテキスト消費量・APIコスト・応答レイテンシが跳ね上がる課題があります。</li>
+</ul>
+<h3 id="out-of-loop-retrospective-運用後構造改善">Out-of-Loop Retrospective (運用後構造改善)</h3>
+<p><em>Out-of-Loop Retrospective</em> は、複数の実行セッションや運用ログ、あるいは不採用・ボツとなった事例を集積し、タスクの実行完了後にバッチ的・オフラインで実施するプロセス改善行為です。</p>
+<ul>
+<li><strong>特徴</strong>: 失敗体験や課題から抽象化されたルールを抽出し、 Git リポジトリで管理される <code>AGENTS.md</code> や <code>SKILL.md</code> などのシステム仕様（Specification）へ書き込みます。</li>
+<li><strong>利点</strong>: 反省結果が Persistent（永続的）に固定化されるため、次回以降のすべてのセッションに効果が波及します。実行中の無駄な反省ステップ（In-Loop）を減らし、トークン消費とレイテンシの削減にも寄与します。</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="left">評価項目</th><th align="left">In-Loop Self-Reflection</th><th align="left">Out-of-Loop Retrospective</th></tr></thead><tbody><tr><td align="left"><strong>適用タイミング</strong></td><td align="left">タスク実行中（Real-time / In-session）</td><td align="left">運用後・定期バッチ（Offline / Batch / Async）</td></tr><tr><td align="left"><strong>記憶の耐久性</strong></td><td align="left">Episodic Memory（揮発性・セッション終了で消滅）</td><td align="left">System Spec / Git Repository（永続化）</td></tr><tr><td align="left"><strong>主な対象</strong></td><td align="left">単一セッション内の出力修正</td><td align="left">システム定義、スキル、プロンプト、型・検証機構</td></tr><tr><td align="left"><strong>コスト構造</strong></td><td align="left">トークン消費・実行レイテンシの増加</td><td align="left">人間またはメタプロセスのレビュー計算コスト</td></tr><tr><td align="left"><strong>アナロジー</strong></td><td align="left">実行時エラー処理 (try-catch &#x26; retry)</td><td align="left">リファクタリング &#x26; CI/CD パイプライン改善</td></tr></tbody></table>
+<hr>
+<h2 id="3-事故がルールに沈殿するメカニズムpost-mortem-から-agentsmd-への仕様還元">3. 事故がルールに沈殿するメカニズム：Post-mortem から AGENTS.md への仕様還元</h2>
+<p>過去に掲載したボツ事例の深掘り記事 <sup><a href="#user-content-fn-blog-rej" id="user-content-fnref-blog-rej" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup> でも示された通り、パイプライン運用における失敗事例や予期せぬ挙動は、単なる損失ではなく「システム仕様を育てるための貴重な材料」です。</p>
+<p>障害事後検証（Post-mortem）の教訓を、地層（Sedimentation）のようにシステム定義ファイル（ <code>AGENTS.md</code> や <code>SKILL.md</code> 等）へ蓄積・固定化していく概念モデルを、本記事では <strong>「ルール沈殿（Rule Sedimentation）」</strong> と呼びます。</p>
+<h3 id="ルール沈殿の-4-ステップ">ルール沈殿の 4 ステップ</h3>
+<ol>
+<li><strong>Incident Layer (事故の発生)</strong>: ハルシネーションの発生、論理エラー、検証ゲートのパス失敗などの事故が記録される。</li>
+<li><strong>Post-mortem Analysis (5-Whys 原因特定)</strong>: なぜその誤りが発生したのか、プロンプトの記述不足か、検証視点の抜け漏れかを分析する。</li>
+<li><strong>Rule Extraction (行動規範の抽出)</strong>: 「個別の誤りを防ぐ文言」ではなく、「汎用的に同種の誤りを排除するための制約・ガードレール」として抽象化する。</li>
+<li><strong>Rule Sedimentation (仕様への沈殿)</strong>: 抽出された制約を <code>AGENTS.md</code> や各プロセスのスキル定義へコード化された仕様として書き込み、 Git コミットによってバージョン管理する。</li>
+</ol>
+<p>たとえば、以前の懐疑的検証ゲート導入記事 <sup><a href="#user-content-fn-blog-adv" id="user-content-fnref-blog-adv" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup> で取り上げた検証視点の追加は、まさに「検証の抜け漏れ」という事故体験がパイプラインの品質ゲート定義へ沈殿した具体例と言えます。</p>
+<p>なお、こうしたルール沈殿を人間の手作業だけでなく自動化する研究動向として、失敗事例の定性フィードバックからプロンプトを自動更新する <em>TextGrad</em> <sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup> や、失敗データセットから宣言的プロンプトを再コンパイルする <em>DSPy</em> <sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup> があります。</p>
+<hr>
+<h2 id="4-過剰規制over-regulationのパラドックスルール追加が引き起こす-4つの障害">4. 過剰規制（Over-regulation）のパラドックス：ルール追加が引き起こす 4つの障害</h2>
+<p>「事故が起きたらルールを追加して沈殿させる」という運用を無計画に続けると、やがて別の深刻な問題に突き当たります。それが <strong>「過剰規制（Over-regulation）のパラドックス」</strong> です。再発防止策としてのルールや品質チェックが増えすぎた結果、システム全体が不全に陥る 4 つの障害現象が知られています。</p>
+<h3 id="1-constraint-tax-過剰制約による能力阻害">1. Constraint Tax (過剰制約による能力阻害)</h3>
+<p>人工的な制約条件や禁止事項をプロンプト内に大量に詰め込むと、モデル本来の柔軟な推論能力が損なわれる現象です <sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<h3 id="2-prompt-bloat--lost-in-the-middle--multi-hop-bottlenecks">2. Prompt Bloat &#x26; Lost in the Middle / Multi-hop Bottlenecks</h3>
+<p>初期の長文コンテキスト研究である <em>Lost in the Middle</em> <sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup> では、プロンプト中央付近に置かれた重要ルールを無視・忘却する U 字型特性が指摘されました。</p>
+<p>プロンプトの肥大化（Prompt Bloat）は、置き場所を選べば避けられるという類の問題ではありません。</p>
+<h3 id="3-instruction-following-degradation--interference-指示追従性の低下と干渉">3. Instruction Following Degradation / Interference (指示追従性の低下と干渉)</h3>
+<p>制約条件の数が一定の閾値を超えると、エージェントが全体として指示に従う確率が低下します <sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。ルールを足したこと自体が、元からあったルールの遵守率を下げる方向に働くということです。</p>
+<h3 id="4-constraint-collisions-ルール衝突">4. Constraint Collisions (ルール衝突)</h3>
+<p>「詳細に解説せよ」と「簡潔に書け」、「安全のため確認を挟め」と「完全自動で完了させよ」のように、異なる事故の反省から過去に追加されたルール同士が潜在的に矛盾し、モデルが非決定論的なエラーや迷走を起こす現象です。</p>
+<hr>
+<h2 id="5-ルールの剪定とメタ改善rule-gardening持続可能なパイプラインを育てる運用設計">5. ルールの剪定とメタ改善（Rule Gardening）：持続可能なパイプラインを育てる運用設計</h2>
+<p>事故から生じたルールを沈殿させつつ、過剰規制のパラドックスを回避するためには、沈殿したルール群を定期的に剪定・整理・リファクタリングする運用プロセスが不可欠です。本パイプラインではこのメタ改善アプローチを <strong>「Rule Gardening（ルール・ガーデニング）」</strong> と呼んでいます。</p>
+<h3 id="compacting-agent-context-コンテキストの最適化重複排除">Compacting Agent Context (コンテキストの最適化・重複排除)</h3>
+<p>意味的重複（Intent Duplication）を持つ類似ルールを検知し、単一の明確な「標準指示（Canonical Rule）」へ集約・統合します。同一カテゴリの制約を整理することで、プロンプトのトークン密度を高め、認知干渉を軽減します。</p>
+<h3 id="progressive-disclosure--lazy-loading-と-agentsmd-オープン規格">Progressive Disclosure / Lazy Loading と AGENTS.md オープン規格</h3>
+<p>Anthropic が提唱する Agent 設計ベストプラクティス <sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup> に基づき、メインの <code>AGENTS.md</code> には最小限のアイデンティティと安全原則のみを保持します。</p>
+<p>特定ドメインのルールや複雑な手順は、ディレクトリ近接評価（Proximity-based Rules）や独立した <code>SKILL.md</code> / ツール定義へ切り出し、エージェントがその作業を実行する段階になって初めて「オンデマンドでコンテキストに注入（Lazy Load）」するレイヤード設計をとります。</p>
+<h3 id="static-code-offloading-静的検査への処理移管">Static Code Offloading (静的検査への処理移管)</h3>
+<p>すべてのルールを LLM に対する自然言語の指示で守らせようとせず、型定義（TypeScript / Zod / Pydantic 等）や AST 検査、 Linter、 CI/CD パイプラインのバリデーションゲートへ処理を移管します。物理的なコード・ルールチェックにオフロードすることで、 LLM の認知負荷を大幅に削減できます。</p>
+<hr>
+<h2 id="6-おわりに振り返りという行為がエージェントシステムを自律進化させる">6. おわりに：振り返りという行為がエージェントシステムを自律進化させる</h2>
+<p>AIエージェントによるパイプライン運用で真に重要なのは、個別エラーに対する単発のプロンプト微調整ではありません。</p>
+<ol>
+<li><strong>二層のフィードバック分離</strong>: In-Loop（セッション内修復）と Out-of-Loop（運用後振り返り）を明確に区別する。</li>
+<li><strong>ルール沈殿</strong>: 失敗体験の根本原因を <code>AGENTS.md</code> 等のシステム仕様へ永続化する。</li>
+<li><strong>ルール剪定 (Rule Gardening)</strong>: コンテキスト圧縮・ Progressive Disclosure ・ AGENTS.md オープン規格・静的検査化により過剰規制を防ぐ。</li>
+</ol>
+<p>という一連の <strong>「振り返りメタプロセス」</strong> の構築です。</p>
+<p>適切な「停止条件」と「学習の受け皿」を持ったパイプライン設計こそが、壊れにくく持続可能な業務自動化を実現します。</p>
+<p>自社でのAIエージェント導入や、自動化パイプラインの品質管理・運用設計に関するご相談は、お気軽に <a href="/#contact">コンタクトフォーム</a> よりお問い合わせください。</p>
+<hr>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-blog-dev">
+<p><a href="/blog/ai-agent-blog-pipeline-development">ブログ執筆パイプラインを作らせて分かったこと</a> <a href="#user-content-fnref-blog-dev" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-blog-orch">
+<p><a href="/blog/blog-pipeline-orchestrator">5工程を束ねるオーケストレーター導入</a> <a href="#user-content-fnref-blog-orch" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-1">
+<p>Google SRE Book. <em>Postmortem Culture: Learning from Failure</em>. <a href="https://sre.google/sre-book/postmortem-culture/">https://sre.google/sre-book/postmortem-culture/</a> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p>Shinn, N., et al. (2023). <em>Reflexion: Language Agents with Verbal Reinforcement Learning</em>. NeurIPS 2023. <a href="https://arxiv.org/abs/2303.11366">https://arxiv.org/abs/2303.11366</a> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-blog-rej">
+<p><a href="/blog/opus-5-blog-writing-rejection">ブログ執筆拒否事例の深掘り</a> <a href="#user-content-fnref-blog-rej" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-blog-adv">
+<p><a href="/blog/blog-pipeline-adversarial-verification">懐疑的検証ゲートの設計思想</a> <a href="#user-content-fnref-blog-adv" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p>Yuksekgonul, M., et al. (2024). <em>TextGrad: Automatic Differentiation via Text</em>. arXiv:2406.07496. <a href="https://arxiv.org/abs/2406.07496">https://arxiv.org/abs/2406.07496</a> <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p>Khattab, O., et al. (2023). <em>DSPy: Compiling Declarative Language Model Calls</em>. arXiv:2310.03714. <a href="https://arxiv.org/abs/2310.03714">https://arxiv.org/abs/2310.03714</a> <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p>Lin, B. Y., et al. (2024). <em>Instruction Following under Complex Constraints</em>. arXiv:2407.01426. <a href="https://arxiv.org/abs/2407.01426">https://arxiv.org/abs/2407.01426</a> <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 9-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p>Liu, N. F., et al. (2024). <em>Lost in the Middle: How Language Models Use Long Contexts</em>. TACL 2024. <a href="https://arxiv.org/abs/2307.03172">https://arxiv.org/abs/2307.03172</a> <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p>Anthropic. (2024). <em>Building Effective Agents</em>. <a href="https://www.anthropic.com/engineering/building-effective-agents">https://www.anthropic.com/engineering/building-effective-agents</a> <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

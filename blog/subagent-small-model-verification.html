@@ -1,0 +1,253 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>検証系サブエージェントは安価モデルに任せられるか ── コスト構造と委任境界の設計指針 | Meetsource</title><meta name="description" content="明確な合否基準を持つ検証系サブエージェントは、小型・安価モデルへ委任できるというのが筆者の仮説です。トークンの入出力単価差、キャッシュ損益分岐点の試算と、決定論的テストとの多層防御設計から、モデル選定の境界線を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/subagent-small-model-verification"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="検証系サブエージェントは安価モデルに任せられるか ── コスト構造と委任境界の設計指針 | Meetsource"><meta property="og:description" content="明確な合否基準を持つ検証系サブエージェントは、小型・安価モデルへ委任できるというのが筆者の仮説です。トークンの入出力単価差、キャッシュ損益分岐点の試算と、決定論的テストとの多層防御設計から、モデル選定の境界線を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/subagent-small-model-verification"><meta property="og:image" content="https://www.meetsource.work/blog/subagent-small-model-verification-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-04T16:20:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="検証系サブエージェントは安価モデルに任せられるか ── コスト構造と委任境界の設計指針 | Meetsource"><meta name="twitter:description" content="明確な合否基準を持つ検証系サブエージェントは、小型・安価モデルへ委任できるというのが筆者の仮説です。トークンの入出力単価差、キャッシュ損益分岐点の試算と、決定論的テストとの多層防御設計から、モデル選定の境界線を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/subagent-small-model-verification-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"検証系サブエージェントは安価モデルに任せられるか ── コスト構造と委任境界の設計指針","description":"明確な合否基準を持つ検証系サブエージェントは、小型・安価モデルへ委任できるというのが筆者の仮説です。トークンの入出力単価差、キャッシュ損益分岐点の試算と、決定論的テストとの多層防御設計から、モデル選定の境界線を解説します。","datePublished":"2026-10-04T16:20:00.000Z","image":"https://www.meetsource.work/blog/subagent-small-model-verification-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/subagent-small-model-verification"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"小型モデルに検証を任せるとハルシネーションや見逃しが増えませんか？","acceptedAnswer":{"@type":"Answer","text":"合否判定の基準を単一ルールに絞り込み、決定論的な機械テスト（正規表現やスキーマバリデータ）と組み合わせることで、見逃しや誤判定を抑えやすくなる、というのが筆者の仮説です。小型モデルが苦手とするのは「曖昧な基準での総合評価」と考えられるため、評価対象を 1 つの明確な規約に限定します。上位モデルとの検出率の差は未測定です。導入時に手元の既知違反例で測ることを勧めます。"}},{"@type":"Question","name":"サブエージェントを呼ぶと親セッションのキャッシュが切れて逆に高くつきませんか？","acceptedAnswer":{"@type":"Answer","text":"独立サブエージェントは親セッションのキャッシュを引き継げないためコールドスタートのコストが発生しますが、小型モデルへの差し替えによる単価圧縮（Sonnet 5.5 比で 1/2、Sonnet 4 比で 1/3）に加えて「コンテキストを検証対象だけに絞り込むスライス」を行うことで、入力のみの試算では親セッション維持の半額になります。親の肥大化したコンテキスト全体を渡さず、必要なルールと対象文のみに限定することが損益分岐点を超える鍵です。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-04T16:20:00.000Z" data-astro-cid-7jjqptxk> 2026.10.05 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#llm-architecture</span><span class="tag" data-astro-cid-7jjqptxk>#ai-cost-optimization</span><span class="tag" data-astro-cid-7jjqptxk>#subagents</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#llm-evals</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>検証系サブエージェントは安価モデルに任せられるか ── コスト構造と委任境界の設計指針</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/subagent-small-model-verification-hero.webp" alt="検証系サブエージェントは安価モデルに任せられるか ── コスト構造と委任境界の設計指針" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>検証系サブエージェントとは、メインエージェントが生成した成果物に対し、明確な規約やスキーマへの適合性を独立した視点で判定する特化型エージェントです。複数の AI モデルを協調させる自律エージェントパイプラインの実用化が進むにつれ、開発現場ではサブエージェント呼び出しの累積による API コストの急激な膨張が深刻な課題になっています。</p>
+<p>特にコードレビュー、執筆規約の適合確認、出力スキーマのバリデーションといった「検証工程」にまで、上位のフロンティアモデル（Claude Sonnet 等）を固定で割り当て続ける設計は、パイプライン全体の運用コストを不必要に押し上げる過剰投資になりがちです。一方で、「安価な小型モデルへ差し替えると、指示追従の甘さやハルシネーションで見逃しが頻発するのではないか」という不安から、モデルの切り替えに踏み切れないケースも少なくありません。</p>
+<p>しかし、幅広い文脈理解やトレードオフの裁定を要する「創造的生成タスク」には最高性能モデルが不可欠である一方、合否基準が明確に形式化された「ルール適合判定タスク」は、適切なアーキテクチャ設計を行えば小型・安価モデルで十分に実用的な検証ができる、と筆者は考えています。<a href="/blog/ai-agent-supervision-cost">AIエージェントの監視コストと上流品質ゲートに関する考察</a> でも触れられているように、下流での手戻りを防ぐ検証ゲートの役割は極めて重要ですが、その実行基盤には必ずしもフロンティアモデルを単体で置く必要はありません。</p>
+<p>本記事では、執筆規約と引用の対応を確かめる検証工程（R13チェック）の設計を題材に、LLM API のコスト構造の急所（入出力の単価差やプロンプトキャッシュの損益分岐点）を解き明かし、小型モデルへ安全にタスクを委任するための多層防御アーキテクチャとモデル選定の境界線を解説します。</p>
+<h2 id="小型モデルの実用化とタスク要求スペックの分離">小型モデルの実用化とタスク要求スペックの分離</h2>
+<p>なぜ今、検証工程において小型モデルの活用が現実的な選択肢となっているのでしょうか。その背景には、軽量トランスフォーマーモデルの推論効率の飛躍的な向上と、実務タスクの性質分解に関する知見の深まりがあります。</p>
+<p>Segment の共同創業者である Calvin French-Owen は、自身のエッセイにおいて同社共同創業者の Peter Reinhardt の観察を引き合いに出し、ビジネスにおける日常業務の約 95% は即時の応答と定型的な判定を求める「token spewer」ワークであると述べています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。French-Owen は、従来の Sonnet クラスでは日次約 1 ドルかかっていたパーソナライズニュースの生成処理が、小型モデルである luna クラスを採用することで約 0.10 ドル（10 分の 1）へと劇的に圧縮できた実例を報告しています。</p>
+<p>また、AI 研究者の Mithil Vakde による実証実験では、単一の RTX 5090 GPU を用い、わずか約 1.5 時間でスクラッチ学習させた 8 層の極小トランスフォーマーが、難関推論ベンチマークである ARC-AGI-1 の公開評価セットにおいて 44% というスコアを達成しました<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。その計算コストはわずか約 0.67 ドルです。巨大なパラメータを持つフロンティアモデルに頼らなくとも、目的とアーキテクチャを絞り込んだ推論は驚くほど低廉に実現できることが示されています。</p>
+<p>さらに、フロンティアモデルを提供する主要ベンダー自身も、小型モデルをサブタスク実行基盤として位置づけてきました。Anthropic が Claude Haiku 4.5 を発表した際にも、当時の前世代最先端モデルであった Claude Sonnet 4 と同等水準のコーディング性能を、3 分の 1 のコストと 2 倍以上の速度で提供していました<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。同社は公式に、上位モデル（当時の Claude Sonnet 4.5）がシステム全体の複雑な計画立案を担い、複数の Claude Haiku 4.5 に対して並列にサブタスクを委任するマルチエージェントオーケストレーションを推奨アーキテクチャとして提示していました。</p>
+<p>ここで重要になるのが、「創造的生成タスク」と「ルール適合判定タスク」の要求スペックの分離です。</p>
+<ul>
+<li><strong>創造的生成タスク</strong>: 記事の企画立案、コードの全体アーキテクチャ設計、複雑な不具合の根本原因究明など。膨大なコンテキストの統合、曖昧な要求の解釈、複数のトレードオフの裁定が求められるため、フロンティアモデルの推論能力が必須。</li>
+<li><strong>ルール適合判定タスク</strong>: フォーマット準拠、命名規則の照合、引用元と本文の事実一致チェックなど。明確なルールセットと対象テキストが与えられ、両者が合致しているかを判定する作業。文脈の飛躍や独創的な解釈はむしろ有害であり、小型モデルの能力範囲内に収まりやすい。</li>
+</ul>
+<p><a href="/blog/tokenmaxxing-ai-cost-optimization">コンテキスト肥大化とモデルルーティングを論じた過去記事</a> で指摘したとおり、すべての処理を単一の万能モデルに押し込む設計は経済的にも品質的にも持続可能ではありません。タスクの性質を見極め、要求スペックに見合ったモデルへ作業を切り分けることが最適化の第一歩となります。</p>
+<h2 id="コスト構造の急所入出力の45倍の価格差とキャッシュ損益分岐点">コスト構造の急所：入出力の4〜5倍の価格差とキャッシュ損益分岐点</h2>
+<p>検証系サブエージェントの経済性を評価する際には、単にカタログの基本料金を眺めるだけでは不十分です。LLM API のコスト構造には、見落とされがちな「2つの急所」が存在します。</p>
+<h3 id="入力トークンと出力トークンの45倍の価格差">入力トークンと出力トークンの4〜5倍の価格差</h3>
+<p>第一の急所は、入力（Prefill）と出力（Decode）における大幅な単価格差です。現代の LLM サービングアーキテクチャにおいて、プロンプトの入力処理は GPU の並列計算能力を活かした計算律速（Compute-bound）で行われます。一方で、テキストの生成出力は過去のトークンを参照しながら 1 トークンずつ自己回帰的に生成するため、メモリ帯域幅に律速（Memory Bandwidth-bound）されます。</p>
+<p>この計算機アーキテクチャ上の物理的な制約を反映して、主要な API 提供各社は出力トークンに対して入力トークンの 4〜5 倍の価格を設定しています<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>この格差がエージェント設計に突きつける教訓は明快です。<strong>「入力内容をそのまま出力させる処理に LLM を使ってはならない」</strong> という原則です。例えば、ファイルのコピー、データの整形や抽出、Web ページの取得結果をそのままレスポンスとして書き出すような作業に LLM の生成能力を使わせると、入力の 5 倍のコストを支払うことになります。ファイルの複製には <code>cp</code> コマンドを、データ取得には <code>curl</code> や専用スクリプトといった決定論的ツールを直接呼び出させ、エージェントにはその実行結果の判定や最小限の差分のみを出力させる設計を徹底する必要があります。</p>
+<h3 id="prompt-caching-の割引と独立サブエージェントの損益分岐点">Prompt Caching の割引と独立サブエージェントの損益分岐点</h3>
+<p>第二の急所は、Prompt Caching（プロンプトキャッシュ）の割引率と、独立サブエージェントへの委譲に伴う「コールドスタート」のトレードオフです。</p>
+<p>Anthropic は 2024 年 8 月に Prompt Caching を導入し、キャッシュヒット時の読み出し単価を基本入力単価の 10%（90% 割引）へと大幅に引き下げました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。公式の料金表にはキャッシュ書込単価として 5 分と 1 時間の 2 種類（<code>5m writes</code> / <code>1h writes</code>）が載っており<sup><a href="#user-content-fn-4" id="user-content-fnref-4-3" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>、1 時間以内の反復的なやり取りであれば、同一セッションを維持してコンテキストを使い回す方が安価になると考えられます。</p>
+<p>ここで、検証タスクを独立したサブエージェントへ委任する際の損益計算が極めて重要になります。</p>
+<ul>
+<li><strong>親セッション内での検証</strong>: 親エージェントが保持している会話履歴や参照ファイル群のキャッシュが効くため、読み出し単価は 90% 割引（最新の Claude Sonnet 5.5 なら <code>$0.20 / MTok</code>、前世代の Claude Sonnet 4 なら <code>$0.30 / MTok</code>）で処理できます。しかし、過去のやり取りや試行錯誤がコンテキスト内に大量に蓄積されているため、判定対象以外の無関係な情報に引っ張られ、検証の厳密さが損なわれるリスク（コンテキスト汚染）を抱えます。</li>
+<li><strong>独立サブエージェントへの委任</strong>: 親セッションの履歴を切り離し、クリーンな状態で検証ルールと対象テキストのみを渡せるため、判定の純度を最高レベルに保てます。しかし、親セッションのキャッシュを引き継げないため、初回読み込み（コールドスタート）として基本入力単価（Claude Haiku 4.5 なら <code>$1.00 / MTok</code>）を支払う必要があります。</li>
+</ul>
+<p>主要モデルのトークン単価を比較すると、出力単価はいずれも入力の 4〜5 倍に設定されており、Claude シリーズではキャッシュ読出単価が基本入力の 10%（90%割引）まで、GPT-4o mini でも 50% まで低減されます<sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>モデル</th><th>基本入力 ($/MTok)</th><th>基本出力 ($/MTok)</th><th>キャッシュ読出 ($/MTok)</th><th>出力/入力比</th></tr></thead><tbody><tr><td>Claude Sonnet 4</td><td><code>$3.00</code></td><td><code>$15.00</code></td><td><code>$0.30</code></td><td>5.0倍</td></tr><tr><td>Claude Sonnet 5.5</td><td><code>$2.00</code></td><td><code>$10.00</code></td><td><code>$0.20</code></td><td>5.0倍</td></tr><tr><td>Claude Haiku 4.5</td><td><code>$1.00</code></td><td><code>$5.00</code></td><td><code>$0.10</code></td><td>5.0倍</td></tr><tr><td>GPT-4o mini</td><td><code>$0.15</code></td><td><code>$0.60</code></td><td><code>$0.075</code></td><td>4.0倍</td></tr></tbody></table>
+<p>ここで注目すべきは、最新世代におけるフロンティアモデルと小型モデルの価格差です。Claude Sonnet 5.5 の基本入力単価（<code>$2.00</code>）は Claude Haiku 4.5（<code>$1.00</code>）の 2 倍にとどまり、前世代の Sonnet 4（<code>$3.00</code>）と Haiku 4.5 の差（3 倍）より縮まっています。</p>
+<p>しかし、この単価構造から導かれるもうひとつの重要な事実は、親セッションのキャッシュ読出（Sonnet 5.5: <code>$0.20</code>）に対して、独立サブエージェントの初回入力（Haiku 4.5: <code>$1.00</code>）は単価ベースで依然として 5 倍も高いという点です。基本単価差が 2 倍に縮まったからといって、サブエージェント委譲のコスト計算を単純に考えることはできません。</p>
+<p>具体的に計算してみましょう。親エージェントが作業を重ね、セッションコンテキストが 50,000 トークンまで膨らんでいたとします。この状態で親エージェント（Sonnet 5.5）に検証を行わせると、キャッシュヒット時のコストは次のようになります。</p>
+<p><code>50,000 tokens × ($0.20 / 1,000,000 tokens) = $0.010</code></p>
+<p>一方、独立したサブエージェント（Haiku 4.5）へ検証を切り出す際、親のコンテキスト全体（50,000 トークン）をそのまま引き渡してしまうと、コールドスタートにより <code>$1.00 / MTok</code> の満額が課金され、1 回あたり <code>$0.050</code>（親セッション維持の 5 倍）に跳ね上がってしまいます。</p>
+<p>独立サブエージェント化を経済的に成立させる鍵は、<strong>「コンテキストスライス（局所化）」</strong> です。サブエージェントには親の履歴を一切渡さず、検証に必要な「規約ルール（約 2,000 トークン）」と「検証対象テキスト（約 3,000 トークン）」の計 5,000 トークンのみを切り出して渡します。</p>
+<p><code>5,000 tokens × ($1.00 / 1,000,000 tokens) = $0.005</code></p>
+<p>これにより、キャッシュが効いた親セッション（<code>$0.010</code>）と比較して半額（<code>$0.005</code>）になります。ただしこの差は2つの要因の合成です。同じ 5,000 トークンのスライスを Sonnet 5.5 のコールドスタート（<code>$2.00 / MTok</code>）で処理すると <code>$0.010</code> で、親セッションのキャッシュ読出と同額です。つまり、スライスだけでは親セッション維持に並ぶのみで、Haiku 4.5 への差し替え（入力単価 2 分の 1）が加わって初めて半額になります。いずれも入力トークンのみの試算で、出力トークンとキャッシュ書込みの割増は含みません。</p>
+<h2 id="検証系サブエージェントの委任アーキテクチャ設計">検証系サブエージェントの委任アーキテクチャ設計</h2>
+<p>小型モデルへの安全な委任を実現するためには、プロンプトの工夫だけで精度を担保しようとしてはなりません。</p>
+<p>Eugene Yan はその論考において、単に LLM-as-a-judge を導入するだけではプロダクトの品質は改善せず、テスト駆動開発と同様に事前の評価基準設計やデータ観察を繰り返す「Eval-Driven Development（EDD）」のプロセスこそが不可欠であると論じています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。さらに Yan が整理した LLM システム構築パターン集にあるように、ガードレールや多層防御（Defense in Depth）をシステムレベルで組み込むことが極めて有効です<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<p>安価な小型モデルの指示追従性の揺らぎを吸収するため、次の多層防御アーキテクチャを提案します。</p>
+<ol>
+<li><strong>第1層（決定論的フィルタ）</strong>: 正規表現、外部スクリプト、スキーマバリデータなどの古典的なコードによる検査。構文エラーや明白なキーワード違反をゼロコストかつ 100% の再現性で即時検出する。</li>
+<li><strong>第2層（小型モデル検証）</strong>: 決定論的テストを通過した対象に対し、小型モデル（Claude Haiku 4.5 等）を用いて文脈上の意味論的整合性（セマンティックチェック）を判定する。</li>
+<li><strong>入力の極小化（1ルール1責務）</strong>: 複数の複雑な規約を一度に渡して総合判定させるのではなく、独立した単一ルールごとにコンテキストを絞り込んで判定させる。</li>
+<li><strong>出力の構造化（JSON 強制）</strong>: 出力トークン数を最小限に抑えるため、合否フラグと簡潔な理由のみを JSON 形式で返却させる。</li>
+</ol>
+<p>以下は、この設計思想を具現化した TypeScript による検証モジュールの実装例です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#9CA0B0;font-style:italic">// ts:src/validators/rule-checker.ts</span></span>
+<span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> Anthropic </span><span style="color:#8839EF">from</span><span style="color:#40A02B"> "@anthropic-ai/sdk"</span><span style="color:#7C7F93">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">export</span><span style="color:#8839EF"> interface</span><span style="color:#DF8E1D;font-style:italic"> ValidationRule</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#4C4F69">  id</span><span style="color:#179299">:</span><span style="color:#8839EF"> string</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  name</span><span style="color:#179299">:</span><span style="color:#8839EF"> string</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  description</span><span style="color:#179299">:</span><span style="color:#8839EF"> string</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  regexPattern</span><span style="color:#179299">?:</span><span style="color:#DF8E1D;font-style:italic"> RegExp</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">export</span><span style="color:#8839EF"> interface</span><span style="color:#DF8E1D;font-style:italic"> ValidationResult</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#4C4F69">  ruleId</span><span style="color:#179299">:</span><span style="color:#8839EF"> string</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  passed</span><span style="color:#179299">:</span><span style="color:#8839EF"> boolean</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  reason</span><span style="color:#179299">:</span><span style="color:#8839EF"> string</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">  checkedBy</span><span style="color:#179299">:</span><span style="color:#40A02B"> "</span><span style="color:#40A02B;font-style:italic">regex</span><span style="color:#40A02B">"</span><span style="color:#179299"> |</span><span style="color:#40A02B"> "</span><span style="color:#40A02B;font-style:italic">small-model</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">const</span><span style="color:#4C4F69"> anthropic </span><span style="color:#179299">=</span><span style="color:#8839EF;font-weight:bold"> new</span><span style="color:#1E66F5;font-style:italic"> Anthropic</span><span style="color:#4C4F69">()</span><span style="color:#7C7F93">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">/**</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"> * 決定論的チェックと小型モデル検証を組み合わせた多層バリデータ</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"> */</span></span>
+<span class="line"><span style="color:#8839EF">export</span><span style="color:#8839EF"> async</span><span style="color:#8839EF"> function</span><span style="color:#1E66F5;font-style:italic"> validateContent</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">  content</span><span style="color:#179299">:</span><span style="color:#8839EF"> string</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">  rule</span><span style="color:#179299">:</span><span style="color:#DF8E1D;font-style:italic"> ValidationRule</span></span>
+<span class="line"><span style="color:#7C7F93">)</span><span style="color:#179299">:</span><span style="color:#DF8E1D;font-style:italic"> Promise</span><span style="color:#04A5E5">&#x3C;</span><span style="color:#DF8E1D;font-style:italic">ValidationResult</span><span style="color:#04A5E5">></span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  // 第1層: 決定論的テスト（正規表現による高速・確実な機械判定）</span></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#4C4F69"> (rule</span><span style="color:#179299">.</span><span style="color:#4C4F69">regexPattern) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#8839EF">    const</span><span style="color:#4C4F69"> isMatched </span><span style="color:#179299">=</span><span style="color:#4C4F69"> rule</span><span style="color:#179299">.</span><span style="color:#4C4F69">regexPattern</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">test</span><span style="color:#4C4F69">(content)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> (</span><span style="color:#179299">!</span><span style="color:#4C4F69">isMatched) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#8839EF">      return</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#4C4F69">        ruleId</span><span style="color:#179299">:</span><span style="color:#4C4F69"> rule</span><span style="color:#179299">.</span><span style="color:#4C4F69">id</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">        passed</span><span style="color:#179299">:</span><span style="color:#FE640B"> false</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">        reason</span><span style="color:#179299">:</span><span style="color:#40A02B"> `正規表現パターン </span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">rule</span><span style="color:#179299">.</span><span style="color:#4C4F69">regexPattern</span><span style="color:#7C7F93">}</span><span style="color:#40A02B"> に適合しませんでした。`</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">        checkedBy</span><span style="color:#179299">:</span><span style="color:#40A02B"> "regex"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">      };</span></span>
+<span class="line"><span style="color:#7C7F93">    }</span></span>
+<span class="line"><span style="color:#7C7F93">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  // 第2層: 小型モデル（Claude Haiku 4.5）によるセマンティック検証</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  // コンテキストをスライスし、対象文と単一ルール定義のみを渡す</span></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> prompt </span><span style="color:#179299">=</span><span style="color:#40A02B"> `あなたは文書の規約準拠を判定する検証エージェントです。</span></span>
+<span class="line"><span style="color:#40A02B">以下のルールに照らして、対象テキストが準拠しているかを判定してください。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">## ルール定義</span></span>
+<span class="line"><span style="color:#40A02B">- ID: </span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">rule</span><span style="color:#179299">.</span><span style="color:#4C4F69">id</span><span style="color:#7C7F93">}</span></span>
+<span class="line"><span style="color:#40A02B">- 名称: </span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">rule</span><span style="color:#179299">.</span><span style="color:#4C4F69">name</span><span style="color:#7C7F93">}</span></span>
+<span class="line"><span style="color:#40A02B">- 詳細: </span><span style="color:#7C7F93">${</span><span style="color:#4C4F69">rule</span><span style="color:#179299">.</span><span style="color:#4C4F69">description</span><span style="color:#7C7F93">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">## 対象テキスト</span></span>
+<span class="line"><span style="color:#40A02B">"""</span></span>
+<span class="line"><span style="color:#7C7F93">${</span><span style="color:#4C4F69">content</span><span style="color:#7C7F93">}</span></span>
+<span class="line"><span style="color:#40A02B">"""</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">出力は必ず以下のJSON形式のみで行ってください。余計な前置きや解説は含めないでください。</span></span>
+<span class="line"><span style="color:#40A02B">{"passed": true|false, "reason": "判定理由"}</span></span>
+<span class="line"><span style="color:#40A02B">`</span><span style="color:#7C7F93">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> response </span><span style="color:#179299">=</span><span style="color:#8839EF"> await</span><span style="color:#4C4F69"> anthropic</span><span style="color:#179299">.</span><span style="color:#4C4F69">messages</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">create</span><span style="color:#4C4F69">(</span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#4C4F69">    model</span><span style="color:#179299">:</span><span style="color:#40A02B"> "claude-haiku-4-5"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">    max_tokens</span><span style="color:#179299">:</span><span style="color:#FE640B"> 300</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">    messages</span><span style="color:#179299">:</span><span style="color:#4C4F69"> [</span><span style="color:#7C7F93">{</span><span style="color:#4C4F69"> role</span><span style="color:#179299">:</span><span style="color:#40A02B"> "user"</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> content</span><span style="color:#179299">:</span><span style="color:#4C4F69"> prompt </span><span style="color:#7C7F93">}</span><span style="color:#4C4F69">]</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">  }</span><span style="color:#4C4F69">)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> textBlock </span><span style="color:#179299">=</span><span style="color:#4C4F69"> response</span><span style="color:#179299">.</span><span style="color:#4C4F69">content</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">find</span><span style="color:#4C4F69">(</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">block</span><span style="color:#7C7F93">)</span><span style="color:#179299"> =></span><span style="color:#4C4F69"> block</span><span style="color:#179299">.</span><span style="color:#4C4F69">type </span><span style="color:#179299">===</span><span style="color:#40A02B"> "text"</span><span style="color:#4C4F69">)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#4C4F69"> (</span><span style="color:#179299">!</span><span style="color:#4C4F69">textBlock </span><span style="color:#179299">||</span><span style="color:#4C4F69"> textBlock</span><span style="color:#179299">.</span><span style="color:#4C4F69">type </span><span style="color:#179299">!==</span><span style="color:#40A02B"> "text"</span><span style="color:#4C4F69">) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#8839EF">    throw</span><span style="color:#8839EF;font-weight:bold"> new</span><span style="color:#1E66F5;font-style:italic"> Error</span><span style="color:#4C4F69">(</span><span style="color:#40A02B">"モデルからテキスト応答が得られませんでした。"</span><span style="color:#4C4F69">)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">  const</span><span style="color:#4C4F69"> parsed </span><span style="color:#179299">=</span><span style="color:#FE640B"> JSON</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">parse</span><span style="color:#4C4F69">(textBlock</span><span style="color:#179299">.</span><span style="color:#4C4F69">text</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">trim</span><span style="color:#4C4F69">()) </span><span style="color:#8839EF">as</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#4C4F69">    passed</span><span style="color:#179299">:</span><span style="color:#8839EF"> boolean</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">    reason</span><span style="color:#179299">:</span><span style="color:#8839EF"> string</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">  };</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">  return</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#4C4F69">    ruleId</span><span style="color:#179299">:</span><span style="color:#4C4F69"> rule</span><span style="color:#179299">.</span><span style="color:#4C4F69">id</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">    passed</span><span style="color:#179299">:</span><span style="color:#4C4F69"> parsed</span><span style="color:#179299">.</span><span style="color:#4C4F69">passed</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">    reason</span><span style="color:#179299">:</span><span style="color:#4C4F69"> parsed</span><span style="color:#179299">.</span><span style="color:#4C4F69">reason</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">    checkedBy</span><span style="color:#179299">:</span><span style="color:#40A02B"> "small-model"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">  };</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span></code></pre>
+<p>この実装における設計の急所は以下の3点です。</p>
+<ul>
+<li><strong>早期リターンによる API コールの削減</strong>: <code>rule.regexPattern</code> による検査を先行させることで、自明な違反は LLM API を呼び出すことなくミリ秒単位・コストゼロで弾かれます。</li>
+<li><strong>コンテキストの厳密な局所化</strong>: プロンプトに渡しているのは対象テキストと単一のルール定義のみです。親エージェントの会話履歴や不要なメタ情報を削ぎ落とすことで、コールドスタートの課金トークン数を最小化しています。</li>
+<li><strong>出力トークンの極小化</strong>: 出力形式を最小限の JSON に制限し、<code>max_tokens: 300</code> を設定することで、高価な出力トークンの消費を物理的にブロックしています。</li>
+</ul>
+<h2 id="エージェントパイプラインにおけるモデル選定の境界線">エージェントパイプラインにおけるモデル選定の境界線</h2>
+<p>多段エージェントパイプラインを設計する際、どのタスクを安価な小型モデルへ委任し、どのタスクをフロンティアモデルに残すべきでしょうか。実務における境界線の判断基準を以下に示します。</p>
+<h3 id="小型安価モデルへ委任できるタスク">小型・安価モデルへ委任できるタスク</h3>
+<ul>
+<li><strong>規約・構文・フォーマットの検証</strong>: 本文の主張と脚注番号の一致照合（R13チェック）、Markdown 記法や見出し階層のバリデーション、命名規約のチェック。</li>
+<li><strong>データ抽出と分類</strong>: 長文ドキュメントからの特定キー・事実関係・日付の抽出、エラーログのカテゴリ分類。</li>
+<li><strong>外部ツール実行結果の解釈</strong>: CLI ツールやテストスイートのエラーログを読み取り、失敗箇所を要約する作業。</li>
+<li><strong>構造化データの変換</strong>: 自由形式テキストから JSON や YAML スキーマへの変換。</li>
+</ul>
+<h3 id="フロンティアモデルに残すべきタスク">フロンティアモデルに残すべきタスク</h3>
+<ul>
+<li><strong>システム全体の要件定義と計画立案</strong>: 要求仕様の曖昧さを解釈し、全体のタスク依存関係（DAG）を設計するオーケストレーション。</li>
+<li><strong>トレードオフの判断と優先順位の裁定</strong>: パフォーマンスと可読性の衝突、複数のアーキテクチャ案の比較評価など、絶対的な正解が存在しない意思決定。</li>
+<li><strong>未知のエラーに対する原因究明</strong>: 複数システムにまたがる障害において、仮説を多角的に組み立てて検証を進める高度なデバッグ。</li>
+<li><strong>高度な文脈推敲とトーンの調整</strong>: 読者の心理や前提知識を汲み取り、記事全体のストーリー構成や論理展開を微調整する文章執筆。</li>
+</ul>
+<p>モデル選定の境界線を決める究極のルールは、<strong>「合否判定の正解（期待される出力や違反条件）が事前に明確に言語化・形式化できるか否か」</strong> です。正解の基準が明確であれば、どれほど厳格なチェックであっても、コンテキストを絞り込んだ小型モデルと決定論的テストの組み合わせによって、安価に委任できると考えられます。ただし小型モデルの見逃し率は未測定のため、委任後は少数の既知の違反例（ゴールデンセット）を定期的に通して検出率を測り、下回れば上位モデルへ戻す運用を前提にします。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-小型モデルに検証を任せるとハルシネーションや見逃しが増えませんか">Q. 小型モデルに検証を任せるとハルシネーションや見逃しが増えませんか？</h3>
+<p><strong>A.</strong> 合否判定の基準を単一ルールに絞り込み、決定論的な機械テスト（正規表現やスキーマバリデータ）と組み合わせることで、見逃しや誤判定を抑えやすくなる、というのが筆者の仮説です。小型モデルが苦手とするのは「曖昧な基準での総合評価」と考えられるため、評価対象を 1 つの明確な規約に限定します。上位モデルとの検出率の差は未測定です。導入時に手元の既知違反例で測ることを勧めます。</p>
+<h3 id="q-サブエージェントを呼ぶと親セッションのキャッシュが切れて逆に高くつきませんか">Q. サブエージェントを呼ぶと親セッションのキャッシュが切れて逆に高くつきませんか？</h3>
+<p><strong>A.</strong> 独立サブエージェントは親セッションのキャッシュを引き継げないためコールドスタートのコストが発生しますが、小型モデルへの差し替えによる単価圧縮（Sonnet 5.5 比で 1/2、Sonnet 4 比で 1/3）に加えて「コンテキストを検証対象だけに絞り込むスライス」を行うことで、入力のみの試算では親セッション維持の半額になります。親の肥大化したコンテキスト全体を渡さず、必要なルールと対象文のみに限定することが損益分岐点を超える鍵です。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本記事で解説した検証系サブエージェントの最適化指針を、以下の要点命題としてまとめます。</p>
+<ul>
+<li><strong>タスクの要求スペックを分離する</strong>: 創造的な推論や大局的な意思決定にはフロンティアモデルを使い、明確な合否判定には小型安価モデルを割り当てる。</li>
+<li><strong>出力とコールドスタートのコスト構造を意識する</strong>: 出力トークンは入力の 4〜5 倍高価であり、ファイルコピーやデータ取得にはシェルコマンド（<code>cp</code> / <code>curl</code>）を徹底する。</li>
+<li><strong>プロンプト単体に頼らず決定論的テストと多層化する</strong>: 小型モデルの指示追従性の揺らぎは、正規表現や外部スクリプトなどの決定論的フィルタとの組み合わせで吸収する。</li>
+<li><strong>キャッシュと単価の損益分岐点を計算する</strong>: 独立サブエージェントのコールドスタートによる割高感は、小型モデルによる単価圧縮とコンテキストスライスの掛け算によって、入力のみの試算では相殺・逆転できる。</li>
+<li><strong>次世代小型モデルの進化に備える</strong>: Haiku 5.5 のような新世代の小型モデルの登場に期待し、検証モジュールをいつでも低コストモデルへ差し替えられる疎結合な設計を維持する。</li>
+</ul>
+<p>マルチエージェントパイプラインのコスト最適化や、用途に応じたモデルルーティングアーキテクチャの設計・PoC 検証について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://calv.info/small-models-have-arrived">Small Models Have Arrived</a> Calvin French-Owen、2026年。日次ニュース生成のコスト1/10化は本文冒頭、日常業務の約95%が定型的な「token spewer」ワークである点はPeter Reinhardtの観察として言及。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://mvakde.github.io/blog/44-on-arc-1/">44% on ARC-AGI-1 in 67 cents</a> Mithil Vakde、2026年。単一GPUによる1.5時間学習、8層トランスフォーマーでの44%達成および計算コスト約 0.67 ドルの実証。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://www.anthropic.com/news/claude-haiku-4-5">Introducing Claude Haiku 4.5</a> Anthropic、2025年10月15日。Sonnet 4同等のコーディング性能と1/3のコスト・2倍以上の速度、上位モデルと組み合わせたマルチエージェント推奨アーキテクチャの公式発表。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://platform.claude.com/docs/en/about-claude/pricing">Pricing</a> Anthropic、2026年。Claude Haiku 4.5、Claude Sonnet 5.5、Claude Sonnet 4の入力・出力単価（出力は入力の5倍）とプロンプトキャッシュ読出単価（90%割引）の公式料金仕様。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-4-3" data-footnote-backref="" aria-label="Back to reference 4-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://claude.com/blog/prompt-caching">Prompt caching with Claude</a> Anthropic、2024年8月14日（2024年12月17日更新）。Prompt Cachingによる最大90%のコスト削減（入力の10%）および会話エージェント反復利用時の有効性。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://openai.com/api/pricing/">OpenAI API Pricing</a> OpenAI、2026年。GPT-4oおよびGPT-4o miniの入力・出力単価（出力は入力の4倍）とキャッシュ入力単価（50%割引）の公式料金仕様。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://eugeneyan.com/writing/eval-process/">An LLM-as-Judge Won’t Save The Product—Fixing Your Process Will</a> Eugene Yan、2025年4月20日。評価器単体導入の限界と、データ観察・仮説検証・評価駆動開発（EDD）のプロセス設計の重要性。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://eugeneyan.com/writing/llm-patterns/">Patterns for Building LLM-based Systems &#x26; Products</a> Eugene Yan、2023年7月。ガードレール、多層防御、プロンプトキャッシュ、フォールバックなどのアーキテクチャパターン体系。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

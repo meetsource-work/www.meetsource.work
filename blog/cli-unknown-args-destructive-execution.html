@@ -1,0 +1,251 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>エージェント向け自作 CLI の最低限の契約 ── 未知の引数は exit 2、--help は副作用なし | Meetsource</title><meta name="description" content="AI エージェントが操作する自作 CLI では、未知の引数をサイレントに無視せず終了コード 2 で停止し、--help では副作用を持たずに usage を表示する防御契約が不可欠です。実務でのヒヤリハット実測ログと修正 diff をもとに、手動引数パースのすり抜け穴と、不可逆な破壊操作を防ぐ 3 つの安全契約を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/cli-unknown-args-destructive-execution"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="エージェント向け自作 CLI の最低限の契約 ── 未知の引数は exit 2、--help は副作用なし | Meetsource"><meta property="og:description" content="AI エージェントが操作する自作 CLI では、未知の引数をサイレントに無視せず終了コード 2 で停止し、--help では副作用を持たずに usage を表示する防御契約が不可欠です。実務でのヒヤリハット実測ログと修正 diff をもとに、手動引数パースのすり抜け穴と、不可逆な破壊操作を防ぐ 3 つの安全契約を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/cli-unknown-args-destructive-execution"><meta property="og:image" content="https://www.meetsource.work/blog/cli-unknown-args-destructive-execution-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-11T18:30:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="エージェント向け自作 CLI の最低限の契約 ── 未知の引数は exit 2、--help は副作用なし | Meetsource"><meta name="twitter:description" content="AI エージェントが操作する自作 CLI では、未知の引数をサイレントに無視せず終了コード 2 で停止し、--help では副作用を持たずに usage を表示する防御契約が不可欠です。実務でのヒヤリハット実測ログと修正 diff をもとに、手動引数パースのすり抜け穴と、不可逆な破壊操作を防ぐ 3 つの安全契約を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/cli-unknown-args-destructive-execution-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"エージェント向け自作 CLI の最低限の契約 ── 未知の引数は exit 2、--help は副作用なし","description":"AI エージェントが操作する自作 CLI では、未知の引数をサイレントに無視せず終了コード 2 で停止し、--help では副作用を持たずに usage を表示する防御契約が不可欠です。実務でのヒヤリハット実測ログと修正 diff をもとに、手動引数パースのすり抜け穴と、不可逆な破壊操作を防ぐ 3 つの安全契約を解説します。","datePublished":"2026-11-11T18:30:00.000Z","image":"https://www.meetsource.work/blog/cli-unknown-args-destructive-execution-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/cli-unknown-args-destructive-execution"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"自作 CLI で未知のオプションが渡されたとき、なぜ終了コード 2 で終了すべきなのですか？","acceptedAnswer":{"@type":"Answer","text":"終了コード 2 は、Python の argparse においてコマンドライン引数の構文エラーやコマンドの誤用時にデフォルトで返される標準的な終了ステータスです （POSIX ユーティリティ規約においても、未認識のオプションに対しては非ゼロの終了ステータスを返すことが義務付けられています ）。サイレントに無視して実行したり、単に汎用エラーを表す exit 1 で終了するのではなく exit 2 を返すことで、AI エージェントや呼び出し元スクリプトに対して「引数の指定方法に誤りがある」という明確な境界シグナルを伝え、破壊的処理の誤爆を防ぎつつ安全な再試行やリカバリを促すことができます。"}},{"@type":"Question","name":"--help オプションで破壊的な本体処理が走ってしまうのを防ぐには、どのような実装が必要ですか？","acceptedAnswer":{"@type":"Answer","text":"サブコマンドのディスパッチや引数スライスの前段で -h または --help の存在を最優先で検出し、コマンド本体のロジックを一切呼び出さずに使用法（usage）を表示して即座に終了（exit 0）させます 。手動で sys.argv を解釈する場合は共通フラグの事前除去によるすり抜けを防ぐか、argparse などの標準ライブラリを用いてサブコマンドごとに独立したパーサーを定義し、デフォルトで --help が安全に処理される構造を採用します。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-11T18:30:00.000Z" data-astro-cid-7jjqptxk> 2026.11.12 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#cli</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#python</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span><span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>エージェント向け自作 CLI の最低限の契約 ── 未知の引数は exit 2、--help は副作用なし</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/cli-unknown-args-destructive-execution-hero.webp" alt="エージェント向け自作 CLI の最低限の契約 ── 未知の引数は exit 2、--help は副作用なし" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>開発現場で新しいコマンドや慣れないツールを前にしたとき、私たち人間は使い方を確かめるために反射的に <code>--help</code> や <code>-h</code> を叩きます。Linux や UNIX のコマンドライン環境において、ヘルプオプションは当然備わっているべきものという暗黙の前提が広く共有されています。これは Claude Code などの AI エージェントにとっても例外ではありません。エージェントもまた、与えられた環境やツールの使い方を探索する過程で、頻繁に <code>--help</code> を実行して使用法を把握しようと試みます。</p>
+<p>しかし、業務の自動化や開発支援のために急ごしらえで作られた自作 CLI スクリプトでは、引数のパースが簡易的な <code>sys.argv</code> の手動解釈で済まされがちです。特に「引数を取らないサブコマンド」において、余分な引数の存在を検査せずに放置してしまうケースが後を絶ちません。</p>
+<p>筆者の開発現場において、まさにその盲点が引き金となったヒヤリハットが発生しました。AI エージェントが Git worktree を整理する自作ツールの使い方を確認しようと <code>--help</code> を付与して実行したところ、ヘルプを表示するどころか、worktree の削除サブコマンド本体がそのまま走り出したのです。</p>
+<p><strong>エージェント向け自作 CLI における引数安全契約</strong> とは、未知の引数や不正なオプションが指定された場合に直ちに終了コード 2 で処理を中断し、<code>--help</code> が指定された場合はいかなる副作用（ファイルの作成・変更・削除やプロセスの起動・停止など）も伴わずに使用法（usage）を表示して正常終了する、入力検証の防御原則です。</p>
+<p>GNU Coding Standards では、<code>--help</code> が指定された場合は他の引数を無視して通常の機能を実行してはならないと定められており <sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>、コマンドラインインターフェースの設計指針である clig.dev でも、<code>--help</code> は他のフラグを無視してヘルプを表示すべきであると提唱されています <sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>幸いこのときは削除対象となる worktree が存在せず、実害には至りませんでした。しかし、「たまたま消す対象が無くてセーフだった」という結果オーライ（事後検収）に甘えてはなりません。Git worktree やバックグラウンドプロセスの強制終了といった不可逆な破壊操作を伴うツールにおいて、事後検収は一度の失敗で破綻します。安全を担保すべきなのは実行結果の検収ではなく、実行境界における決定論的な入力予防契約です。</p>
+<p>本記事では、実務で発生したヒヤリハットの一次実測ログと修正・再修正の diff をもとに、未知の引数を無視する CLI に潜む構造的危険性を検証し、AI エージェント時代に自作 CLI が備えるべき 3 つの安全契約を提示します。</p>
+<h2 id="使い方を見ようと-help-を付けたら破壊処理が走りかけた瞬間">使い方を見ようと —help を付けたら破壊処理が走りかけた瞬間</h2>
+<p>事の発端は、筆者が開発中の別プロジェクトにおいて、Claude Code を用いた自動化の検証を行っていた 2026-10-26 のセッションでした。</p>
+<p>エージェントに対してバックグラウンド作業の片付けを促した際、エージェントは自作のオーケストレーションツール（<code>dispatch.py</code>）に含まれる <code>sweep</code> サブコマンド（不要になった Git worktree や作業端末セッションをクローズして削除するコマンド）の使い方を確認するため、コマンドラインから以下のコマンドを実行しました。</p>
+<p><code>コマンド実行ログ</code>
+引用元: 筆者の検証セッションの記録（2026-10-26）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#4C4F69">D</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">ls</span><span style="color:#40A02B"> -d</span><span style="color:#40A02B"> ~/.claude/plugins/cache/nqounet/claude-skills/</span><span style="color:#4C4F69">*</span><span style="color:#40A02B">/</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> sort</span><span style="color:#40A02B"> -V</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> tail</span><span style="color:#40A02B"> -1</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">skills/dispatch/scripts/dispatch.py</span><span style="color:#7C7F93">;</span><span style="color:#1E66F5;font-style:italic"> python3</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$D</span><span style="color:#40A02B">"</span><span style="color:#40A02B"> --help</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> head</span><span style="color:#40A02B"> -20</span><span style="color:#7C7F93">;</span><span style="color:#1E66F5;font-style:italic"> python3</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$D</span><span style="color:#40A02B">"</span><span style="color:#40A02B"> sweep</span><span style="color:#40A02B"> --help</span><span style="color:#179299"> 2>&#x26;1</span><span style="color:#179299"> |</span><span style="color:#1E66F5;font-style:italic"> head</span><span style="color:#40A02B"> -20</span></span>
+<span class="line"></span></code></pre>
+<p>前半の <code>python3 "$D" --help</code> は、スクリプト全体の docstring（ヘルプメッセージ）を期待どおりに出力しました。しかし、後半の <code>python3 "$D" sweep --help</code> はヘルプを出力せず、サブコマンド <code>sweep</code> の本体処理がそのまま実行されたのです。</p>
+<p>ターミナルには、以下のログが出力されました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>keep task-1f7a92af: PR #69 のマージ待ち（main に無い patch 1 件）</span></span>
+<span class="line"><span>keep task-8cc7b743: PR #67 のマージ待ち（main に無い patch 1 件）</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この実行時、該当リポジトリには 2 つの Git worktree が存在していましたが、いずれもプルリクエストのマージ待ち状態であったため、スクリプトの内部ロジックにより「keep」と判定されました。そのため、worktree の削除や端末の終了といった破壊的な処理は実行されず、実害は免れました。</p>
+<p>エージェントはその直後のターンで、以下のように報告しました。</p>
+<blockquote><p>なお、最初に <code>sweep --help</code> を打ったところ、ヘルプではなく sweep そのものが実行されました。結果は上と同じ「keep」2 件で、消えたものはありません。</p></blockquote>
+<p>エージェント自身も、コマンド出力から「ヘルプではなく本体が実行された」という異常出力を検知し、後続のターンでその旨を報告しています。しかし、問題はその約 2 分後でした。プルリクエストのマージが完了した後に通常の <code>dispatch.py sweep</code> を実行したところ、今度は 2 件の worktree が実際に削除（<code>removed</code>）され、紐づいていた 4 つの端末セッションが終了されたのです <sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>もし最初の <code>--help</code> 実行時に、マージ済みの worktree や完了判定となるタスクが存在していた場合、当時のコード構造上はヘルプを表示することなく、作業中の worktree や端末セッションが即座に消去されてしまうところでした。「消えるものが無くて良かった」という事後的な偶然によって救われたに過ぎなかったのです。</p>
+<h2 id="コードに潜んでいた穴と最初の修正help-先行分岐と-exit-2-ガード">コードに潜んでいた穴と最初の修正：—help 先行分岐と exit 2 ガード</h2>
+<p>なぜ、<code>sweep --help</code> でヘルプが出ず、本体処理が走ってしまったのでしょうか。</p>
+<p>原因は、<code>dispatch.py</code> の <code>main()</code> 関数における引数解釈の構造にありました。このスクリプトでは、外部ライブラリを使わずに <code>sys.argv</code> を手動スライスして引数を処理していました。</p>
+<p><code>go</code> や <code>drive</code>、<code>watch</code> といった引数を必須とするサブコマンドでは、<code>len(args)</code> による引数長の検査が行われていました。しかし、追加の引数を必要としないはずの <code>finish</code> や <code>sweep</code> の分岐では、残りの引数の有無が一切検査されていなかったのです。そのため、末尾に未知のフラグや <code>--help</code> が渡されてもそれを完全に無視し、本体関数 <code>cmd_sweep(dry)</code> を呼び出す構造になっていました。</p>
+<p>「引数を取らないサブコマンドだから引数チェックは不要だろう」という思い込みが、余分な引数をすべてサイレントに無視して破壊処理を実行する重大な穴を生んでいたのです。</p>
+<p>この問題に対処するため、直ちに最初の修正コミットが行われました。修正の骨子となったのは以下の 3 点です。</p>
+<ol>
+<li><strong><code>-h</code> / <code>--help</code> の先行判定</strong>: <code>main()</code> の冒頭で引数リストに <code>-h</code> または <code>--help</code> が含まれているかを最優先で検査し、サブコマンドの処理に入る前にヘルプを出力して終了コード 0 で正常終了させる。</li>
+<li><strong>引数長検査と <code>exit 2</code> による拒絶</strong>: <code>finish</code> および <code>sweep</code> の分岐において、<code>len(args) != 1</code>（サブコマンド名以外の引数が存在する場合）は標準エラー出力（stderr）に使用法（usage）を出力し、終了コード 2 で即座に処理を停止する。</li>
+<li><strong>単体テストによる契約の固定</strong>: <code>test_dispatch.py</code> にテストクラス <code>CliArguments</code> を新設し、モックを用いて <code>sweep --help</code> や未知の引数が渡された際に本体関数が一切呼び出されないことを機械的に保証する。</li>
+</ol>
+<p><code>diff:dispatch.py</code>
+引用元: 自作CLIスクリプト（dispatch.py）の修正コミット</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="diff"><code><span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">    if "-h" in args or "--help" in args:</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">        print(__doc__)</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">        return 0</span></span>
+<span class="line"></span></code></pre>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="diff"><code><span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">            if len(args) != 1:</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">                print("usage: dispatch.py sweep [--dry-run]", file=sys.stderr)</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">                return 2</span></span>
+<span class="line"></span></code></pre>
+<p>この修正によって、未知の引数が渡された場合は即座に終了コード 2 で停止し、<code>--help</code> が渡された場合は本体を実行せずにヘルプを表示する構造が整いました。</p>
+<p>さらに、この安全契約が将来のコード変更で崩れないよう、単体テストによって本体関数の未実行を検証するテストケースが追加されました。</p>
+<p><code>python:test_dispatch.py</code>
+引用元: 自作CLIテストスイート（test_dispatch.py）のテストコード</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#8839EF">class</span><span style="color:#DF8E1D;font-style:italic"> CliArguments</span><span style="color:#7C7F93">(</span><span style="color:#DF8E1D;font-style:italic">unittest</span><span style="color:#7C7F93">.</span><span style="color:#DF8E1D;font-style:italic">TestCase</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#8839EF">    def</span><span style="color:#1E66F5;font-style:italic"> test_help_precedes_parsing_and_never_runs_commands</span><span style="color:#7C7F93">(</span><span style="color:#D20F39;font-style:italic">self</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#8839EF">    def</span><span style="color:#1E66F5;font-style:italic"> test_extra_arguments_do_not_run_finish_or_sweep</span><span style="color:#7C7F93">(</span><span style="color:#D20F39;font-style:italic">self</span><span style="color:#7C7F93">):</span></span>
+<span class="line"></span></code></pre>
+<p>テストでは、モックを用いて <code>cmd_sweep</code> や <code>cmd_finish</code> が決して呼び出されないこと、および終了コードが期待どおり 0 または 2 になることが厳格に検証されました。</p>
+<h2 id="さらなる落とし穴共通オプション事前除去が招いたすり抜け">さらなる落とし穴：共通オプション事前除去が招いたすり抜け</h2>
+<p>これで自作 CLI の引数処理は安全になったかに見えました。しかし、数日後に別の不具合報告が寄せられました。手動引数パースには、さらなる落とし穴が潜んでいたのです。</p>
+<p><code>dispatch.py</code> の <code>main()</code> 関数では、サブコマンド分岐に入る前段で、スクリプト全体で共通して使えるオプションとして <code>--model</code> や <code>--effort</code> などのフラグを検索し、<code>del args[i:i + 2]</code> を使って引数リストから事前に取り除く処理を行っていました。</p>
+<p>これが思わぬすり抜けを引き起こしました。</p>
+<p>本来、<code>--model</code> や <code>--effort</code> はエージェントを起動する一部のサブコマンド（<code>go</code> や <code>drive</code>）でのみ有効なオプションであり、<code>sweep</code> や <code>finish</code> には無関係なオプションです。しかし、もしエージェントや人間が <code>dispatch.py sweep --model opus</code> のように誤ってオプションを付与して実行した場合、前段の共通処理によって <code>--model</code> とその値が <code>args</code> から事前に削除されてしまいます。</p>
+<p>その結果、サブコマンド判定に到達した時点では <code>len(args)</code> が 1 に戻ってしまい、せっかく導入した <code>len(args) != 1</code> のガードをすり抜けて <code>cmd_sweep()</code> 本体が実行されてしまっていたのです。</p>
+<p>「共通オプションだから手前で一括して取り除いておく」という安易な前処理が、サブコマンドごとの引数検証を骨抜きにしていました。</p>
+<p>このすり抜けを塞ぐため、再修正コミットが行われました。</p>
+<p><code>diff:dispatch.py</code>
+引用元: 自作CLIスクリプト（dispatch.py）の再修正コミット</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="diff"><code><span class="line"><span style="color:#7C7F93"><span style="user-select: none;">-</span></span><span style="color:#D20F39">            if len(args) != 1:</span></span>
+<span class="line"><span style="color:#7C7F93"><span style="user-select: none;">+</span></span><span style="color:#40A02B">            if len(args) != 1 or claude_flags:</span></span>
+<span class="line"></span></code></pre>
+<p>再修正では、事前除去を行う前に <code>claude_flags = "--model" in args or "--effort" in args</code> によってオプションの存在をフラグとして保持するようにしました。そして、<code>finish</code> および <code>sweep</code> の検査条件を <code>if len(args) != 1 or claude_flags:</code> へと強化し、不要なフラグが付与されている場合も確実に usage を出力して終了コード 2 で停止するように改善しました。</p>
+<p>また、スクリプトの docstring にもサブコマンドごとの引数契約を明文化し、「<code>--model / --effort を取るのは go / drive だけ。finish / sweep に付けると usage を出して exit 2（本体は実行しない）</code>」という旨が明確に規定されました。</p>
+<p>手動で <code>sys.argv</code> を加工・スライスするアプローチは、共通オプションのハンドリングやオプションの出現順序によって容易にガードをすり抜けてしまいます。穴を塞いだつもりでも別の経路からすり抜けが発生するという事実は、手動引数パースの構造的な限界を物語っています。</p>
+<h2 id="自作-cli-が守るべき3つの防御契約">自作 CLI が守るべき3つの防御契約</h2>
+<p>実務でのヒヤリハットと再修正の経験から、自作 CLI（特に破壊的操作を伴うツール）が守るべき契約は以下の 3 つに集約されます。</p>
+<h3 id="契約-1---help---h-は副作用を持たずに-usage-を表示して正常終了exit-0する">契約 1: <code>--help</code> / <code>-h</code> は副作用を持たずに usage を表示して正常終了（exit 0）する</h3>
+<p>GNU Coding Standards では、<code>--help</code> オプションが指定された場合、プログラムは通常の機能を実行してはならず（should not perform its normal function）、呼び出し方法を簡潔に出力して正常終了すべきであると明確に定めています <sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。clig.dev においても、<code>-h</code> や <code>--help</code> はヘルプ以外の意味を持たせてはならず、末尾を含めいかなる位置に渡された場合でも他のフラグを無視してヘルプを表示すべきであるとされています <sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>サブコマンドの実行ロジックや破壊的処理に入る前に、ヘルプオプションの有無を決定論的に捕捉し、本体処理を一切走らせずに exit 0 で終了させることが鉄則です。</p>
+<h3 id="契約-2-未知の引数オプションはサイレントに無視せず-exit-2-で停止する">契約 2: 未知の引数・オプションはサイレントに無視せず exit 2 で停止する</h3>
+<p>POSIX.1-2017 のユーティリティ規約では、未認識のオプションが渡された場合、標準エラー出力に診断メッセージを出力し、非ゼロの終了ステータスで終了しなければならないと規定されています <sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。さらに Python の標準ライブラリである <code>argparse</code> では、未認識の引数が渡された場合、デフォルトで stderr に使用法を出力し、ステータスコード 2 で終了する仕様になっています <sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>ここで重要なのは、単なる一般的な失敗を表す <code>exit 1</code> ではなく、構文・引数エラーを表す <code>exit 2</code> を返すことです。これにより、呼び出し元のスクリプトや AI エージェントに対して「実行に失敗した」のではなく「コマンドの構文やオプションの指定方法に誤りがある」という明確な境界シグナルを伝達できます。</p>
+<h3 id="契約-3-破壊的操作には---dry-run-を用意し引数解釈の契約を単体テストで保証する">契約 3: 破壊的操作には <code>--dry-run</code> を用意し、引数解釈の契約を単体テストで保証する</h3>
+<p>clig.dev では、ディレクトリの削除などの破壊的な変更を伴う操作に対して、事前に影響を確認できる <code>--dry-run</code>（<code>-n</code>）の提供を推奨しています <sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>そして何より重要なのは、引数パースの挙動をコード上の工夫だけで終わらせず、単体テストによって固定することです。「<code>--help</code> を付けたときに本体関数が呼ばれないこと」「未知の引数を付けたときに本体関数が呼ばれず exit 2 になること」をモックを用いてテストすることで、将来のリファクタリングやすり抜けの再発を機械的に防止できます。また、サブコマンドの管理が複雑化する場合は、独自のスライス処理に頼るのではなく、PEP 389 で標準化されたサブパーサー機構などの体系的なパーサーの活用を検討すべきです <sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<h3 id="引数解釈方式の比較">引数解釈方式の比較</h3>
+<p>手動での引数スライスと、標準ライブラリ（<code>argparse</code> など）を用いた引数解釈の違いを整理すると、以下のようになります。入力境界の安全性を担保するうえでは、手動スライスによる場当たり的なガードよりも、標準パーサーによる宣言的な制約が圧倒的に優位です。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>比較項目</th><th>手動引数解釈（<code>sys.argv</code> スライス）</th><th>標準ライブラリ（<code>argparse</code>）</th></tr></thead><tbody><tr><td><strong>未知の引数・オプションの処理</strong></td><td>明示的な長さ・フラグ検査を書かない限りサイレントに無視されやすい</td><td>デフォルトで未認識の引数を検知し、stderr に usage を出して exit 2 で停止</td></tr><tr><td><strong><code>--help</code> / <code>-h</code> のハンドリング</strong></td><td>サブコマンド分岐の前に個別の先行分岐を書かないと本体処理が走る</td><td>自動で <code>action='help'</code> が設定され、本体処理を実行せず exit 0 で終了</td></tr><tr><td><strong>共通オプションの事前除去</strong></td><td><code>del args[...]</code> などの手動除去により引数長検査をすり抜ける穴が生まれやすい</td><td>サブパーサー（<code>add_subparsers</code>）によりサブコマンドごとの許容引数が厳格に分離される</td></tr><tr><td><strong>実装行数・手軽さ</strong></td><td>手軽に書けるが、安全ガードを足すほど肥大化・複雑化する</td><td>パーサーの定義が必要だが、引数の追加・変更に対して安全な構造を保ちやすい（ただし <code>parse_known_args</code> や略称設定などの設定次第ですり抜けが起きる余地はある）</td></tr><tr><td><strong>テスト容易性・堅牢性</strong></td><td>手動ループの分岐漏れやすり抜けを単体テストで網羅的に塞ぎ続ける必要がある</td><td>ライブラリ自体の引数検証機構に任せられるため、ツール固有のコマンドロジック検証に集中可能</td></tr></tbody></table>
+<p>このよう​​に、手動スライスでは安全ガードを追加するたびに実装が複雑化し、すり抜け穴が残りやすくなります。一方、<code>argparse</code> などの検証機構を備えたライブラリを活用することで、未知の引数の拒絶や <code>--help</code> の先行表示を宣言的に実装できます。</p>
+<p>以下は、<code>argparse</code> を用いてこれらの契約を満たす最小限の CLI テンプレートです。</p>
+<p><code>python:safe_cli_template.py</code></p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> argparse</span></span>
+<span class="line"><span style="color:#8839EF">import</span><span style="color:#4C4F69"> sys</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> cmd_sweep</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">dry_run</span><span style="color:#7C7F93">:</span><span style="color:#FE640B;font-style:italic"> bool</span><span style="color:#7C7F93">)</span><span style="color:#7C7F93"> -></span><span style="color:#FE640B;font-style:italic"> int</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> dry_run</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"[dry-run] 不要なリソースをスキャンしました（削除は行いません）"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    else</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#FE640B;font-style:italic">        print</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"不要なリソースを安全に削除しました"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#FE640B"> 0</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> main</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">argv</span><span style="color:#7C7F93">:</span><span style="color:#E64553;font-style:italic"> list</span><span style="color:#7C7F93">[</span><span style="color:#FE640B;font-style:italic">str</span><span style="color:#7C7F93">]</span><span style="color:#179299"> |</span><span style="color:#8839EF"> None</span><span style="color:#179299"> =</span><span style="color:#8839EF"> None</span><span style="color:#7C7F93">)</span><span style="color:#7C7F93"> -></span><span style="color:#FE640B;font-style:italic"> int</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">    parser </span><span style="color:#179299">=</span><span style="color:#4C4F69"> argparse</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">ArgumentParser</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        prog</span><span style="color:#179299">=</span><span style="color:#40A02B">"safe_cli"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        description</span><span style="color:#179299">=</span><span style="color:#40A02B">"エージェント向け自作ツールの安全な CLI テンプレート"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">    )</span></span>
+<span class="line"><span style="color:#4C4F69">    parser</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">add_argument</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#40A02B">        "-n"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#40A02B">        "--dry-run"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        action</span><span style="color:#179299">=</span><span style="color:#40A02B">"store_true"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        help</span><span style="color:#179299">=</span><span style="color:#40A02B">"実際の変更を行わずに実行内容を表示する"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">    )</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">    subparsers </span><span style="color:#179299">=</span><span style="color:#4C4F69"> parser</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">add_subparsers</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        dest</span><span style="color:#179299">=</span><span style="color:#40A02B">"subcommand"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        title</span><span style="color:#179299">=</span><span style="color:#40A02B">"subcommands"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        description</span><span style="color:#179299">=</span><span style="color:#40A02B">"利用可能なサブコマンド一覧"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">    )</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    # sweep サブコマンドの定義（追加の引数は受け付けない）</span></span>
+<span class="line"><span style="color:#4C4F69">    parser_sweep </span><span style="color:#179299">=</span><span style="color:#4C4F69"> subparsers</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">add_parser</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#40A02B">        "sweep"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">        help</span><span style="color:#179299">=</span><span style="color:#40A02B">"不要なリソースを一括でクリーンアップする"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">    )</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">    args </span><span style="color:#179299">=</span><span style="color:#4C4F69"> parser</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">parse_args</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">argv</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> args</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">subcommand </span><span style="color:#179299">==</span><span style="color:#40A02B"> "sweep"</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">        return</span><span style="color:#1E66F5"> cmd_sweep</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">dry_run</span><span style="color:#179299">=</span><span style="color:#4C4F69">args</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">dry_run</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">    parser</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">print_help</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">sys</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">stderr</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#FE640B"> 2</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#4C4F69"> __name__ </span><span style="color:#179299">==</span><span style="color:#40A02B"> "__main__"</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">    sys</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">exit</span><span style="color:#7C7F93">(</span><span style="color:#1E66F5">main</span><span style="color:#7C7F93">())</span></span>
+<span class="line"></span></code></pre>
+<p>このテンプレートでは、<code>safe_cli sweep --help</code> を実行すれば本体処理を実行することなく exit 0 でヘルプが表示され、<code>safe_cli sweep --unknown</code> のように未知の引数が渡された場合は自動的に stderr に usage が出力されて exit 2 で停止します。</p>
+<h3 id="想定される反論への客観的検討">想定される反論への客観的検討</h3>
+<p>現場でこうした防御契約を導入しようとすると、しばしば以下のような反論が寄せられます。</p>
+<ul>
+<li><strong>反論 1：自分しか使わない小さな使い捨てスクリプトに、終了コード 2 や単体テストまで書くのは大げさではないか？</strong>
+<ul>
+<li><strong>検討</strong>: 自分しか使わないツールであっても、それを操作するのが AI エージェントになった瞬間、前提は根本から変わります。エージェントは高速に自律的な試行錯誤を行い、推測によってフラグを補おうとします。「今回はたまたま消える対象が無かった」という事後検収の結果オーライは、不可逆な破壊の前では一度の失敗で破綻します。不可逆な処理を伴うツールであるならば、結果ではなく入力境界での決定論的な予防こそが不可欠です。</li>
+</ul>
+</li>
+<li><strong>反論 2：AI エージェントは賢いのだから、プロンプトやドキュメントを丁寧に整えれば正しい引数だけを叩いてくれるのではないか？</strong>
+<ul>
+<li><strong>検討</strong>: プロンプトによる指示は常に確率的です。未知の環境や曖昧な指示に直面したエージェントは、環境を認識するために探索行動（probe）に出ます。自然言語のプロンプトだけに依存した安全設計は脆く、実行境界である CLI ツール自身が決定論的なガードを提供しなければなりません。</li>
+</ul>
+</li>
+</ul>
+<h2 id="エージェント協業時代におけるコマンドライン契約の再考">エージェント協業時代におけるコマンドライン契約の再考</h2>
+<p>AI エージェントが開発現場の日常的なパートナーとなるにつれ、CLI ツールに求められる前提も大きく変化しています。</p>
+<p>人間は、ツールの使い方が分からないときにドキュメントやマニュアルをじっくり読んでから慎重にコマンドを入力することが多いでしょう。しかしエージェントは、環境やツールの仕様を確かめるために、積極的に「コマンドを叩いて標準出力や標準エラー出力を観察する（プローブ動作）」を行います。</p>
+<p>エージェントにとって、コマンドの終了コードとエラー出力は、環境の状態を正しく把握するための最も重要なフィードバックループです。</p>
+<p>もし自作 CLI が未知の引数をサイレントに無視して実行してしまうと、エージェントは終了コード 0 を正常終了シグナルとして受け取るため、指定したオプションが無効化されたことに気付かず、意図と異なる前提のまま後続タスクを実行してしまいます。その結果、誤った前提の上に後続の自動化タスクを次々と組み立ててしまい、問題の検知が大幅に遅れることになります。</p>
+<p>逆に、未知の引数に対して直ちに <code>exit 2</code> と明快な usage が返されれば、エージェントは「引数の構文エラーが発生した」と正確に認識し、即座に正しいオプションへと自己修復を試みることができます。</p>
+<p>ツールの起動確認や仕様確認において <code>--help</code> の存在を盲目的に過信しない慎重さも大切ですが、提供するツール側としては、POSIX ユーティリティ規約 <sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup> や clig.dev <sup><a href="#user-content-fn-2" id="user-content-fnref-2-4" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup> が培ってきた標準的な契約を忠実に守り続けることが求められます。広く共有されたプロトコルを裏切らないインターフェースを提供することこそが、自律型 AI エージェントとの安全で堅牢な協業を支える土台となるのです。</p>
+<h3 id="前提が変われば結論はどう変わるか構造化プロトコルと推論能力の進化">前提が変われば結論はどう変わるか：構造化プロトコルと推論能力の進化</h3>
+<p>では、今後の技術進化によって開発環境の前提が変わった場合、この結論はどう変わるでしょうか。</p>
+<p>第一に、Model Context Protocol（MCP）などのツール連携プロトコルが標準化され、CLI のテキスト入出力ではなく JSON-RPC などを介した構造化されたツール呼び出しが主流になった場合です。呼び出し形式がシェル引数からスキーマ定義されたオブジェクトに移行したとしても、「未知のプロパティをスキーマ検証で拒絶する」「副作用を伴う操作の前にドライランを用意する」という防御契約の原則は全く同じ形で存続します。インターフェースの層が変わるだけで、境界における入力検証の重要性は揺らぎません。</p>
+<p>第二に、将来のフロンティア LLM の推論能力やコンテキスト理解が飛躍的に向上した場合です。どれほどモデルが賢くなったとしても、自然言語プロンプトによる指示は本質的に確率的です。確率的な知能と協業するシステムであるからこそ、不可逆な破壊操作の手前には決定論的な防御壁（未知入力の拒絶と <code>--help</code> の副作用ゼロ）が不可欠であり続けます。モデルの賢さに甘えてツールの境界契約を緩めることは、安全設計の本末転倒と言えます。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-自作-cli-で未知のオプションが渡されたときなぜ終了コード-2-で終了すべきなのですか">Q. 自作 CLI で未知のオプションが渡されたとき、なぜ終了コード 2 で終了すべきなのですか？</h3>
+<p>終了コード 2 は、Python の <code>argparse</code> においてコマンドライン引数の構文エラーやコマンドの誤用時にデフォルトで返される標準的な終了ステータスです <sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>（POSIX ユーティリティ規約においても、未認識のオプションに対しては非ゼロの終了ステータスを返すことが義務付けられています <sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>）。サイレントに無視して実行したり、単に汎用エラーを表す exit 1 で終了するのではなく exit 2 を返すことで、AI エージェントや呼び出し元スクリプトに対して「引数の指定方法に誤りがある」という明確な境界シグナルを伝え、破壊的処理の誤爆を防ぎつつ安全な再試行やリカバリを促すことができます。</p>
+<h3 id="q-help-オプションで破壊的な本体処理が走ってしまうのを防ぐにはどのような実装が必要ですか">Q. —help オプションで破壊的な本体処理が走ってしまうのを防ぐには、どのような実装が必要ですか？</h3>
+<p>サブコマンドのディスパッチや引数スライスの前段で <code>-h</code> または <code>--help</code> の存在を最優先で検出し、コマンド本体のロジックを一切呼び出さずに使用法（usage）を表示して即座に終了（exit 0）させます <sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。手動で <code>sys.argv</code> を解釈する場合は共通フラグの事前除去によるすり抜けを防ぐか、<code>argparse</code> などの標準ライブラリを用いてサブコマンドごとに独立したパーサーを定義し、デフォルトで <code>--help</code> が安全に処理される構造を採用します。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>AI エージェントが自律的にコマンドを実行する時代において、自作 CLI の引数パースの手抜きは致命的なヒヤリハットに直結します。本記事で提示した重要な判断基準は以下のとおりです。</p>
+<ul>
+<li><strong>引数を取らないサブコマンドでも引数長を必ず検査する</strong>: 余分な引数や <code>--help</code> をサイレントに無視して本体を実行する穴を放置してはならない。</li>
+<li><strong><code>-h</code> / <code>--help</code> は副作用を持たずに usage を表示して exit 0 で終了させる</strong>: サブコマンドの判定や破壊的操作に先立ち、最優先でヘルプを処理する。</li>
+<li><strong>未知のオプションや余分な引数は exit 2 で即座に停止させる</strong>: 一般的なエラー（exit 1）でお茶を濁さず、構文エラー（exit 2）を返すことでエージェントに明確な自己修復シグナルを渡す。</li>
+<li><strong>手動の引数事前除去（スライス）によるすり抜け穴を警戒する</strong>: 共通オプションを手前で削除すると引数長検査が無力化するため、フラグの存在を保持して検証するか標準ライブラリを活用する。</li>
+<li><strong>事後検収の結果オーライに依存せず入力境界の決定論的契約と単体テストで担保する</strong>: 「消えるものが無くてセーフだった」という偶然に甘えず、モックを用いたテストで本体未実行を機械的に保証する。</li>
+</ul>
+<p>自作ツールの安全な設計や AI エージェントのオーケストレーション環境の構築、AI Operations の導入設計について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://www.gnu.org/prep/standards/html_node/_002d_002dhelp.html">GNU Coding Standards: Standards for Command Line Interfaces &#x26; —help</a> Free Software Foundation、Last updated 2024年。<code>--help</code> が指定された場合は他の引数を無視して通常の機能を実行せず正常終了（exit successfully）すべきとする規約は Section 4.8.2。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://clig.dev/">Command Line Interface Guidelines</a> clig.dev。<code>-h</code> / <code>--help</code> で他のフラグを無視してヘルプを表示する規約は Help 節、中程度の破壊的変更に対する <code>--dry-run</code> 検討推奨は Arguments and flags 節（Confirm before doing anything dangerous.）。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-2-4" data-footnote-backref="" aria-label="Back to reference 2-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p>一次検証ログ 当リポジトリの一次検証ログ（status: 検証済み、2026-11-12）。<code>sweep --help</code> の誤走行ログは §1、最初の修正コミットの diff とテストは §2、再修正コミットの共通フラグすり抜け修正は §3。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap01.html">POSIX.1-2017 Shell and Utilities (XCU) Chapter 1: Considerations for Utilities (OPTIONS)</a> The IEEE and The Open Group、2018 Edition。実装で認識されないオプションに対して standard error に diagnostic message を出力し non-zero exit status で終了しなければならない規約は Section 1.4 OPTIONS。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://docs.python.org/3/library/argparse.html">argparse — Parser for command-line options, arguments and subcommands</a> Python Software Foundation、Python 3.12 Documentation。<code>error()</code> による stderr への usage 出力とステータスコード 2 終了は <code>error</code> メソッド節、<code>exit_on_error</code> の仕様は <code>exit_on_error</code> 節、<code>action='help'</code> によるヘルプ出力と終了は <code>action</code> 節。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://peps.python.org/pep-0389/">PEP 389 – argparse - New Command Line Parsing Module</a> Steven Bethard、Python 公式仕様。optparse/getopt に対するサブコマンドのネイティブサポートとディスパッチ機構の動機は Sub-commands 節。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap12.html">The Open Group Base Specifications Issue 7 (POSIX.1-2017) Chapter 12: Utility Conventions</a> The IEEE and The Open Group、2018 Edition。オプションのデリミタ規約（<code>-</code>）は Guideline 4、オペランド先行規約は Guideline 9、オプション終了デリミタ（<code>--</code>）は Guideline 10。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

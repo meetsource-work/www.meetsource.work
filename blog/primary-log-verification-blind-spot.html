@@ -1,0 +1,92 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>記事の根拠になっている一次計測ログを、どの工程も検証していなかった──品質ゲートが見落としていた「生データ検証」の盲点 | Meetsource</title><meta name="description" content="AIレビューやCI/CDなどの「品質ゲート」を導入して文章表現の整合性をチェックしていても、根拠となる一次計測ログの集計・解釈誤りは検出できません。276KBの生ログ再集計で主張が真逆になった実例から、検証パイプラインの盲点を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/primary-log-verification-blind-spot"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="記事の根拠になっている一次計測ログを、どの工程も検証していなかった──品質ゲートが見落としていた「生データ検証」の盲点 | Meetsource"><meta property="og:description" content="AIレビューやCI/CDなどの「品質ゲート」を導入して文章表現の整合性をチェックしていても、根拠となる一次計測ログの集計・解釈誤りは検出できません。276KBの生ログ再集計で主張が真逆になった実例から、検証パイプラインの盲点を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/primary-log-verification-blind-spot"><meta property="og:image" content="https://www.meetsource.work/blog/primary-log-verification-blind-spot-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-08-07T11:10:30.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="記事の根拠になっている一次計測ログを、どの工程も検証していなかった──品質ゲートが見落としていた「生データ検証」の盲点 | Meetsource"><meta name="twitter:description" content="AIレビューやCI/CDなどの「品質ゲート」を導入して文章表現の整合性をチェックしていても、根拠となる一次計測ログの集計・解釈誤りは検出できません。276KBの生ログ再集計で主張が真逆になった実例から、検証パイプラインの盲点を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/primary-log-verification-blind-spot-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"記事の根拠になっている一次計測ログを、どの工程も検証していなかった──品質ゲートが見落としていた「生データ検証」の盲点","description":"AIレビューやCI/CDなどの「品質ゲート」を導入して文章表現の整合性をチェックしていても、根拠となる一次計測ログの集計・解釈誤りは検出できません。276KBの生ログ再集計で主張が真逆になった実例から、検証パイプラインの盲点を解説します。","datePublished":"2026-08-07T11:10:30.000Z","image":"https://www.meetsource.work/blog/primary-log-verification-blind-spot-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/primary-log-verification-blind-spot"}}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-08-07T11:10:30.000Z" data-astro-cid-7jjqptxk> 2026.08.07 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span><span class="tag" data-astro-cid-7jjqptxk>#code-review</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#log-analysis</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>記事の根拠になっている一次計測ログを、どの工程も検証していなかった──品質ゲートが見落としていた「生データ検証」の盲点</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/primary-log-verification-blind-spot-hero.webp" alt="記事の根拠になっている一次計測ログを、どの工程も検証していなかった──品質ゲートが見落としていた「生データ検証」の盲点" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>LLM（大規模言語モデル）やAIエージェントを活用した開発・自動化パイプラインの導入が進む中で、多くのチームが「コードレビューの自動化」や「文章品質ゲート」の導入に取り組んでいます。</p>
+<p>しかし、厳格な品質レビュー工程を設けて通過させたはずの技術レポートや開発ドキュメントにおいて、<strong>「根拠となっている一次計測ログ（生ログ）を誰も検証していなかった」</strong> という構造的な穴が存在することに気づいているでしょうか。</p>
+<p>本サイトの連載では、これまで <a href="/blog/ai-agent-pipeline-retrospective">AIパイプライン振り返り</a> や <a href="/blog/blog-pipeline-adversarial-verification">敵対的検証ゲート</a>、<a href="/blog/ai-agent-blog-pipeline-development">自動化パイプライン構築</a> を通して、「自動化ゲートがどのような不備や誤りを検出してきたか」の実例を報告してきました。また <a href="/blog/llm-as-verifier-not-judge">文章をレビューさせるな、ログを再集計させろ</a> では、同じ <code>powermetrics-8min.log</code> の再集計事例をもとに、<strong>発見された個々の誤りが「文章レビューだけで決着したか」「検算まで必要だったか」という誤りの性質の違い</strong> を扱いました。</p>
+<p>本記事が扱うのは、それらとは別の問いです。個々の誤りの性質ではなく、<strong>「そもそも、その生ログを検証する工程は、パイプラインのどこにも所有されていなかった」</strong> という、検査対象の設計そのものに空いていた構造的な穴を主題とします。まとめ文章の論理整合性をいくら高めても、集計元の生ログの解釈が誤っていれば真逆の主張がまかり通ってしまうという、品質保証のブラインドスポット（盲点）について解説します。</p>
+<hr>
+<h2 id="1-実例-276kbの生ログを再集計して見えた真逆の結論">1. 実例: 276KBの生ログを再集計して見えた「真逆の結論」</h2>
+<p>まず、実際に私たちの開発・執筆パイプラインの中で発覚したリアルな実例を紹介します。</p>
+<p>過去に実施した「ローカルLLM推論検証」のレポート設計段階において、執筆担当エージェントは計測ログをもとに以下のような要約主張を作成し、レビューに提出していました。</p>
+<blockquote><p>「74サンプルの計測を通じて、最上位P-state（動作周波数階梯）は 1296 MHz に留まっている。クロックが最上位の半分程度までしか上がらないため、推論速度のボトルネックはGPUプロセッサ上限の低さにある」</p></blockquote>
+<p>このまとめ文章は、文脈としても論理展開としてもきわめてスムーズであり、レビュアー（人間およびAI審判）の一次チェックを不自然さなく通過しかけていました。</p>
+<p>しかし、検証フェーズにおいて根拠となった 276KB の生ログファイル（<code>powermetrics-8min.log</code>）を直接プログラマティックに再集計・検算したところ、驚くべき事実が判明しました。</p>
+<h3 id="生ログの再集計数値とギャップ">生ログの再集計数値とギャップ</h3>
+<ul>
+<li><strong>計測環境</strong>: MacBookPro18,3 (M1 Pro / 14コアGPU / 16GB RAM)</li>
+<li><strong>ログ仕様</strong>: <code>powermetrics-8min.log</code> (ファイルサイズ: 276KB / サンプル数: 74 / サンプリング間隔: 5,000ms / 観測時間: 6分06秒)</li>
+<li><strong>実際の再集計数値（計測全時間に対する内訳）</strong>:
+<ul>
+<li>74サンプル中 <strong>69サンプル（約93.2%）</strong> で 1296 MHz の active residency > 0%（常時到達）</li>
+<li>GPU P-state 階梯別平均滞在率: 389 MHz (25.45%), 486 MHz (13.13%), 648 MHz (18.75%), 778 MHz (17.50%), 972 MHz (6.58%), <strong>1296 MHz (2.03%)</strong></li>
+<li>GPU Idle（非稼働率）: <strong>16.56%</strong>（上記全稼働階梯の合計 83.44% に対する残存割合）</li>
+<li>Active Frequency（時間加重平均クロック）: <strong>約 609 MHz</strong></li>
+</ul>
+</li>
+</ul>
+<h3 id="主張の反転と真の原因">主張の反転と真の原因</h3>
+<p>生ログの数値を正確に集計すると、「74サンプル中69サンプルで最上位 1296 MHz に到達している」ことがわかります。</p>
+<p>つまり、「上限クロックが低く抑えられていて到達しない」のではなく、<strong>「最上位 1296 MHz には問題なく到達しているが、I/O待ちによる Idle (16.56%) や低周波数階梯と交互に稼働するため滞在時間が短く（2.03%）、加重平均クロックが約609MHzに低下していた」</strong> のが真実でした。</p>
+<p>文字通りの事実（「1296 MHz という数値が出現している」）から「1296 MHz に制限されている」という正反対の推論が導かれ、それが要約テキストとして整形されていたのです。</p>
+<hr>
+<h2 id="2-構造的盲点-レビューが見ているのは文章であって生ログではない">2. 構造的盲点: レビューが見ているのは「文章」であって「生ログ」ではない</h2>
+<p>なぜ、複数層の品質レビューや自動検証ゲートを設けていたのにもかかわらず、このような「主張の真逆化」が見過ごされそうになったのでしょうか。</p>
+<p>そこには、既存のコードレビューやAIレビューツールが持つ構造的な盲点が存在します。</p>
+<h3 id="レビューツールの限界">レビューツールの限界</h3>
+<ol>
+<li><strong>検査対象が「テキスト表現」に偏っている</strong>:
+コードレビュアーやAI（LLM）審判が評価するのは、提出されたテキストの「文法」「論理の一貫性」「フォーマット」「事前プロンプトへの追従性」です。まとめ文章の内部で閉じた論理矛盾がない限り、文章レビューは合格判定を出してしまいます。</li>
+<li><strong>生データとまとめ文章の間の乖離を検出できない</strong>:
+集計ロジックの誤り、集計範囲（全サンプルなのか平均値なのか）の誤解、全称記号（「すべてのサンプルで」）の誤用は、生データとまとめ文章の双方を直接突き合わせて再計算しない限り、テキストだけから検出することは原理的に不可能です。</li>
+<li><strong>一次データの所有権・検証責務の欠如</strong>:
+当時の私たちのリポジトリにおいて、エージェントの指示書やCI/CDパイプラインのスキル定義を検索したところ、計測ログ（一次データ）自体の正確性をチェックする命令は <strong>ヒットゼロ</strong> でした。生ログは「どこにも所有者が存在しない成果物」として放置されていたのです。</li>
+</ol>
+<hr>
+<h2 id="3-一次データを品質ゲートの検査対象に組み込むアプローチ">3. 一次データを品質ゲートの検査対象に組み込むアプローチ</h2>
+<p>この盲点を克服し、根拠データの信頼性を担保するためには、「文章の推敲」とは別に <strong>「一次データの自動検算・追試プロセス」</strong> を開発パイプラインに組み込む必要があります。</p>
+<h3 id="1-一次検証ログと生データの保持追試性の設計">1. 一次検証ログと生データの保持（追試性の設計）</h3>
+<p>実機検証やパフォーマンス計測を伴う開発レポート・技術記事では、検証環境や集計結果を記録した一次検証ノート（<code>hands-on-log.md</code> 等）と、元となる生ログ（<code>powermetrics</code> の出力等）<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> を同一リポジトリ・同一ディレクトリ内に保存することをルール化します。</p>
+<p>第三者や自動化スクリプトがいつでも生ログから数値を再現（追試）できる状態を作ることが第一歩です。</p>
+<h3 id="2-llm-as-verifier文章の審判ではなく検算機としての活用">2. LLM as Verifier（文章の審判ではなく「検算機」としての活用）</h3>
+<p>LLMを品質ゲートに組み込む際、単に文章を読ませて「この表現でよいか」を判定させる（LLM as Judge）だけでは不十分です。</p>
+<p>一次生ログのテキストやCSVデータをPythonスクリプトやLLMコード実行機能に直接投入し、<strong>「本文中に記載された数値（平均値、最大値、パーセンテージ）が生ログから正しく計算されているか」を自動再計算・照合させる「検算機 (Verifier)」</strong> として位置づけます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 一次生ログの検算スクリプト例（概念コード）</span></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> verify_log_metrics</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">log_filepath</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> reported_avg_freq</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> reported_max_pstate</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#4C4F69">    samples </span><span style="color:#179299">=</span><span style="color:#1E66F5"> parse_powermetrics_log</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">log_filepath</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">    actual_max </span><span style="color:#179299">=</span><span style="color:#FE640B;font-style:italic"> max</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">s</span><span style="color:#7C7F93">.</span><span style="color:#4C4F69">gpu_pstate </span><span style="color:#8839EF">for</span><span style="color:#4C4F69"> s </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> samples</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">    actual_avg </span><span style="color:#179299">=</span><span style="color:#1E66F5"> calculate_weighted_active_freq</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">samples</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">    </span></span>
+<span class="line"><span style="color:#8839EF">    assert</span><span style="color:#4C4F69"> reported_max_pstate </span><span style="color:#179299">==</span><span style="color:#4C4F69"> actual_max</span><span style="color:#7C7F93">,</span><span style="color:#40A02B;font-style:italic"> f</span><span style="color:#40A02B">"最上位クロックの不一致: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">reported_max_pstate</span><span style="color:#EA76CB">}</span><span style="color:#40A02B"> vs </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">actual_max</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#8839EF">    assert</span><span style="color:#FE640B;font-style:italic"> abs</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">reported_avg_freq </span><span style="color:#179299">-</span><span style="color:#4C4F69"> actual_avg</span><span style="color:#7C7F93">)</span><span style="color:#179299"> &#x3C;</span><span style="color:#FE640B"> 5.0</span><span style="color:#7C7F93">,</span><span style="color:#40A02B;font-style:italic"> f</span><span style="color:#40A02B">"平均クロックの乖離: </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">reported_avg_freq</span><span style="color:#EA76CB">}</span><span style="color:#40A02B"> vs </span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">actual_avg</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span></code></pre>
+<p>人間の直感やAIのテキスト解釈を盲信せず、コードや数値データで裏を取るプロセスを品質ゲートの最前線に置くことで、データの読み違いによる事故を未然に防ぐことが可能になります。</p>
+<hr>
+<h2 id="4-まとめと今後の展望">4. まとめと今後の展望</h2>
+<p>「CI/CDやAIレビューの品質ゲートを整備したから安心だ」という考え方は、時に大きな盲点となります。どれだけ堅牢なゲートを構築しても、そのゲートが <strong>「文章やコードの表面的な形式」</strong> しか検査していなければ、根拠となる一次データの解釈誤りやすり替わりを防ぐことはできません。</p>
+<ol>
+<li><strong>検査対象の範囲を再点検する</strong>: 自分のチームのレビュー工程が「まとめ文章」だけを見ていないか点検する。</li>
+<li><strong>一次データと生ログの所有権を明確にする</strong>: 追試可能な形で生データを保存し、パイプラインの所有成果物として定義する。</li>
+<li><strong>自動検算（Verifier）を導入する</strong>: テキストの整合性確認とは別に、生ログからの数値再集計ステップを設ける。</li>
+</ol>
+<p>「ゲートが何を検出したか」だけでなく「ゲートの検査対象に入っていないデータは何か」を意識することが、真に信頼できる技術情報・システム開発を実現する鍵となります。</p>
+<p>AI開発パイプラインの品質保証や自動化プロセスの設計に関するご相談・お問い合わせは <a href="/#contact">コンタクトフォーム</a> まで。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://ss64.com/mac/powermetrics.html">PowerMetrics Command: Gather and display CPU and power usage stats in macOS - ss64.com</a> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

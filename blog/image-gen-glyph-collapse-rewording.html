@@ -1,0 +1,173 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>画像生成AIの図解で「パ」が「バ」に化ける ── 部分編集で直さず、崩れない語に言い換える | Meetsource</title><meta name="description" content="画像生成AIの図解作成で濁点・半濁点の文字崩れを防ぐには、事後の部分編集で直そうとせず、構成段階で崩れにくい語に言い換える方が早く通りました。編集を重ねて利用枠の上限（429）に達した失敗と、パ行・バ行を含む語を言い換えて2枚・全17ラベルを一発で一致させた実務記録から、制作パイプラインの判断軸を共有します。"><link rel="canonical" href="https://www.meetsource.work/blog/image-gen-glyph-collapse-rewording"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="画像生成AIで「パ」が「バ」に化ける ── 編集で直さず、崩れない語に言い換える"><meta property="og:description" content="部分編集を重ねて利用枠の上限（429・約4時間40分待ち）に達した失敗談から、構成段階でパ行・バ行を含む語を避けて全17ラベルを一発一致させた実務ログまで。画像生成パイプラインの知見を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/image-gen-glyph-collapse-rewording"><meta property="og:image" content="https://www.meetsource.work/blog/image-gen-glyph-collapse-rewording-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-29T01:05:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="画像生成AIで「パ」が「バ」に化ける ── 編集で直さず、崩れない語に言い換える"><meta name="twitter:description" content="部分編集を重ねて利用枠の上限（429・約4時間40分待ち）に達した失敗談から、構成段階でパ行・バ行を含む語を避けて全17ラベルを一発一致させた実務ログまで。画像生成パイプラインの知見を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/image-gen-glyph-collapse-rewording-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"画像生成AIの図解で「パ」が「バ」に化ける ── 部分編集で直さず、崩れない語に言い換える","description":"画像生成AIの図解作成で濁点・半濁点の文字崩れを防ぐには、事後の部分編集で直そうとせず、構成段階で崩れにくい語に言い換える方が早く通りました。編集を重ねて利用枠の上限（429）に達した失敗と、パ行・バ行を含む語を言い換えて2枚・全17ラベルを一発で一致させた実務記録から、制作パイプラインの判断軸を共有します。","datePublished":"2026-10-29T01:05:00.000Z","image":"https://www.meetsource.work/blog/image-gen-glyph-collapse-rewording-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/image-gen-glyph-collapse-rewording"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"画像生成AIで日本語の濁点・半濁点が崩れた場合、部分編集で修正することはできますか？","acceptedAnswer":{"@type":"Answer","text":"直せる場合もありますが、筆者はおすすめしません。手元の事例では、「パ」→「バ」の誤りを参照画像編集で 2 回直そうとして直らず、そのまま API 利用枠の上限（429 エラー）に達しました。別件では、余分な 1 文字を削る指示で逆に文字が増えています。崩れた語を別の語に替えたところ、回復後の 1 回で合格しました。構成案の段階で崩れやすい語を言い換えておく方が、手戻りが少なく済みます。"}},{"@type":"Question","name":"図解内の専門用語を平易な言葉に言い換えると、技術的な正確性が損なわれませんか？","acceptedAnswer":{"@type":"Answer","text":"図中の文字は直感的な理解と識別性に特化させ、正確な技術用語は前後の本文で補うことで、正確性を保つようにしています。例えば、図中では「サンドボックス」を「OSの枠」、「データベース」を「検証環境のデータ」と言い換え、直後の地の文で「図で『OSの枠』と書いたのが、サンドボックスのことだ」と補足しました。図だけを見る読者には正式名称が届かない不便は残ります。"}},{"@type":"Question","name":"どのような言葉に言い換えるのが効果的ですか？","acceptedAnswer":{"@type":"Answer","text":"筆者は、パ行・バ行の字を含まない語か、英単語への言い換えを使っています。半濁点を含む「パス」を英単語の path に置き換えて回復後の 1 回で合格した事例と、構成案段階で「サンドボックス」を「OSの枠」、「データベース」を「検証環境のデータ」に言い換えて 2 枚の図解の計 17 ラベルを一発で一字一句一致させた事例があります。どの語がどれだけ崩れにくいかを比較したわけではありません。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-29T01:05:00.000Z" data-astro-cid-7jjqptxk> 2026.10.29 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#image-generation</span><span class="tag" data-astro-cid-7jjqptxk>#prompt-engineering</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>画像生成AIの図解で「パ」が「バ」に化ける ── 部分編集で直さず、崩れない語に言い換える</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/image-gen-glyph-collapse-rewording-hero.webp" alt="画像生成AIの図解で「パ」が「バ」に化ける ── 部分編集で直さず、崩れない語に言い換える" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>画像生成 AI を活用してシステム構成図や技術解説のインフォグラフィックを作成する際、日本語ラベルの濁点・半濁点（パ行やバ行）の微細なパーツが欠落・変形する問題に直面することがあります。画像生成 AI の文字崩れは、拡散モデルが文字を言語的な意味ではなく視覚的テクスチャ（模様）として描く過程で、微細な線や点が脱落・変形する現象だと説明されています。</p>
+<p>この崩れを発見した際、インペインティングや参照画像編集などの「部分編集」でピンポイントに修正しようとすると、文字が直らないばかりか増殖したり、API の利用枠を使い切って上限（429 Too Many Requests）に達し、長時間の作業停止に陥ったりするリスクがあります。Google Cloud の Imagen 向け公式プロンプトガイドでも、テキスト長は 25 文字以内、フレーズ数は 2〜3 個以下に留めることが推奨されており<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>、画像内の文字は、モデルにとってまだ扱いの難しい要素です。</p>
+<p>筆者の制作パイプラインでは、AI エージェント経由で Gemini 系の画像モデル（<code>gemini-3.1-flash-image</code>）を呼んで図解を作っています。図中の「付きパスも」が「付きバスも」と誤描画された際、参照画像編集の指示を2回重ねたところで API 利用枠の上限（429 エラー）に達し、約 4 時間 40 分の回復待ちに陥りました。この経験から、「生成後に編集で直す」のではなく、「構成（Mermaid やプロンプト）の段階で、崩れやすい字を含む語を言い換えておく」方針に切り替えました。以下、部分編集で起きたことと、言い換えによって 2 枚・全 17 ラベルが一字一句一致した記録を共有します。</p>
+<h2 id="なぜ部分編集で直すと泥沼にハマるのか429エラーと文字増殖のメカニズム">なぜ「部分編集で直す」と泥沼にハマるのか：429エラーと文字増殖のメカニズム</h2>
+<p>画像内のたった 1 文字の誤字を見つけたとき、「その文字だけを直すよう編集させれば早い」と考えがちです。しかし筆者のパイプラインでは、このアプローチが最も泥沼にハマりやすい選択肢でした。</p>
+<p>背景として、画像生成モデルがテキストを処理する構造が挙げられています。拡散モデルは、文字を私たちが認識する「言語記号」としてではなく、画像全体のノイズを除去する過程で現れる「視覚的テクスチャ（模様）」として描画します<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。研究では、漢字のような複雑な字形の描画で破綻が露呈しやすいことが課題として挙げられています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。濁点（゛）や半濁点（゜）のような小さな点や丸も、同じく崩れやすい部類だと筆者は見ています。</p>
+<p>編集を重ねること自体にも劣化のリスクがあります。画像に対して再帰的にインペインティングを適用すると、元の画像に似たまま保たれる場合がある一方で、構造的な退化（degeneration）に至る場合もあることが研究で示されています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。実務向けの解説でも、部分修正では直すたびに範囲外の別の場所が変わったり、直した範囲の境目が浮いたりすること、複雑な文字は直しきれないことが、よくある失敗として挙げられています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。なお、筆者が使ったのはマスクで範囲を指定するインペインティングではなく、参照画像を渡して全体を描き直させる「参照画像編集」です。仕組みは違いますが、直したい箇所以外まで描き直されうる点は共通しています。</p>
+<p>筆者の制作環境でも、過去に連載記事の挿絵で「板の替えにした」というラベルが「替ええにした」と誤描画された際、余分な「え」を1文字削る局所編集指示を出したところ、文字が消えるどころか「替えええ」と逆に増えました。</p>
+<p>そして、この試行錯誤の最大の代償が「API 利用枠の消費」です。Google Cloud の仕様では、クォータは原則としてプロジェクト単位で適用され、多くの場合、上限を超えて消費しようとするとシステムがアクセスを遮断し、タスクは失敗します<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。編集のリトライは 1 回ごとに枠を消費します。</p>
+<p>実際に発生したインシデントの記録を見てみましょう。連載記事の図解制作において、右側のラベル「付きパスも」が「付きバスも」と描かれたため、参照画像編集で 1 文字のみの修正を試みた 2 回目のプロンプトです（前後の定型指示は省略。<code>$S</code> は作業ディレクトリ）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>First view this image: $S/ig2d.jpg</span></span>
+<span class="line"><span>Reproduce the identical image with one single fix. In the small edge label on the right side, the third line currently reads 付きバスも, where バ (ba, with two short dakuten strokes) is wrong. It must read 付きパスも, where パ is pa: the katakana ハ with a small open circle (handakuten) at its upper right, the same character that starts the word パス meaning "path". The word パス also appears correctly in the diamond above (同じパスと同じ); copy that exact パ glyph.</span></span>
+<span class="line"><span>Everything else stays exactly as it is: every other string, every position, every arrow, the card, and the colors of every arrow, tag, and the background stay unchanged. Keep the square 1:1 canvas.</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>このときの実行結果です。生のエラー行ではなく、画像生成を呼び出したエージェント（agy）が返したまとめの抜粋です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>[exited with code 1]</span></span>
+<span class="line"><span>- **モデル**: `gemini-3.1-flash-image`</span></span>
+<span class="line"><span>- **エラーコード**: `429 Too Many Requests (RESOURCE_EXHAUSTED / QUOTA_EXHAUSTED)`</span></span>
+<span class="line"><span>- **内容**: 利用枠の上限に達しています（クォータリセット予定: 約4時間40分後 / `2026-10-14T07:09:57Z`）</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>プロンプトでは「他の要素は一切変えず、菱形の中にある正しい『パ』の字形をコピーせよ」と極めて厳密に指示を出していました。しかし、1 回目の試行では「バ」のまま直らず、続けて投入した 2 回目の修正指示の直後にプロジェクトの利用枠上限（<code>RESOURCE_EXHAUSTED</code>）に達しました。クォータ回復予定時刻は <code>2026-10-14T07:09:57Z</code> と返却され、画像生成は約 4 時間 40 分止まりました。2 回の編集だけで尽きたわけではなく、それまでの生成で消費した分を含めた累積で上限に当たったと見ています。</p>
+<h2 id="構成段階で崩れない語へ言い換える実務での設計ルールと検証結果">構成段階で崩れない語へ言い換える：実務での設計ルールと検証結果</h2>
+<p>約 4 時間 40 分の利用枠回復待ちの間に、ひとつの大きな方針転換が行われました。
+「濁点と半濁点の違いをモデルに修正させるのは構造的に難しい。一度失敗した語はそもそも失敗しやすいのだから、文字の間違いは別の文字に置き換えるべきではないか」という着想です。</p>
+<p>そこで、問題となったラベル「1行でも いいえ（T や引用符付きパスも）」の「パス」を英単語の <code>path</code> に替え、「1行でも いいえ（T や引用符付き path も）」としました。利用枠の回復後に参照画像編集を 1 回だけ実行したところ、この画像は逐語一致で合格しました。同じ参照画像編集で通ったので、少なくとも編集をやめたから通ったわけではありません。変えたのは語だけです。</p>
+<p>この経験から、実務パイプラインの標準規律として以下のルールを体系化しました。</p>
+<ol>
+<li><strong>構成段階でのパ行・バ行の排除</strong>: 図解の構成案（Mermaid 等）を作成する段階で、ハ行と点・丸だけで見分けるパ行・バ行の字を含む語を避け、別の表現に言い換える。</li>
+<li><strong>図中ラベルと地の文の役割分担</strong>: 図中のテキストは崩れにくい語での識別に徹し、正式名称や詳細な技術用語は前後の本文で補う。</li>
+</ol>
+<p>この言い換えルールを適用したのが、その後の連載記事における 2 枚のフロー図解の作成です。構成案の段階から「ラベルにパ行・バ行の字を入れない」規律を敷き、以下のように語彙を言い換えました。</p>
+<ul>
+<li>「サンドボックス」 → <strong>「OSの枠」</strong></li>
+<li>「データベース」 → <strong>「検証環境のデータ」</strong></li>
+</ul>
+<p>実際に使用した Mermaid の定義（8 つのノードを持つフロー図。配色を指定する class 定義は省略）は以下のとおりです。ラベル中の「瀬尾さん」は連載の登場人物です。</p>
+<pre class="mermaid">flowchart TB
+  n1["AIが、検証環境のデータを消すコマンドを打とうとする。"]
+  n2["AIが、npm run db:resetと名前どおりに打つ。"]
+  n3["AIが、同じ中身をnpxで直接呼ぶか、sh -cで包んで打つ。"]
+  n4["許可リストが、db:resetの名前を見て止める。"]
+  n5["名前が違うので、許可リストの文字の照合をすり抜ける。"]
+  n6["OSの枠が、動いているプログラムのつながる先を、許可したドメインだけに絞る。"]
+  n8["瀬尾さんが、社員の手元から検証環境のデータへつながる道を閉じる。"]
+  n7["どちらの書き方でも、検証環境のデータまでは届かない。"]
+
+  n1 -.-> n2
+  n1 -.-> n3
+  n2 -.-> n4
+  n3 -.-> n5
+  n5 -.-> n6
+  n6 --> n7
+  n8 --> n7</pre>
+<p>この定義をもとに画像生成を実行したところ、同じ記事のもう 1 枚（コマンドの振り分けを示す縦の流れ図、9 ラベル）と本図（8 ラベル）の <strong>2 枚の図解に含まれる計 17 ラベルすべてが、出力画像において一発で一字一句一致</strong> しました。事後の編集やリトライは 1 回も発生していません。</p>
+<p>なお、言い換えたのはパ行・バ行を含む語のうち「サンドボックス」と「データベース」の 2 語です。「データ」「どちら」のようなほかの濁音は残っており、ノード n6 の「プログラム」の「プ」も残っていましたが、それでも一致しました。ラベルの長さも、公式ガイドが推奨する 25 文字を超えるものを含んでいます。</p>
+<p>言い換えなかった場合との比較はしていないので、効果の大きさまでは言えません。それでも、事後編集で利用枠を使い切った前回と比べると、入力段階で崩れやすい語を避ける方が、手戻りも枠の消費も少なく済みました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>評価軸</th><th>事後編集で直す（Inpainting / 参照画像編集）</th><th>構成段階で言い換える（語彙の事前予防）</th></tr></thead><tbody><tr><td><strong>文字一致の収束性</strong></td><td>今回は 2 回の編集で直らず、別件では文字が増えた</td><td>今回の 2 枚・17 ラベルは一発で一致</td></tr><tr><td><strong>API 利用枠（クォータ）消費</strong></td><td>リトライごとに枠を消費し、今回は上限に達した</td><td>今回は追加の編集なし</td></tr><tr><td><strong>画像全体の整合性</strong></td><td>範囲外の変化や境目の浮きが起きうる（文献<sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>）</td><td>再編集しないので問題にならない</td></tr><tr><td><strong>図解の表現力</strong></td><td>正式名称を図中に残せる</td><td>図中は平易な表現になり、本文での補足が必要</td></tr></tbody></table>
+<p>図中に正式名称を描かせようとして利用枠を使い切るリスクを冒すより、語彙を平易にして本文で補足する方が、実務パイプラインとして扱いやすいと考えています。</p>
+<h2 id="メリットの裏にあるトレードオフと適用限界">メリットの裏にあるトレードオフと適用限界</h2>
+<p>構成段階での言い換えルールにも、トレードオフと適用限界があります。</p>
+<p>第 1 の懸念は、「専門用語を言い換えることで、技術的な厳密さが損なわれないか」という点です。例えば「サンドボックス」を「OSの枠」と言い換えると、初見の読者には抽象的すぎるように見える可能性があります。</p>
+<p>この問題に対しては、<strong>「図解は構造をつかむための足場に徹し、厳密な定義は前後の地の文で伝える」</strong> という役割分担で対処しました。実際の記事でも、図中で「OSの枠」と描いた直後の本文で、「図で『OSの枠』と書いたのが、サンドボックスのことだ」と補足を入れています。ただし、図だけを見る読者には正式名称が届かないという不便は残ります。</p>
+<p>第 2 の懸念は、「商標名やコード識別子など、どうしても言い換えられない語への対処」です。例えば <code>npm run db:reset</code> や <code>sh -c</code>、あるいは特定のクラウドサービス名などは、勝手に言い換えると意味が通りません。</p>
+<p>英字の識別子が日本語より崩れにくいかは、検証していません。手元の記録で言えるのは、<code>path</code> に替えた 1 件が 1 回で通ったことと、2 枚目の図の <code>db:reset</code> や <code>sh -c</code> も崩れなかったことだけです。言い換えられない日本語の固有名詞を置く場合は、公式ガイドの推奨（テキスト 25 文字以内・フレーズ 2〜3 個まで）<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>を目安にラベルを短くする、といった手が考えられます。</p>
+<p>ここで、当ブログの <a href="/blog/image-gen-label-mixup">先行の検証記事</a> で扱った「ラベル混同（属性漏れ）」の事例と比較してみましょう<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<p>先行記事で扱った問題は、同一形状のカードを横並びに 5 個配置したことで、AI が隣接するカード同士のラベルを取り違えてしまった事象でした。このときは「Prompt Anchoring（その図の全 17 ラベルの再提示）」によって修復に成功しました。本記事の 17 ラベルとは別の図です。モデルは文字の字形自体を描けないのではなく、「どの要素にどのラベルを割り当てるか」という対応関係（Attribute Leakage）で迷っていたため、全体の位置関係を再固定するアプローチが有効だったのです。</p>
+<p>一方、今回の「パ」→「バ」は、対応関係の取り違えではなく、<strong>字形の取り違え</strong> です。同じ画像の菱形の中では「パス」の「パ」が正しく描けていたので、モデルがこの字を描けないわけではありません。微細な字形の描画が不安定になりやすいという説明は前述の文献にありますが、今回の原因は特定していません。言えるのは、この字を編集で直そうと粘った結果、利用枠の上限に当たったということです。</p>
+<p>筆者の判断軸は、<strong>「生成した後に取り戻せないコストは、生成する前の段階で防ぐ」</strong> です。生成後のリトライは利用枠を消費し、尽きれば回復まで作業が止まります。一方、プロンプトや Mermaid の文言は、生成する前なら何度でも直せます。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>将来的な画像生成技術の進化によって、この前提はどのように変わり得るでしょうか。</p>
+<p>Google の Imagen 論文は、大規模言語モデル（T5）をテキストエンコーダーに使い、言語モデルを大きくすると画像の忠実度と文との整合が高まることを示し、DrawBench というベンチマークも提案しています<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。また、GlyphControl<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup> や TextDiffuser<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup> のように、文字のグリフ情報やテキスト領域を明示的に条件付けて正確なテキストを描画・インペイントする手法も登場しています。マルチモーダル統合型モデルや次世代アーキテクチャの普及に伴い、日本語の濁点・半濁点に対する描画精度も今後向上していくと考えられます。</p>
+<p>それでも、パイプライン設計における「事後修正より事前予防」という順番は、当面変えなくてよいと考えています。</p>
+<p>第 1 に、言い換えた語でも崩れる可能性はゼロにはなりません。ただ、崩れたときも、同じ字を編集で直そうと粘るより、別の語に替えて直す方が、今回の経験では早く通りました。この順番は精度が上がっても使えます。</p>
+<p>第 2 に、クラウドの生成 API を使う以上、プロジェクト単位のクォータという制約はなくならないでしょう。リトライのループを組み込んだ自動パイプラインは、一度の失敗をきっかけに枠を使い切り、作業全体を止めてしまう可能性を抱えます。</p>
+<p>モデルが苦手そうな字を描かせて事後修正に賭けるより、崩れにくい語に言い換えて一発で通す方を先に試す。モデルのバージョンが上がっても、まず試す価値のある順番だと考えています。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-画像生成aiで日本語の濁点半濁点が崩れた場合部分編集で修正することはできますか">Q. 画像生成AIで日本語の濁点・半濁点が崩れた場合、部分編集で修正することはできますか？</h3>
+<p><strong>A.</strong> 直せる場合もありますが、筆者はおすすめしません。手元の事例では、「パ」→「バ」の誤りを参照画像編集で 2 回直そうとして直らず、そのまま API 利用枠の上限（429 エラー）に達しました。別件では、余分な 1 文字を削る指示で逆に文字が増えています。崩れた語を別の語に替えたところ、回復後の 1 回で合格しました。構成案の段階で崩れやすい語を言い換えておく方が、手戻りが少なく済みます。</p>
+<h3 id="q-図解内の専門用語を平易な言葉に言い換えると技術的な正確性が損なわれませんか">Q. 図解内の専門用語を平易な言葉に言い換えると、技術的な正確性が損なわれませんか？</h3>
+<p><strong>A.</strong> 図中の文字は直感的な理解と識別性に特化させ、正確な技術用語は前後の本文で補うことで、正確性を保つようにしています。例えば、図中では「サンドボックス」を「OSの枠」、「データベース」を「検証環境のデータ」と言い換え、直後の地の文で「図で『OSの枠』と書いたのが、サンドボックスのことだ」と補足しました。図だけを見る読者には正式名称が届かない不便は残ります。</p>
+<h3 id="q-どのような言葉に言い換えるのが効果的ですか">Q. どのような言葉に言い換えるのが効果的ですか？</h3>
+<p><strong>A.</strong> 筆者は、パ行・バ行の字を含まない語か、英単語への言い換えを使っています。半濁点を含む「パス」を英単語の <code>path</code> に置き換えて回復後の 1 回で合格した事例と、構成案段階で「サンドボックス」を「OSの枠」、「データベース」を「検証環境のデータ」に言い換えて 2 枚の図解の計 17 ラベルを一発で一字一句一致させた事例があります。どの語がどれだけ崩れにくいかを比較したわけではありません。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本記事で解説した、画像生成 AI による図解制作パイプラインの設計判断軸は以下のとおりです。</p>
+<ul>
+<li><strong>画像生成の文字誤りは「事後修正」より「事前予防」を先に考える</strong>: 生成後の部分編集ループは、文字の増殖や利用枠の上限（429 エラー・数時間の待機）を招くことがあります。</li>
+<li><strong>パ行・バ行を含む語は、構成の段階で別の語や英単語に言い換える</strong>: 筆者の 2 枚・17 ラベルは、この言い換えだけで一発で一致しました。</li>
+<li><strong>崩れた語は、編集で粘らず語ごと替える</strong>: 「パス」を <code>path</code> に替えたら、同じ参照画像編集の 1 回で合格しました。</li>
+<li><strong>図中ラベルは識別に徹し、正式名称は本文で補う</strong>: 図だけを見る読者には正式名称が届かない不便は残るので、直後の本文で必ず補います。</li>
+</ul>
+<p>画像生成 AI や AI エージェントを実務のコンテンツ制作パイプラインに組み込むプロセス設計や運用自動化について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://docs.cloud.google.com/vertex-ai/generative-ai/docs/image/img-gen-prompt-guide">Prompt and image attribute guide</a> Google Cloud Documentation, 2026年。テキスト長25文字以内・2〜3フレーズ以下の推奨仕様（「Keep it short」「Multiple phrases」節）、テキスト生成反復の必要性（「Iterate with confidence」節）。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://engineering.webstudio168.jp/blog/ai-media/ai-image-japanese-pop/">画像生成AIで日本語の文字を入れると文字化けする？原因と今すぐ効く対策プロンプト【2026年版】</a> 喜多川賢一, 2026年9月24日。拡散モデルのノイズ除去過程で文字が「模様」として扱われるメカニズム、日本語の画数・ストロークの不利性。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://arxiv.org/abs/2311.03054">AnyText: Multilingual Visual Text Generation And Editing</a> Yuxiang Tuo et al., 2023年11月6日 (v1), 2024年2月21日 (v5), arXiv:2311.03054。拡散モデルが高忠実化してもテキスト領域の描画で破綻が露呈する構造的課題、多言語グリフ生成の難しさ。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://arxiv.org/abs/2303.17870">GlyphDraw: Seamlessly Rendering Text with Intricate Spatial Structures in Text-to-Image Generation</a> Jian Ma et al., 2023年3月31日 (v1), arXiv:2303.17870。漢字のような複雑なグリフ構造を画像内で一貫して生成することの難しさ。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://arxiv.org/abs/2407.09549">Recursive InPainting (RIP): how much information is lost under recursive inferences?</a> Javier Conde et al., 2024年6月27日 (v1), 2025年5月25日 (v2), arXiv:2407.09549。再帰的インペインティング（修正の繰り返し）で、元画像に似たまま保たれる場合と退化（<code>degeneration</code>）に至る場合があることの実証。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://lp.tasky-ai.com/blog/ai-image-inpainting">AI画像の部分修正3つの方法【2026年版】崩れた手と文字を直す</a> タスキ広告研究会, 2026年10月23日。「部分修正でよくある失敗と回避策」節（直した範囲の境目が浮く・直すたびに別の場所が変わる・文字が直しきれない）。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://cloud.google.com/vertex-ai/generative-ai/docs/quotas">Generative AI on Agent Platform quotas and system limits</a> Google Cloud Documentation, 2026年。クォータを超えて消費しようとするとシステムがアクセスを遮断しタスクが失敗する旨、クォータは原則プロジェクト単位で適用される旨（冒頭のクォータ概要）。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="/blog/image-gen-label-mixup">同型要素を5個横並びで生成させると、ラベルが完結文でもAIは混同する</a> 当ブログ（nqounet）, 2026年8月9日。画像生成における属性漏れ（Attribute Leakage）とピンポイント修正失敗、全要素再提示による修復事例。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://arxiv.org/abs/2205.11487">Photorealistic Text-to-Image Diffusion Models with Deep Language Understanding</a> Chitwan Saharia et al. (Google Research), 2022年5月23日, arXiv:2205.11487。大規模言語モデル（T5）をテキストエンコーダーとして用いた Imagen の基本構造と、ベンチマーク DrawBench の提案（Abstract）。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://arxiv.org/abs/2305.18259">GlyphControl: Glyph Conditional Control for Visual Text Generation</a> Yukang Yang et al., NeurIPS 2023, arXiv:2305.18259。グリフ条件付けによるテキスト位置・サイズ制御、ByT5 等の文字認識エンコーダーの特性。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://arxiv.org/abs/2305.10855">TextDiffuser: Diffusion Models as Text Painters</a> Jingye Chen et al., 2023年5月18日 (v1), arXiv:2305.10855。拡散モデルによる正確で一貫したテキスト描画の困難さとテキストインペインティングの課題。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

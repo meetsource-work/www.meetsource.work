@@ -1,0 +1,201 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>タスク重複検出が32件中31件に当たった ── 閾値を上げると本命が消えるのでIDF順位づけに変えた | Meetsource</title><meta name="description" content="タスクの重複検出で誤検知を閾値で足切りすると本命まで脱落するため、二値判定を諦めて共有トークンの逆文書頻度（IDF）による順位づけへと転換した実務設計と教訓を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/task-duplicate-detection-idf-ranking"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="タスク重複検出が32件中31件に当たった ── 閾値を上げると本命が消えるのでIDF順位づけに変えた | Meetsource"><meta property="og:description" content="タスクの重複検出で誤検知を閾値で足切りすると本命まで脱落するため、二値判定を諦めて共有トークンの逆文書頻度（IDF）による順位づけへと転換した実務設計と教訓を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/task-duplicate-detection-idf-ranking"><meta property="og:image" content="https://www.meetsource.work/blog/task-duplicate-detection-idf-ranking-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-01T14:25:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="タスク重複検出が32件中31件に当たった ── 閾値を上げると本命が消えるのでIDF順位づけに変えた | Meetsource"><meta name="twitter:description" content="タスクの重複検出で誤検知を閾値で足切りすると本命まで脱落するため、二値判定を諦めて共有トークンの逆文書頻度（IDF）による順位づけへと転換した実務設計と教訓を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/task-duplicate-detection-idf-ranking-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"タスク重複検出が32件中31件に当たった ── 閾値を上げると本命が消えるのでIDF順位づけに変えた","description":"タスクの重複検出で誤検知を閾値で足切りすると本命まで脱落するため、二値判定を諦めて共有トークンの逆文書頻度（IDF）による順位づけへと転換した実務設計と教訓を解説します。","datePublished":"2026-11-01T14:25:00.000Z","image":"https://www.meetsource.work/blog/task-duplicate-detection-idf-ranking-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/task-duplicate-detection-idf-ranking"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"なぜコサイン類似度ではなく「IDFの和」だけで順位づけできるのですか？","acceptedAnswer":{"@type":"Answer","text":"短文のタスクタイトルでは各単語の出現頻度（TF）がほぼ 1 であり、文長も極端に長くないためです。ベクトルの長さを正規化するコサイン類似度を計算しなくても、共有トークンの IDF 値を足し合わせるだけで、筆者の実務環境では頻出ノイズを下位に沈め、希少な重要単語を共有する候補を優先する実用的な並び順が得られました。"}},{"@type":"Question","name":"閾値による足切りを完全に撤廃すると、誤検知がまた画面に溢れませんか？","acceptedAnswer":{"@type":"Answer","text":"順位づけによって警告行の発生そのものが消えるわけではありません（実測でも 33 件中 31 件に出力されました）。しかし、上位 3 件にはより希少なトークンを共有する候補が並び、頻出語しか共有していない候補は下位へ回ります。画面が過剰な警告で破綻しないよう、表示件数を上位 3 件に制限しつつ、選択肢の推奨を止めない UI の割り切り（注記に留める運用）とセットで設計することが重要です。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-01T14:25:00.000Z" data-astro-cid-7jjqptxk> 2026.11.01 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#情報検索</span><span class="tag" data-astro-cid-7jjqptxk>#自然言語処理</span><span class="tag" data-astro-cid-7jjqptxk>#taskwarrior</span><span class="tag" data-astro-cid-7jjqptxk>#アーキテクチャ</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>タスク重複検出が32件中31件に当たった ── 閾値を上げると本命が消えるのでIDF順位づけに変えた</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/task-duplicate-detection-idf-ranking-hero.webp" alt="タスク重複検出が32件中31件に当たった ── 閾値を上げると本命が消えるのでIDF順位づけに変えた" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>タスクの重複検出とは、新規タスクの起票や着手時に、過去の完了タスクや既存タスクの中から類似・同一の作業を自動抽出し、二重着手やナレッジの分散を防ぐ仕組みです。タスクや Issue の重複を自動検出しようとするとき、多くの開発者が最初に試みるのが「タイトルや説明文の単語（トークン）が一致しているかを調べる」というルールベースの判定ではないでしょうか。</p>
+<p>しかし、短文で文脈が乏しいタスク管理において、単純な単語一致は日常的に使われる一般的な語彙を拾い上げ、膨大な過検出（False Positive）を引き起こします。筆者が開発・運用するタスク管理環境（Taskwarrior と連携し、次に着手すべき1件を浮上させてディスパッチする対話型 CLI ツール）において、直近 14 日間の完了タスクとトークンを共有する重複検出を導入したところ、あるリポジトリでは未完了タスク 32 件中 31 件（96.9%）が重複候補として検出され、画面が重複警告で埋め尽くされる事態に陥りました。</p>
+<p>誤検知を減らそうと頻出語の除外や共有単語数の閾値を設けると、今度は本当に検出すべき唯一の本命タスクまで脱落するジレンマに直面しました。そこで「重複か否か」の二値判定による抑止を諦め、情報検索（IR）のアプローチを取り入れて、共有トークンの逆文書頻度（IDF）の和で並べる「順位づけ（Top-K 枠提示）」へと設計を転換しました。本記事では、この実測の失敗から得られた教訓と、短文データにおける軽量な重複スクリーニングの設計原則を解説します。</p>
+<h2 id="1-単純なトークン一致による過検出の現実32件中31件ヒットの構造">1. 単純なトークン一致による過検出の現実──32件中31件ヒットの構造</h2>
+<p>ソフトウェア開発において重複課題の発生は無視できないコスト要因です。バグ報告に関する実証研究（Jahan &#x26; Rahman, 2022）<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> でも示されているように、バグ報告の約 40% が重複であり、ソフトウェア保守における大きなオーバーヘッドになっていると言われています。この無駄を避けるため、筆者は自作のタスク管理ツールにおいて、着手候補タスクと直近 14 日間の完了タスクの間で固有トークンを共有している場合に <code>dup=</code> として警告行を出力する初期実装を行いました。</p>
+<p>しかし、この素朴な単語共有判定を実務環境（2026年10月22日時点）に適用したところ、以下のような過検出の嵐に見舞われました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>管理リポジトリの種別</th><th>未完了タスク（母数）</th><th>重複警告が出た件数</th><th>直近14日の完了タスク（母数）</th><th>重複警告の発生率</th></tr></thead><tbody><tr><td>リポジトリ A（個人設定系）</td><td>32</td><td>31</td><td>100</td><td>96.9%</td></tr><tr><td>リポジトリ B（業務アプリ系）</td><td>12</td><td>10</td><td>59</td><td>83.3%</td></tr><tr><td>ワークスペース</td><td>5</td><td>2</td><td>42</td><td>40.0%</td></tr><tr><td>筆者のタスク管理ツール</td><td>1</td><td>0</td><td>49</td><td>0.0%</td></tr><tr><td><strong>合計</strong></td><td><strong>50</strong></td><td><strong>43</strong></td><td><strong>250</strong></td><td><strong>86.0%</strong></td></tr></tbody></table>
+<p>調査した全 4 リポジトリの合計で、未完了タスク 50 件中 43 件（86.0%）に重複候補が出力され、その大半が無関係な別件タスクでした。</p>
+<p>過検出を引き起こした主要なトークンを調査すると、<code>weekly-retro</code>、<code>SKILL.md</code>、<code>settings.json</code>、<code>run_daily.sh</code>、<code>test_daily.sh</code> といった語が上位を占めていました。たとえば、リポジトリ A で浮上したタスク「tw-day-plan の launchd 発火確認」に対し、同一のスクリプトや設定ファイル名を含むという理由だけで、文脈のまったく異なる「meeting-cheatsheet の失敗調査」など 3 件が無関係に紐づいていました。</p>
+<p>短文のタスク管理において単純な単語やトークンの表層一致だけに頼ると、共通のファイル名や定期業務といった定型ノイズに引っ張られ、無関係な別件への誤検知が極めて容易に発生する構造が浮き彫りになりました。</p>
+<h2 id="2-閾値を上げると本命が消える足切りが招く再現率recallの破壊">2. 閾値を上げると本命が消える──足切りが招く「再現率（Recall）の破壊」</h2>
+<p>大量の誤検知を目の当たりにした開発者が次に考えるのは、「閾値を設けてノイズを足切りする」ことでしょう。筆者も同様に、以下のルールによる足切りを試作しました。</p>
+<ol>
+<li>チケット番号や Issue 番号といった作業単位の参照の共有は無条件で一致とみなす。</li>
+<li>完了タスクが 20 件以上ある環境では、全体の 5% を超える頻出語を照合から除外する。</li>
+<li>希少トークン <strong>2 個以上</strong> の共有を必須条件とする。</li>
+</ol>
+<p>翌日（2026年10月23日）、未完了タスクが 1 件増えて 33 件となっていた環境でこの試作ルールを適用したところ、31 件に出ていた重複警告は <strong>7 件</strong> へと激減しました（約 77% の削減）。一見すると、邪魔なノイズをきれいに削ぎ落とすことに成功したように思えました。</p>
+<p>しかし、ここに致命的な副作用が潜んでいました。</p>
+<p>そもそもこの重複検出機能を導入するきっかけとなった「本命の実例」（週報の訂正判定修正に関する過去タスクとの重複）を当てる唯一のトークンが、皮肉にも <code>weekly-retro</code> だったのです。過去タスクの記録は「weekly-retro の訂正判定から…」、新規タスクは「週報の訂正判定を直す」と記述されており、日本語の表現揺れによって共通する固有トークンは英数字識別子の <code>weekly-retro</code> 1 語しか存在しませんでした。そのため、頻出語除外（5% 超え）によって照合対象から外され、さらに 2 語以上要求の足切り条件によっても弾かれ、<strong>本来最も検出したかった本命の実例が完全に脱落（False Negative）</strong> してしまいました。</p>
+<p>当時のテストコードにも「動機の実例（weekly-retro 1 語だけの共有）もこの規模では見えなくなる、の確認を兼ねる」と明記されており、足切りの代償として本命が失われた事実が記録されていました。</p>
+<p>表層のテキスト類似度を中心に据える従来の手法では、表現の違いやノイズに阻まれて本命を取りこぼすという課題は、先行研究（Jahan &#x26; Rahman, 2022）<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> でも非類似重複の見逃しとして指摘されています。短文タスクにおいては、「本命を当てる決定的なキーワード」と「日常業務で頻出するノイズ語」が同一の語になってしまう事態が日常的に発生します。二値判定（重複か否か）の枠組みで足切り条件（Threshold cutoff）を厳しくすると、適合率（Precision）は見かけ上向上しても、再現率（Recall）が致命的に破壊されてしまうのです。</p>
+<h2 id="3-重複判定からidf順位づけへの転換二値分類を諦めて情報検索にする">3. 「重複判定」から「IDF順位づけ」への転換──二値分類を諦めて情報検索にする</h2>
+<p>本命が消えてしまう以上、閾値による足切りは採用できません。そこで筆者が下した設計判断は、<strong>「足切りをやめ、頻出トークンも消さずに下位へ回す順位づけにする」</strong> というものでした。</p>
+<p>機械に「重複しているか否か」を白黒つけさせる二値分類（Classification）を諦め、情報検索（IR）の考え方を導入して「類似している可能性が高い順に並べて上位を提示する」ランキング問題へと定式化し直すアプローチです。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>比較軸</th><th>二値判定（足切り）アプローチ</th><th>順位づけ（IDF Ranking）アプローチ</th></tr></thead><tbody><tr><td><strong>設計の目的</strong></td><td>重複か否かを機械が白黒判定する</td><td>類似している可能性が高い順に候補を並べる</td></tr><tr><td><strong>頻出語の扱い</strong></td><td>閾値を超えた語を一律除外・足切り</td><td>スコアの重みを下げるが完全に消去はしない</td></tr><tr><td><strong>本命が1語のみの場合</strong></td><td>複数語要求などの足切りで脱落する</td><td>希少な語ほど上位に残り、頻出語でも下位に残る</td></tr><tr><td><strong>UIでの役割</strong></td><td>閾値判定により警告の要否を二値化</td><td>警告を止めず希少トークン上位を提示し、UIの推奨は維持</td></tr></tbody></table>
+<p>機械に完全な二値判定を迫るのではなく、情報検索のランキング問題として定式化し直すことで、本命の脱落を防ぎつつ、希少トークンを共有する候補を優先して上位に提示できます。ただし、順位づけによって警告行の総数そのものが減るわけではありません（実測でも 33 件中 31 件に出力されました）。変わるのは提示される「並び順」です。</p>
+<h3 id="短文における-idf-の決定性と数理仕様">短文における IDF の決定性と数理仕様</h3>
+<p>全文検索で広く用いられる TF-IDF において、短文のタスクタイトルでは同一単語の出現頻度 <code>tf</code> はほぼ 1 です。また文長も極端に長くないため、文書ベクトルの長さを正規化するコサイン類似度をあえて計算しなくても、共有トークンの希少度、すなわち <strong>逆文書頻度（IDF: Inverse Document Frequency）</strong> の合計値を見るだけで実用上十分な順位づけが得られます（IDF の標準的な体系は Wikipedia <sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup> 参照）。</p>
+<p>改修後の実装では、Python 標準ライブラリの <code>math.log</code> を用い、平滑化 IDF 式 <code>IDF = math.log(1 + len(haystacks) / df)</code> を採用しました。</p>
+<p>ここで <code>len(haystacks)</code> は比較対象となる完了タスクの総件数、<code>df</code>（Document Frequency）はそのトークンを含む完了タスクの件数です。分母に <code>df</code> をそのまま使いつつ分子を <code>1 + len(haystacks)</code> とすることで、ゼロ除算を防止しています。これは scikit-learn の <code>TfidfTransformer</code> における <code>smooth_idf</code> オプション <sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup> と同様の平滑化設計です。また、すべての完了タスクに出現する最頻出語（<code>df = len(haystacks)</code>）であっても、スコアは <code>math.log(1 + 1) = math.log(2) ≒ 0.693</code> となり、重みが完全にゼロ化して照合から消滅するのを防いでいます。</p>
+<h3 id="改修後の実装コード">改修後の実装コード</h3>
+<p>今回の改修では、<code>DUP_MIN_POOL</code>（母数閾値）や <code>min_shared</code>（最小共有単語数）といった足切りロジックをすべて撤廃しました。</p>
+<p>トークンの抽出（<code>dup_tokens</code>）は形態素解析器等の重い外部依存を持たず、正規表現で英数字・記号・特定キーワードを抽出する軽量設計としています。また、チケット番号や Issue 番号（<code>#123</code> や <code>PROJ-456</code> 等）といった確定的参照（<code>STRONG_REF_RE</code>）の一致を最優先キー（第 1 キー）、共有トークンの平滑化 IDF 和を第 2 キー、完了日時を第 3 キーとして降順ソートし、上位 3 件（<code>DUP_MAX = 3</code>）のみを提示する構造に改めました。</p>
+<p>引用元: 筆者のタスク管理ツール（非公開）の float.py</p>
+<p>ファイル: float.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#4C4F69">    haystacks </span><span style="color:#179299">=</span><span style="color:#7C7F93"> [(</span><span style="color:#4C4F69">t</span><span style="color:#7C7F93">,</span><span style="color:#1E66F5"> dup_haystack</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">t</span><span style="color:#7C7F93">))</span><span style="color:#8839EF"> for</span><span style="color:#4C4F69"> t </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> completed </span><span style="color:#8839EF">if</span><span style="color:#4C4F69"> t</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"uuid"</span><span style="color:#7C7F93">)</span><span style="color:#179299"> !=</span><span style="color:#4C4F69"> uuid</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#4C4F69">    weights </span><span style="color:#179299">=</span><span style="color:#7C7F93"> {}</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> tk </span><span style="color:#8839EF">in</span><span style="color:#1E66F5"> dup_tokens</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">desc</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> repo</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#4C4F69">        rx </span><span style="color:#179299">=</span><span style="color:#1E66F5"> dup_token_re</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">tk</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">        if</span><span style="color:#4C4F69"> df </span><span style="color:#179299">:=</span><span style="color:#FE640B;font-style:italic"> sum</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">1</span><span style="color:#8839EF"> for</span><span style="color:#4C4F69"> _</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> h </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> haystacks </span><span style="color:#8839EF">if</span><span style="color:#4C4F69"> rx</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">search</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">h</span><span style="color:#7C7F93">)):</span></span>
+<span class="line"><span style="color:#E64553;font-style:italic">            weights</span><span style="color:#7C7F93">[</span><span style="color:#E64553;font-style:italic">tk</span><span style="color:#7C7F93">]</span><span style="color:#179299"> =</span><span style="color:#7C7F93"> (</span><span style="color:#4C4F69">rx</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> math</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">log</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">1</span><span style="color:#179299"> +</span><span style="color:#FE640B;font-style:italic"> len</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">haystacks</span><span style="color:#7C7F93">)</span><span style="color:#179299"> /</span><span style="color:#4C4F69"> df</span><span style="color:#7C7F93">))</span></span>
+<span class="line"><span style="color:#4C4F69">    scored </span><span style="color:#179299">=</span><span style="color:#7C7F93"> []</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> t</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> text </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> haystacks</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">        shared </span><span style="color:#179299">=</span><span style="color:#7C7F93"> [(</span><span style="color:#4C4F69">tk</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> w</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> for</span><span style="color:#4C4F69"> tk</span><span style="color:#7C7F93">,</span><span style="color:#7C7F93"> (</span><span style="color:#4C4F69">rx</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> w</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> in</span><span style="color:#4C4F69"> weights</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">items</span><span style="color:#7C7F93">()</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> rx</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">search</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">text</span><span style="color:#7C7F93">)]</span></span>
+<span class="line"><span style="color:#8839EF">        if</span><span style="color:#4C4F69"> shared</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#4C4F69">            strong </span><span style="color:#179299">=</span><span style="color:#FE640B;font-style:italic"> any</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">STRONG_REF_RE</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">fullmatch</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">tk</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> for</span><span style="color:#4C4F69"> tk</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> _ </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> shared</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">            scored</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">append</span><span style="color:#7C7F93">((</span><span style="color:#4C4F69">strong</span><span style="color:#7C7F93">,</span><span style="color:#FE640B;font-style:italic"> sum</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">w </span><span style="color:#8839EF">for</span><span style="color:#4C4F69"> _</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> w </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> shared</span><span style="color:#7C7F93">),</span><span style="color:#4C4F69"> t</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"end"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> ""</span><span style="color:#7C7F93">),</span><span style="color:#4C4F69"> t</span><span style="color:#7C7F93">))</span></span>
+<span class="line"><span style="color:#4C4F69">    scored</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">sort</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">key</span><span style="color:#179299">=</span><span style="color:#8839EF">lambda</span><span style="color:#E64553;font-style:italic"> x</span><span style="color:#7C7F93">:</span><span style="color:#E64553;font-style:italic"> x</span><span style="color:#7C7F93">[:</span><span style="color:#FE640B;font-style:italic">3</span><span style="color:#7C7F93">],</span><span style="color:#E64553;font-style:italic"> reverse</span><span style="color:#179299">=</span><span style="color:#8839EF">True</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#7C7F93"> [</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">"dup=</span><span style="color:#EA76CB">{</span><span style="color:#E64553;font-style:italic">t</span><span style="color:#7C7F93">[</span><span style="color:#40A02B">'</span><span style="color:#40A02B;font-style:italic">uuid</span><span style="color:#40A02B">'</span><span style="color:#7C7F93">][:</span><span style="color:#FE640B">8</span><span style="color:#7C7F93">]</span><span style="color:#EA76CB">}</span><span style="color:#EA76CB"> {</span><span style="color:#40A02B">' '</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">join</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">t</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">get</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">'description'</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> ''</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">split</span><span style="color:#7C7F93">())[:</span><span style="color:#FE640B">60</span><span style="color:#7C7F93">]</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">"</span><span style="color:#8839EF"> for</span><span style="color:#179299"> *</span><span style="color:#4C4F69">_</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> t </span><span style="color:#8839EF">in</span><span style="color:#E64553;font-style:italic"> scored</span><span style="color:#7C7F93">[:</span><span style="color:#E64553;font-style:italic">DUP_MAX</span><span style="color:#7C7F93">]]</span></span>
+<span class="line"></span></code></pre>
+<p>このコードにより、頻出語しか共有していないタスクであっても足切りで捨て去られることはなく、他に希少トークンを共有する候補が存在しない場合には下位の枠に残って提示されます。</p>
+<p>アルゴリズムの細部や数理的な知識は既存ライブラリや AI アシスタントに委ねても問題ありません。人間がすべての数式や仕様を完璧に記憶していなくても、現場で起きた現象（過検出の多発や本命の脱落）に対して「二値判定をやめて順位づけにする」というアーキテクチャ上の設計判断を下せれば、実務の仕組みは十分に前進させられます。</p>
+<h2 id="4-uiの割り切り実行を止めず気づかせに留める">4. UIの割り切り──実行を止めず「気づかせ」に留める</h2>
+<p>ランキング方式への転換によって本命の脱落は防げるようになりましたが、UI および運用の観点でもう一つの重要な設計判断が必要になりました。それは <strong>「重複警告が出ても処理を中断させず、推奨を維持する」</strong> という割り切りです。</p>
+<h3 id="ワークフローを壊さない推奨維持">ワークフローを壊さない推奨維持</h3>
+<p>初期の検討では、<code>dup=</code> が出たタスクは着手推奨から外す（二重作業を防止するため選択肢のデフォルトから外す）ことも考えられました。しかし、改修後の実装では <code>dup=</code> 行が出力されても、選択肢 1（タスク着手）の推奨（既定選択）は維持し、ラベルに「（重複の可能性あり）」という注記を添えるだけに留めました。</p>
+<p>誤検知をゼロにすることは原理的に困難です。重複の疑いが少しでもあるからといってツールの自動推奨を止めてしまうと、「最も浮いたタスクをテンポよく実行に移す」というタスク管理本来のワークフローが停止してしまいます。未コミットの変更があるといった「作業を確実に止めるべき理由」と、重複の疑いのような「人間に気づかせるべき理由」は明確に分離し、後者は推奨を維持したまま注記に留めるのが実務的な落としどころです。</p>
+<p>この「強制ブロックではなくサジェストに留める」設計思想は、一般的なプロジェクト管理ツールでも共通しています。たとえば Jira の重複課題防止プラグイン（Find Duplicates）<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup> や、Redmine における問い合わせチケット推薦システム「あいちゃん」<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup> においても、課題やチケットの起票を強制的に中断させるのではなく、類似する過去チケットを画面上に提示して担当者の自発的な判断を促す運用が採られています。</p>
+<h3 id="表示枠漏れの許容というリアリズム">表示枠漏れの許容というリアリズム</h3>
+<p>順位づけの実装後、実環境で改めて検証を行ったところ、興味深い事象が発生しました。</p>
+<p>開発の動機となった本命の実例が、実環境ではより希少なトークンを共有する別の 3 件に枠を取られ、上位 3 行（<code>DUP_MAX = 3</code>）の表示枠から漏れてしまったのです。</p>
+<p>「画面から漏れてしまったのなら、足切りで消えたのと実質的に同じではないか？」と思われるかもしれません。しかし、両者にはアーキテクチャ上の決定的な違いがあります。足切りはアルゴリズム自身が候補の存在を不可逆的に完全抹消（False Negative）するのに対し、順位づけは「提示優先度の問題」であり、本命タスクもスコアを持って候補群の中に依然として存在し続けています。</p>
+<p>このとき本命ペアを押し出した上位 3 件は、特定のシェルスクリプト名や個別ファイル名など、出現頻度がごくわずか（<code>df</code> が 1〜2 件）の希少トークンを共有するタスク群でした。日常的な業務の中で頻繁に登場する中頻度語（<code>weekly-retro</code>）よりも、滅多に使われない希少な固有トークンを共有する候補を優先して上位に並べるのは、情報検索の数理スコアリングとして極めて正常で忠実な挙動です。</p>
+<p>本命を無理に画面内に収めようとして表示枠を 5 件、10 件と広げてしまえば、タスクを選択するたびに画面が候補行で溢れかえり、認知負荷が増大してしまいます。だからこそ、筆者は <strong>「表示枠の漏れを許容し、表示件数を 3 件から増やさない」</strong> という判断を下しました。</p>
+<p>機械に完璧な判定を求めず、限られた表示領域（Top-3）に最も確率の高い候補を提示し、最終的な見極めを人間に委ねます。順位づけに変えても警告自体の発生率がゼロになるわけではないからこそ、UI 側の割り切りが不可欠となります。</p>
+<h2 id="5-前提が変われば結論はどう変わるか">5. 前提が変われば結論はどう変わるか</h2>
+<p>今回採用した平滑化 IDF による順位づけは、ローカル環境で数十〜数百件のタスクを高速にスクリーニングするための軽量なアプローチです。前提条件が変化すれば、最適なアーキテクチャの結論も変わり得ます。</p>
+<h3 id="完了タスクが数千数万件に肥大化した場合">完了タスクが数千〜数万件に肥大化した場合</h3>
+<p>完了タスクが数千〜数万件の規模に拡大した場合、毎回のタスク浮上時に全件ループを回して Python 上で IDF を計算するオーバーヘッドは無視できなくなります。その段階では、インメモリでの逐次計算を卒業し、SQLite の FTS5（Full-Text Search）拡張や BM25 をサポートするローカル検索エンジンを活用した、転置インデックスベースのアーキテクチャへの移行が必要になるでしょう。</p>
+<h3 id="意味的な言い換えセマンティック検索への対応">意味的な言い換え（セマンティック検索）への対応</h3>
+<p>単語の表層一致に基づく IDF 順位づけでは、シノニム（同義語）や表記揺れ（例: 「修正」と「バグフィックス」、「週報」と「weekly-report」）による重複を見逃す限界があります。意味的な類似性を捉えるには、テキスト埋め込み（Embedding）や LLM によるセマンティック検索が有効な選択肢となります。</p>
+<p>ただし、ローカル CLI や即時応答性が求められるディスパッチツールにおいて、外部 API の呼び出しに伴う数百ミリ秒のレイテンシや従量課金コストは小さくありません。実務においては、まず計算コストがほぼゼロの平滑化 IDF で強固なベースラインを構築し、必要に応じてローカルで動作する小型の埋め込みモデルをハイブリッドに組み合わせるのが現実的な発展経路と言えます。</p>
+<h3 id="自律的な振り返りループが仕組みを育てる">自律的な振り返りループが仕組みを育てる</h3>
+<p>今回の過検出の発生から足切りの失敗、そして順位づけへの改修に至る一連のプロセスにおいて、開発者自身が過去のアルゴリズムの細部や数式を最初からすべて記憶していたわけではありませんでした。</p>
+<p>日々の運用の中で異常（32件中31件のヒット）に気づき、一次計測ログを取り、試作の副作用（本命脱落）を検知し、設計方針を転換する。このように、日々の振り返りや運用の仕組みを通じて問題点が自律的に拾い上げられ、適切な設計判断のもとで改善が適用されていくプロセスこそが、実務のシステムが健全に回っている証拠と言えるでしょう。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-なぜコサイン類似度ではなくidfの和だけで順位づけできるのですか">Q: なぜコサイン類似度ではなく「IDFの和」だけで順位づけできるのですか？</h3>
+<p>A: 短文のタスクタイトルでは各単語の出現頻度（TF）がほぼ 1 であり、文長も極端に長くないためです。ベクトルの長さを正規化するコサイン類似度を計算しなくても、共有トークンの IDF 値を足し合わせるだけで、筆者の実務環境では頻出ノイズを下位に沈め、希少な重要単語を共有する候補を優先する実用的な並び順が得られました。</p>
+<h3 id="q-閾値による足切りを完全に撤廃すると誤検知がまた画面に溢れませんか">Q: 閾値による足切りを完全に撤廃すると、誤検知がまた画面に溢れませんか？</h3>
+<p>A: 順位づけによって警告行の発生そのものが消えるわけではありません（実測でも 33 件中 31 件に出力されました）。しかし、上位 3 件にはより希少なトークンを共有する候補が並び、頻出語しか共有していない候補は下位へ回ります。画面が過剰な警告で破綻しないよう、表示件数を上位 3 件に制限しつつ、選択肢の推奨を止めない UI の割り切り（注記に留める運用）とセットで設計することが重要です。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>短文データの重複スクリーニングにおいて、本記事の実践から得られた教訓は以下の通りです。</p>
+<ul>
+<li><strong>単純な単語一致は過検出を引き起こす</strong>: 文脈の乏しい短文タスクでは、日常的に使われる共通語によって 8 割以上の過検出が容易に発生する。</li>
+<li><strong>足切り閾値は再現率を破壊する</strong>: 誤検知を減らすために頻出語除外や複数単語要求を設けると、本命の重要タスクまで脱落するジレンマに陥る。</li>
+<li><strong>二値判定を諦めて順位づけに転換する</strong>: 重複を白黒判定するのではなく、共有トークンの平滑化 IDF 和でソートして Top-K 件を提示することで、本命を消さずに希少語を優先できる。</li>
+<li><strong>UI は推奨を維持して注記に留める</strong>: 誤検知がゼロにならない以上、重複警告でタスクの推奨を止めず、気づかせに留める割り切りがワークフローの維持に不可欠である。</li>
+</ul>
+<p>開発プロセスの標準化、AI Operations の導入設計、アーキテクチャや意思決定プロセスの見直しについて、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://arxiv.org/abs/2212.09976">Towards Understanding the Impacts of Textual Dissimilarity on Duplicate Bug Report Detection</a> Sigma Jahan, Mohammad Masudur Rahman, arXiv:2212.09976 [cs.SE], 2022年12月20日公開。アブストラクト。ソフトウェアのバグ報告の約40%が重複であり保守の大きなオーバーヘッドとなっていること、およびテキストが非類似な重複ペアでは従来の表層類似度手法の性能が著しく低下すること（見逃し課題）の根拠。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://en.wikipedia.org/wiki/Tf%E2%80%93idf">Tf–idf</a> Wikipedia「Tf–idf」。逆文書頻度（IDF）の数理的定義、および平滑化（Smooth IDF）の標準的バリエーション。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfTransformer.html">TfidfTransformer — scikit-learn documentation</a> scikit-learn documentation。<code>smooth_idf=True</code> によるゼロ除算防止および定数加算による重みゼロ化防止の設計思想の根拠。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://www.ricksoft.jp/blog/articles/001337.html">Find DuplicatesでJiraの重複課題を簡単に防ごう！</a> リックソフト株式会社 澤田, 2021年12月17日公開。Jira における重複課題防止アプリの解説。起票を強制ブロックせず、画面上にサジェスト表示して自発的防止を促す UI 設計の根拠。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://future-architect.github.io/articles/20181031/">その問い合わせ、AIが解決します！～Redmineチケットレコメンドシステムのご紹介～</a> フューチャー株式会社 竹林康太, 2018年10月31日公開。Redmine におけるチケットレコメンドシステム。起票の禁止ではなく類似チケットを自動検索・紐付けして回答支援を行う運用の根拠。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

@@ -1,0 +1,278 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>テストもレビューも通ったシミュレーションを50年回したら、男児が9人から1人に減った ── 1期の不変条件のテストは期をまたぐ振る舞いに届かない | Meetsource</title><meta name="description" content="1期の不変条件（保存則）を満たすテストだけでは、微小な端数切り捨てや処理順序の偏りが期をまたいで累積するドリフトを検出できません。自作ゲームのシミュレーションにおいて、単体テストとCIを通過したコードが50年間の実行で人口凍結や男女比崩壊を起こした実例から、SafetyとLivenessの違い、および時間を早送りして長期推移を検収する決定論的シミュレーションテスト（DST）の設計を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/simulation-step-invariant-drift"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="テストもレビューも通ったシミュレーションを50年回したら、男児が9人から1人に減った ── 1期の不変条件のテストは期をまたぐ振る舞いに届かない | Meetsource"><meta property="og:description" content="1期の不変条件（保存則）を満たすテストだけでは、微小な端数切り捨てや処理順序の偏りが期をまたいで累積するドリフトを検出できません。自作ゲームのシミュレーションにおいて、単体テストとCIを通過したコードが50年間の実行で人口凍結や男女比崩壊を起こした実例から、SafetyとLivenessの違い、および時間を早送りして長期推移を検収する決定論的シミュレーションテスト（DST）の設計を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/simulation-step-invariant-drift"><meta property="og:image" content="https://www.meetsource.work/blog/simulation-step-invariant-drift-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-31T03:25:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="テストもレビューも通ったシミュレーションを50年回したら、男児が9人から1人に減った ── 1期の不変条件のテストは期をまたぐ振る舞いに届かない | Meetsource"><meta name="twitter:description" content="1期の不変条件（保存則）を満たすテストだけでは、微小な端数切り捨てや処理順序の偏りが期をまたいで累積するドリフトを検出できません。自作ゲームのシミュレーションにおいて、単体テストとCIを通過したコードが50年間の実行で人口凍結や男女比崩壊を起こした実例から、SafetyとLivenessの違い、および時間を早送りして長期推移を検収する決定論的シミュレーションテスト（DST）の設計を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/simulation-step-invariant-drift-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"テストもレビューも通ったシミュレーションを50年回したら、男児が9人から1人に減った ── 1期の不変条件のテストは期をまたぐ振る舞いに届かない","description":"1期の不変条件（保存則）を満たすテストだけでは、微小な端数切り捨てや処理順序の偏りが期をまたいで累積するドリフトを検出できません。自作ゲームのシミュレーションにおいて、単体テストとCIを通過したコードが50年間の実行で人口凍結や男女比崩壊を起こした実例から、SafetyとLivenessの違い、および時間を早送りして長期推移を検収する決定論的シミュレーションテスト（DST）の設計を解説します。","datePublished":"2026-10-31T03:25:00.000Z","image":"https://www.meetsource.work/blog/simulation-step-invariant-drift-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/simulation-step-invariant-drift"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"1期の不変条件テスト（ユニットテストや保存則テスト）だけでシミュレーションの正しさを保証できないのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"1期の不変条件テストは「その 1 ステップの中で悪いことが起きないこと（Safety）」しか検証できず、微小な端数切り捨てや処理順序の偏りが期をまたいで累積するドリフト（累積誤差）を原理的に検出できないためです。例えば、毎期の人口保存則や資金保存則が 100% 満たされていても、端数切り捨てで変化量が毎期ゼロになれば人口は静止し、男女比の計算が毎回一方に丸められれば長期で極端な偏向が生じます。"}},{"@type":"Question","name":"長期シミュレーションテストにおいて「期待値（テストオラクル）」はどのように設計すべきですか？","acceptedAnswer":{"@type":"Answer","text":"厳密な 1 点の一致ではなく、「許容レンジ（分布幅）」「非静止アサーション」「施策間の乖離（メタモルフィック関係）」という 3 つの判定基準で設計します。長期実行では状態の相互作用によって 1 人単位の厳密解を固定することが困難なため、男女比などの比率が健全な帯域（例: 400‰〜600‰）に収まっていること、状態が初期値から凍結せず推移していること、施策の有無で将来の推移が有意に分岐することをアサーションします。"}},{"@type":"Question","name":"AIエージェントと協業してシミュレーションやバッチ処理を開発する際、設けるべき品質ゲートは何ですか？","acceptedAnswer":{"@type":"Answer","text":"1 ステップのコードレビューや単体テストの合否だけに頼るのではなく、時間を早送りして長期間の推移を観測する「決定論的シミュレーションテスト（DST）」を必須のゲートとして課すことです。1 期の不変条件を満たすテストだけでは、期をまたぐ微小な偏向や施策の結合漏れは捕まりません。「50年〜100年分を瞬時に回して推移と分布を確かめる自動テスト」をゲートに組み込むことが最も確実な防壁となります。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-31T03:25:00.000Z" data-astro-cid-7jjqptxk> 2026.10.31 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#testing</span><span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span><span class="tag" data-astro-cid-7jjqptxk>#simulation</span><span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>テストもレビューも通ったシミュレーションを50年回したら、男児が9人から1人に減った ── 1期の不変条件のテストは期をまたぐ振る舞いに届かない</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/simulation-step-invariant-drift-hero.webp" alt="テストもレビューも通ったシミュレーションを50年回したら、男児が9人から1人に減った ── 1期の不変条件のテストは期をまたぐ振る舞いに届かない" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>シミュレーション、ゲーム経済、複数期にわたるバッチ処理、あるいは会計の月次・年次締め処理など、状態が期（ステップ）をまたいで累積していくシステムを開発していると、奇妙な現象に突き当たることがあります。単体テストは 100% 通過し、三面等価の保存則テストもすべて緑（パス）で、AI エージェント（Claude Code や自律ワーカー）と協業して整備したプルリクエストの CI やコードレビューを完全にクリアしたはずのコードが、実際に運用環境で時間を進めた途端、ある日突然「状態が完全に静止する」「特定のリソースが一方通行に偏って枯渇する」といったサイレントな破綻を起こす現象です。</p>
+<p>シミュレーションにおける <strong>1期の不変条件テスト</strong> とは、1ステップ（1期）内の人口保存則や資金保存則など「悪いことが起きないこと（Safety）」を検証する局所テストであり、期をまたいで累積する微小な端数切り捨てや処理順序の偏り（状態のドリフト）を検証する <strong>長期推移テスト</strong>（Liveness / DST）と対比されます。</p>
+<p>私たちが AI エージェントと協業して個人で開発中の自作ゲーム（非公開。以下、プロジェクトA）のシミュレーションエンジンでも、まったく同じ壁に直面しました。エージェントが作成した関数の実装、単体テスト、PR の自動コードレビューをすべて通過していたにもかかわらず、1年 = 25期として設計された人口・経済シミュレーションにおいて、初期人口 100 人（子供 18 人、成人 36 人、老人 36 人、冒険者 10 人。子供の内訳は男児 9 人、女児 9 人）の都市を動かしたところ、50 年間（1,250期）にわたり人口が初期値の 100 人から 1 人も動かない「人口凍結」が発生しました。さらに、別の修正後に施策を実行しながら 20 年間（500期）進行させたところ、男児が 9 人から 1 人へ激減し、女児が 9 人から 23 人へと激増する「男女比の崩壊」に見舞われたのです。</p>
+<p>これらのコードは、1 期ごとの出生数や死亡数、人口保存則を検証する単体テストをすべてクリアしていました。なぜ 1 期の不変条件テストをすり抜けて長期の破綻が起きたのか。本記事では、自作ゲームで露呈した 4 つの失敗パターンをコードと実測ログから解剖し、Safety と Liveness の理論的背景、および時間を早送りして推移を検証する「決定論的シミュレーションテスト（DST）」の実践的な設計論を共有します。</p>
+<h2 id="なぜ1期のテストをすり抜けたのか4つの失敗パターンの解剖">なぜ1期のテストをすり抜けたのか：4つの失敗パターンの解剖</h2>
+<p>すべての単体テストと保存則テストがパスしていたにもかかわらず、長期実行で露呈した不具合は次の 4 つでした。いずれも「1期の中では完全に正しい計算」が行われていたことが、発見を遅らせた共通の原因でした。</p>
+<h3 id="パターン1-率人数の端数切り捨てによる人口凍結">パターン1: 率×人数の端数切り捨てによる人口凍結</h3>
+<p>最初の不具合は、初期人口 100 人の都市において、50 年間（1,250期）まったく人口が変動しなかった現象です。</p>
+<p>シミュレーションエンジンでは、毎期の出生率や死亡率を千分率（‰）として定義し、整数演算（除算による切り捨て）で当期の人数を算定していました。しかし、初期人口 100 人という小規模な都市では、各年齢層の人数が小さいため、率を掛けた結果が毎期 1 未満になっていました。</p>
+<ul>
+<li>成人女性からの出生: 11 人 × 5‰ = 0.055 人 → 0 人に切り捨て</li>
+<li>老人の自然死亡: 18 人 × 8‰ = 0.14 人 → 0 人に切り捨て</li>
+<li>年齢層の加齢推移: 18 人 ÷ 375 期（子供期間15年＝375期） = 0.048 人 → 0 人に切り捨て</li>
+<li>冒険者のダンジョン死亡: 10 人 × 10‰ = 0.1 人 → 0 人に切り捨て</li>
+</ul>
+<p>この結果、毎期の変動量が全項目で 0 人となり、都市の人口動態が完全に停止しました。数学的には、固定的な切り捨て演算が引き起こす停滞（stagnation）現象として解析されている挙動です<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>以下のコードは、人口凍結を引き起こしていた当時の出生計算ロジックの抜粋です。</p>
+<p>引用元: プロジェクトAの population.rs</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#9CA0B0;font-style:italic">        // Births from general adult females only</span></span>
+<span class="line"><span style="color:#8839EF">        let</span><span style="color:#4C4F69"> births </span><span style="color:#179299">=</span><span style="color:#7C7F93"> (</span><span style="color:#8839EF">u64</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#D20F39">self</span><span style="color:#179299">.</span><span style="color:#1E66F5">general</span><span style="color:#179299">.</span><span style="color:#1E66F5">adult_female</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#179299">            *</span><span style="color:#8839EF"> u64</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">effective_birth_rate_permille</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#179299">            /</span><span style="color:#FE640B"> 1000</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> as</span><span style="color:#8839EF"> u32</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">        let</span><span style="color:#4C4F69"> male_births </span><span style="color:#179299">=</span></span>
+<span class="line"><span style="color:#7C7F93">            (</span><span style="color:#8839EF">u64</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">births</span><span style="color:#7C7F93">)</span><span style="color:#179299"> *</span><span style="color:#8839EF"> u64</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">BIRTH_SEX_RATIO_MALE_PERMILLE</span><span style="color:#7C7F93">)</span><span style="color:#179299"> /</span><span style="color:#FE640B"> 1000</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> as</span><span style="color:#8839EF"> u32</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">        let</span><span style="color:#4C4F69"> female_births </span><span style="color:#179299">=</span><span style="color:#4C4F69"> births</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">saturating_sub</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">male_births</span><span style="color:#7C7F93">);</span></span>
+<span class="line"></span></code></pre>
+<p>このコードを実行し、50年分（1,250期）進めたときの実測ログが以下です。施策なし（何もしない）だけでなく、住宅やインフラを拡張して収容可能人口（cap）を 1,120 人まで増やした施策環境であっても、人口が 100 人（子18 成36 老36 冒10）のまま 1 人も動いていないことが記録されています。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>--- 何もしない</span></span>
+<span class="line"><span>y1 pop=100 (子18 成36 老36 冒10) cap=100 [住100 水100 食100 衛100] wall=50 used=48 国庫=113975</span></span>
+<span class="line"><span>...</span></span>
+<span class="line"><span>y50 pop=100 (子18 成36 老36 冒10) cap=100 [住100 水100 食100 衛100] wall=50 used=48 国庫=798750</span></span>
+<span class="line"><span>--- 人口を増やす</span></span>
+<span class="line"><span>y1 pop=100 (子18 成36 老36 冒10) cap=160 [住170 水160 食160 衛160] wall=80 used=74 国庫=72552</span></span>
+<span class="line"><span>y50 pop=100 (子18 成36 老36 冒10) cap=1120 [住1130 水1130 食1130 衛1120] wall=470 used=463 国庫=34468</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>1 期の人口保存則テストの視点から見ると、「前期の人口 100人 + 出生 0人 - 死亡 0人 = 今期の人口 100人」という等式は何の破綻もなく成立します。そのため、ユニットテストも CI もこの静止をまったく検知できませんでした。</p>
+<h3 id="パターン2-男女振り分けの端数切り捨てによる男女比崩壊">パターン2: 男女振り分けの端数切り捨てによる男女比崩壊</h3>
+<p>人口凍結に対処するため、端数を持ち越すバッファを導入したところ、今度は別の端数切り捨てによって男女比が極端に崩壊する不具合が発生しました。</p>
+<p>端数バッファの導入により、出生数そのものは 0〜1 人ずつ平滑化されて生まれるようになりました。しかし、生まれた赤子を男児と女児に振り分ける処理において、男児比率（<code>BIRTH_SEX_RATIO_MALE_PERMILLE = 500</code>）を乗じた後に 1,000 で除算する切り捨てが行われていました。</p>
+<p>引用元: プロジェクトAの population.rs</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#8839EF">        let</span><span style="color:#4C4F69"> births </span><span style="color:#179299">=</span><span style="color:#1E66F5;font-style:italic"> settle</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#179299">            &#x26;</span><span style="color:#8839EF">mut</span><span style="color:#D20F39"> self</span><span style="color:#179299">.</span><span style="color:#1E66F5">remainders</span><span style="color:#179299">.</span><span style="color:#1E66F5">births</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">            birth_num</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#FE640B">            1_000_000_000_000</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#DF8E1D">            u32</span><span style="color:#179299">::</span><span style="color:#FE640B">MAX</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#7C7F93">        );</span></span>
+<span class="line"><span style="color:#8839EF">        let</span><span style="color:#4C4F69"> male_births </span><span style="color:#179299">=</span></span>
+<span class="line"><span style="color:#7C7F93">            (</span><span style="color:#8839EF">u64</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">births</span><span style="color:#7C7F93">)</span><span style="color:#179299"> *</span><span style="color:#8839EF"> u64</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#FE640B">BIRTH_SEX_RATIO_MALE_PERMILLE</span><span style="color:#7C7F93">)</span><span style="color:#179299"> /</span><span style="color:#FE640B"> 1000</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> as</span><span style="color:#8839EF"> u32</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">        let</span><span style="color:#4C4F69"> female_births </span><span style="color:#179299">=</span><span style="color:#4C4F69"> births</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">saturating_sub</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">male_births</span><span style="color:#7C7F93">);</span></span>
+<span class="line"></span></code></pre>
+<p>1 期に生まれる赤子が 1 人のとき、<code>1 × 500 ÷ 1000 = 0</code> となり、男児の出生数は常に 0 人と計算されます。そして残りの全員（1 人）が女児として割り当てられました。この結果、20 年間（500期）シミュレーションを進めた実測ログでは、初期に男児 9 人・女児 9 人だった子供の内訳が次のように歪みました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>男児: 9人 → 1人</span></span>
+<span class="line"><span>女児: 9人 → 23人（20年目）</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>ここでも、1 期の中では「男児 0人 + 女児 1人 = 出生数 1人」という保存則が 100% 成立しています。定数も 500‰ と公平に設定されており、単体テストは何の警告も出しませんでした。1 人ずつの離散化における丸め方向の偏りが、時間軸で一方通行に累積して初めて顕在化したバグでした。</p>
+<h3 id="パターン3-引退死亡の処理順序固定による成人女性の一方通行吸収">パターン3: 引退・死亡の処理順序固定による成人女性の一方通行吸収</h3>
+<p>3 つ目は、処理順序の固定化によって特定属性の人口が別枠へ一方通行に吸い取られ続けた問題です。</p>
+<p>初期設計において、世界観の要件から成人男性比率が約 694‰ と高めに設定されていました。その環境下で、冒険者の引退処理およびダンジョンでの死亡処理を実装した際、「リストの先頭（男性）から優先して引退・死亡枠を埋める」という順序固定の実装が行われていました。さらに、一般成人から冒険者へ就業（クラスチェンジ）する処理でも、男性から優先的に採用されていました。</p>
+<p>この結果、女性の冒険者がほとんど引退・死亡しなくなり、一般の成人女性枠から冒険者枠へと女性が吸い上げられ続けました。500 期の実走において、修正前は成人が男 234 人に対して女 110 人、冒険者が男 89 人に対して女 50 人という極端な不均衡に固定されました。</p>
+<p>1 期の処理としては、「今期引退すべき指定人数が正しく引退したか」「死亡枠の人数が保存されているか」という条件をすべて満たしていました。しかし、選択アルゴリズムの静的な順序バイアスが、長期実行において特定グループの不可逆な流出を引き起こしていました。</p>
+<h3 id="パターン4-施策移住の実装漏れによる推移の完全一致">パターン4: 施策（移住）の実装漏れによる推移の完全一致</h3>
+<p>4 つ目の失敗は、仕様として定義されていたロジックがシミュレーションループから呼ばれていなかったという、結合レベルの欠落です。</p>
+<p>都市の収容人口を広げる施策を打った際、外部からの「移住」によって人口が流入する仕様が設計されていました。しかし、シミュレーションループの実装から移住の呼び出しが抜け落ちていました。</p>
+<p>その結果、施策を一切打たずに放置した都市（収容人口 100 人）と、国庫を投じてインフラを拡張した都市（収容人口 900 人）を 50 年間回したところ、人口推移が 1 年目（93人）から 50 年目（48人）まで、<strong>1 人の狂いもなく完全一致</strong>（1 年目 93人 → 5 年目 70人 → 50 年目 48人）しました。</p>
+<p>インフラ施設の建設処理、費用の引き落とし、収容能力の計算ロジック自体は単体テストで完璧に動作していました。しかし、算定された収容能力が人口動態へとフィードバックされる唯一の結合経路が欠落していたため、50 年間の推移を比較して初めて「施策が一切人口に影響を与えていない」という事実が判明したのです。</p>
+<h2 id="なぜ長期推移テストdstを導入したのか実務での選択理由">なぜ長期推移テスト（DST）を導入したのか：実務での選択理由</h2>
+<p>これら 4 つの破綻を経験したことで、私たちはテスト設計の前提を根本から見直すことになりました。</p>
+<h3 id="safety安全性と-liveness活性の二分法">Safety（安全性）と Liveness（活性）の二分法</h3>
+<p>分散システムや並行プログラミングの形式手法において、システムの性質は伝統的に <strong>Safety（安全性）</strong> と <strong>Liveness（活性）</strong> の 2 つに分類されます<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<ul>
+<li><strong>Safety（悪いことが起きないこと）</strong>: 有限の時間内で不整合や不正な状態が発生しない性質。人口や資金の保存則が守られていること、不正なパラメータによる更新が拒絶されること。何もしないシステム（完全に静止したシステム）も、自明に Safety を満たします。</li>
+<li><strong>Liveness（望ましいことが起き続けること・前進すること）</strong>: 時間が経過するにつれて、望ましい状態へと前進・循環する性質。人口が停滞せず世代交代すること、施策に応じて状態が有意に変化すること、特定の属性が絶滅しないこと。</li>
+</ul>
+<p>シミュレーション工学における分類でも、Robert G. Sargent はプログラムが仕様通りに実装されているかを問う「Model verification（検証）」と、動的モデルの振る舞いが意図した目的に対して妥当かを問う「Model validation（妥当性確認 / Operational validity）」を明確に区別しています<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>1 期の不変条件テストは、本質的に <strong>Safety の検証（Model verification）</strong> です。しかし、私たちが直面した人口凍結や男女比崩壊は、Safety が 100% 守られているにもかかわらず、システムの前進や循環が停止・偏向する <strong>Liveness の喪失（Model validation の失敗）</strong> でした。</p>
+<p>この課題に対し、分散トランザクション DB の TigerBeetle では、決定論的シミュレーションテスト（DST）において Deep Safety 不変条件と Deep Liveness 不変条件を峻別し、長期間のシミュレーションループの中でクラスタが活性を保ち前進しているかを監視する設計を採用しています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。また FoundationDB では、離散イベントシミュレーションによって仮想時間を早送りする Time Dilation を用い、数年分に相当する耐障害性シナリオを短時間で決定論的に再現・検証しています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>私たちに必要なのも、1 期の Safety テストをいくら厚くすることでもなく、<strong>時間を早送りして Liveness と状態推移を検収するテストゲート</strong> でした。</p>
+<h3 id="乱数に頼らず決定論性を保つ累積剰余バッファ">乱数に頼らず決定論性を保つ累積剰余バッファ</h3>
+<p>端数切り捨てによる人口凍結や偏向を解決する際、一般的なアプローチとしては確率的丸め（stochastic rounding）や乱数による振り分けが考えられます。しかし、テストの再現性を最重要視するシミュレーションにおいて、安易に乱数を導入するとテストオラクルの固定が極めて難しくなります。</p>
+<p>そこで私たちは、乱数を使わずに決定論性を 100% 維持したまま端数を回収する <strong>累積剰余バッファ（carry-over remainder buffer）</strong> を導入しました。毎期の計算で生じた端数（割り算の余り）を状態として保持し、次期以降に加算して繰り上げるアルゴリズムです。</p>
+<p>以下は、シミュレーションエンジンで端数を決定論的に処理するために実装された <code>settle</code> 関数の抜粋です。</p>
+<p>引用元: プロジェクトAの population.rs</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#8839EF">pub</span><span style="color:#7C7F93">(</span><span style="color:#8839EF">crate</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> fn</span><span style="color:#1E66F5;font-style:italic"> settle</span><span style="color:#7C7F93">(</span><span style="color:#E64553">remainder</span><span style="color:#179299">:</span><span style="color:#179299"> &#x26;</span><span style="color:#8839EF">mut</span><span style="color:#8839EF"> u64</span><span style="color:#7C7F93">,</span><span style="color:#E64553"> numerator</span><span style="color:#179299">:</span><span style="color:#8839EF"> u64</span><span style="color:#7C7F93">,</span><span style="color:#E64553"> den</span><span style="color:#179299">:</span><span style="color:#8839EF"> u64</span><span style="color:#7C7F93">,</span><span style="color:#E64553"> cap</span><span style="color:#179299">:</span><span style="color:#8839EF"> u32</span><span style="color:#7C7F93">)</span><span style="color:#179299"> -></span><span style="color:#8839EF"> u32</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#8839EF">    let</span><span style="color:#4C4F69"> total </span><span style="color:#179299">=</span><span style="color:#179299"> *</span><span style="color:#4C4F69">remainder </span><span style="color:#179299">+</span><span style="color:#4C4F69"> numerator</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">    let</span><span style="color:#4C4F69"> whole </span><span style="color:#179299">=</span><span style="color:#8839EF"> u32</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">try_from</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">total</span><span style="color:#179299"> /</span><span style="color:#4C4F69"> den</span><span style="color:#7C7F93">)</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">unwrap_or</span><span style="color:#7C7F93">(</span><span style="color:#DF8E1D">u32</span><span style="color:#179299">::</span><span style="color:#FE640B">MAX</span><span style="color:#7C7F93">)</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">min</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">cap</span><span style="color:#7C7F93">);</span></span>
+<span class="line"><span style="color:#179299">    *</span><span style="color:#4C4F69">remainder </span><span style="color:#179299">=</span><span style="color:#4C4F69"> total </span><span style="color:#179299">-</span><span style="color:#8839EF"> u64</span><span style="color:#179299">::</span><span style="color:#1E66F5;font-style:italic">from</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">whole</span><span style="color:#7C7F93">)</span><span style="color:#179299"> *</span><span style="color:#4C4F69"> den</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    // Do not bank more than one term's worth of fraction when capped by availability.</span></span>
+<span class="line"><span style="color:#179299">    *</span><span style="color:#4C4F69">remainder </span><span style="color:#179299">=</span><span style="color:#7C7F93"> (</span><span style="color:#179299">*</span><span style="color:#4C4F69">remainder</span><span style="color:#7C7F93">)</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">min</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">den</span><span style="color:#179299"> -</span><span style="color:#FE640B"> 1</span><span style="color:#7C7F93">);</span></span>
+<span class="line"><span style="color:#4C4F69">    whole</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span></code></pre>
+<p>分子に前回の余りを足し合わせ、分母で割った商を当期の確定人数として返し、余りをバッファに残します。これにより、微小な変化量であっても期をまたいで確実に積算され、浮動小数点数を使わずに整数演算だけで長期の期待値を厳密に維持できるようになりました。</p>
+<h3 id="50年高速実行で推移と分布を検証する長期テスト">50年高速実行で推移と分布を検証する長期テスト</h3>
+<p>累積剰余バッファを導入した上で、4 つの破綻の再発を構造的に防止するため、初期状態から 50 年間（1,250期）を高速に回す長期シミュレーションテストスイートを配備しました。</p>
+<p>引用元: プロジェクトAの long_run_test.rs</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#DF8E1D;font-style:italic">#</span><span style="color:#7C7F93">[</span><span style="color:#DF8E1D;font-style:italic">test</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#8839EF">fn</span><span style="color:#1E66F5;font-style:italic"> test_population_moves_over_50_years</span><span style="color:#7C7F93">()</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#8839EF">    let</span><span style="color:#4C4F69"> run </span><span style="color:#179299">=</span><span style="color:#1E66F5;font-style:italic"> play</span><span style="color:#7C7F93">(</span><span style="color:#DF8E1D">Strategy</span><span style="color:#179299">::</span><span style="color:#DF8E1D;font-style:italic">None</span><span style="color:#7C7F93">);</span></span>
+<span class="line"><span style="color:#8839EF">    let</span><span style="color:#4C4F69"> initial </span><span style="color:#179299">=</span><span style="color:#4C4F69"> run</span><span style="color:#179299">.</span><span style="color:#4C4F69">totals</span><span style="color:#7C7F93">[</span><span style="color:#FE640B">0</span><span style="color:#7C7F93">];</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">    assert!</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#4C4F69">        run</span><span style="color:#179299">.</span><span style="color:#4C4F69">totals</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">iter</span><span style="color:#7C7F93">()</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">any</span><span style="color:#7C7F93">(</span><span style="color:#179299">|&#x26;</span><span style="color:#4C4F69">t</span><span style="color:#179299">|</span><span style="color:#4C4F69"> t</span><span style="color:#179299"> !=</span><span style="color:#4C4F69"> initial</span><span style="color:#7C7F93">),</span></span>
+<span class="line"><span style="color:#40A02B">        "population never moved from </span><span style="color:#7C7F93">{</span><span style="color:#40A02B">initial</span><span style="color:#7C7F93">}</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#7C7F93">    );</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">    assert_ne!</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">run</span><span style="color:#179299">.</span><span style="color:#4C4F69">totals</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">last</span><span style="color:#7C7F93">(),</span><span style="color:#DF8E1D;font-style:italic"> Some</span><span style="color:#7C7F93">(</span><span style="color:#179299">&#x26;</span><span style="color:#4C4F69">initial</span><span style="color:#7C7F93">));</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#DF8E1D;font-style:italic">#</span><span style="color:#7C7F93">[</span><span style="color:#DF8E1D;font-style:italic">test</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#8839EF">fn</span><span style="color:#1E66F5;font-style:italic"> test_child_sex_ratio_stays_in_range</span><span style="color:#7C7F93">()</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> strategy </span><span style="color:#8839EF">in</span><span style="color:#DF8E1D;font-style:italic"> Strategy</span><span style="color:#179299">::</span><span style="color:#FE640B">ALL</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#8839EF">        let</span><span style="color:#4C4F69"> run </span><span style="color:#179299">=</span><span style="color:#1E66F5;font-style:italic"> play</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">strategy</span><span style="color:#7C7F93">);</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">        assert!</span><span style="color:#7C7F93">(</span><span style="color:#179299">!</span><span style="color:#4C4F69">run</span><span style="color:#179299">.</span><span style="color:#4C4F69">child_shares</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">is_empty</span><span style="color:#7C7F93">(),</span><span style="color:#40A02B"> "</span><span style="color:#7C7F93">{}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> strategy</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">name</span><span style="color:#7C7F93">());</span></span>
+<span class="line"><span style="color:#8839EF">        for</span><span style="color:#4C4F69"> share </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> run</span><span style="color:#179299">.</span><span style="color:#4C4F69">child_shares </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">            assert!</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#FE640B">                CHILD_MALE_SHARE_PERMILLE</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">contains</span><span style="color:#7C7F93">(</span><span style="color:#179299">&#x26;</span><span style="color:#4C4F69">share</span><span style="color:#7C7F93">),</span></span>
+<span class="line"><span style="color:#40A02B">                "</span><span style="color:#7C7F93">{}</span><span style="color:#40A02B">: male share of children </span><span style="color:#7C7F93">{</span><span style="color:#40A02B">share</span><span style="color:#7C7F93">}</span><span style="color:#40A02B">‰ (#53)"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">                strategy</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">name</span><span style="color:#7C7F93">()</span></span>
+<span class="line"><span style="color:#7C7F93">            );</span></span>
+<span class="line"><span style="color:#7C7F93">        }</span></span>
+<span class="line"><span style="color:#7C7F93">    }</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#DF8E1D;font-style:italic">#</span><span style="color:#7C7F93">[</span><span style="color:#DF8E1D;font-style:italic">test</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#8839EF">fn</span><span style="color:#1E66F5;font-style:italic"> test_adventurers_never_die_out</span><span style="color:#7C7F93">()</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> strategy </span><span style="color:#8839EF">in</span><span style="color:#DF8E1D;font-style:italic"> Strategy</span><span style="color:#179299">::</span><span style="color:#FE640B">ALL</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#8839EF">        let</span><span style="color:#4C4F69"> run </span><span style="color:#179299">=</span><span style="color:#1E66F5;font-style:italic"> play</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">strategy</span><span style="color:#7C7F93">);</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">        assert!</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">run</span><span style="color:#179299">.</span><span style="color:#4C4F69">min_adventurers </span><span style="color:#179299">></span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "</span><span style="color:#7C7F93">{}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> strategy</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">name</span><span style="color:#7C7F93">());</span></span>
+<span class="line"><span style="color:#7C7F93">    }</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#DF8E1D;font-style:italic">#</span><span style="color:#7C7F93">[</span><span style="color:#DF8E1D;font-style:italic">test</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#8839EF">fn</span><span style="color:#1E66F5;font-style:italic"> test_population_focus_diverges_from_no_policy</span><span style="color:#7C7F93">()</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    // Capacity growth only matters if people can move in (#50): with migration removed, both</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">    // runs measured the same final total (232).</span></span>
+<span class="line"><span style="color:#8839EF">    let</span><span style="color:#4C4F69"> none </span><span style="color:#179299">=</span><span style="color:#1E66F5;font-style:italic"> play</span><span style="color:#7C7F93">(</span><span style="color:#DF8E1D">Strategy</span><span style="color:#179299">::</span><span style="color:#DF8E1D;font-style:italic">None</span><span style="color:#7C7F93">);</span></span>
+<span class="line"><span style="color:#8839EF">    let</span><span style="color:#4C4F69"> focus </span><span style="color:#179299">=</span><span style="color:#1E66F5;font-style:italic"> play</span><span style="color:#7C7F93">(</span><span style="color:#DF8E1D">Strategy</span><span style="color:#179299">::</span><span style="color:#DF8E1D;font-style:italic">PopulationFocus</span><span style="color:#7C7F93">);</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">    assert_ne!</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">none</span><span style="color:#179299">.</span><span style="color:#4C4F69">totals</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> focus</span><span style="color:#179299">.</span><span style="color:#4C4F69">totals</span><span style="color:#7C7F93">);</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">    assert!</span><span style="color:#7C7F93">(</span></span>
+<span class="line"><span style="color:#4C4F69">        focus</span><span style="color:#179299">.</span><span style="color:#4C4F69">totals</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">last</span><span style="color:#7C7F93">()</span><span style="color:#04A5E5"> ></span><span style="color:#4C4F69"> none</span><span style="color:#179299">.</span><span style="color:#4C4F69">totals</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">last</span><span style="color:#7C7F93">(),</span></span>
+<span class="line"><span style="color:#40A02B">        "population focus ended at </span><span style="color:#7C7F93">{</span><span style="color:#40A02B">:?</span><span style="color:#7C7F93">}</span><span style="color:#40A02B">, no policy at </span><span style="color:#7C7F93">{</span><span style="color:#40A02B">:?</span><span style="color:#7C7F93">}</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span></span>
+<span class="line"><span style="color:#4C4F69">        focus</span><span style="color:#179299">.</span><span style="color:#4C4F69">totals</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">last</span><span style="color:#7C7F93">(),</span></span>
+<span class="line"><span style="color:#4C4F69">        none</span><span style="color:#179299">.</span><span style="color:#4C4F69">totals</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">last</span><span style="color:#7C7F93">()</span></span>
+<span class="line"><span style="color:#7C7F93">    );</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span></code></pre>
+<p>このテストスイートは、以下の 4 点を検証しています。</p>
+<ol>
+<li><code>test_population_moves_over_50_years</code>: 人口が初期値 100 人から動いていること（完全静止の検知）。</li>
+<li><code>test_child_sex_ratio_stays_in_range</code>: 子供の男児比率が健全な帯域（400‰〜600‰）に収まり続けること（男女比崩壊の防止）。</li>
+<li><code>test_adventurers_never_die_out</code>: 冒険者人口が枯渇（0 人）しないこと（循環停止の防止）。</li>
+<li><code>test_population_focus_diverges_from_no_policy</code>: 施策ありと施策なしで推移が有意に分岐（Diverge）すること（施策の結合漏れおよび端数切り捨て停滞の検知）。</li>
+</ol>
+<p>システムの健全性を担保するには、1ステップ内の局所的不変条件と、複数ステップにわたる大域的推移の両面からテストを設計する必要があります。両者の役割の違いを整理したのが下表です。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>比較軸</th><th>1期の不変条件テスト（局所検証）</th><th>長期シミュレーションテスト（DST / 推移検証）</th></tr></thead><tbody><tr><td><strong>検証の対象（空間）</strong></td><td>原因の空間（1ステップ内の不変量・保存則）</td><td>結果の空間（時間累積推移・分布・状態乖離）</td></tr><tr><td><strong>形式手法上の分類</strong></td><td>Safety Property（悪いことが起きない）</td><td>Liveness Property（良いことが前進・循環する）</td></tr><tr><td><strong>検知できる主な不具合</strong></td><td>資金や人口の即時リーク、不正な入力パラメータ</td><td>端数切り捨ての累積停滞、順序バイアス、施策の未結合</td></tr><tr><td><strong>テストオラクル（期待値）</strong></td><td>完全一致（三面等価・計算式通りの値）</td><td>許容帯域（レンジ）・非静止・メタモルフィック関係（施策差分）</td></tr><tr><td><strong>実行時間とコスト</strong></td><td>極めて高速（マイクロ秒単位・数千ケース即時）</td><td>高速だが一定のループを要する（ミリ秒〜秒単位）</td></tr></tbody></table>
+<p>このように、1 期の不変条件テストと長期推移テストは排他ではなく補完関係にあります。1 期の保存則（Safety）を基盤として敷いた上で、長期推移（Liveness）を重ねて検証する二層構造こそが、状態が積み上がるシステムにおける本質的な品質ゲートとなります。</p>
+<h2 id="長期テストのトレードオフと適用限界">長期テストのトレードオフと適用限界</h2>
+<p>長期シミュレーションテストは強力ですが、実務に導入する際にはいくつかのトレードオフと設計上の制約が存在します。</p>
+<h3 id="実行時間とci負荷time-dilation-による解決">実行時間とCI負荷（Time Dilation による解決）</h3>
+<p>長期テストを導入する際に最も懸念されるのは、CI の実行時間です。「50 年分のシミュレーション」と聞くと長時間の処理を想像しがちですが、FoundationDB の Time Dilation アプローチ<sup><a href="#user-content-fn-7" id="user-content-fnref-7-2" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup> が示すように、I/O や実時間タイマー、UI レンダリングを完全に分離した純粋ロジックとしてループを設計すれば、実行時間は極めて短く抑えられます。</p>
+<p>プロジェクトAにおいても、50 年間（1,250期）のテストは純粋なメモリ上での状態遷移として実行されるため、CI 環境でわずか数ミリ秒から数十ミリ秒で完了します。スリープや非同期待機を排除し、離散ステップを決定論的に回すアーキテクチャを守る限り、CI の高速性を損なうことはありません。</p>
+<h3 id="テストオラクル問題正解の決め方">テストオラクル問題（正解の決め方）</h3>
+<p>長期テストにおける最大の難所は、<strong>「何を期待値（テストオラクル）とするか」</strong> という問題です。</p>
+<p>複数期にわたるシミュレーションでは、微小な差分が非線形なフィードバックを通じて拡大していくため、「50年後の人口が厳密に232人になる」といった 1 点一致のオラクルを作成すると、わずかなパラメータ調整でテストが頻繁に壊れる脆弱なテスト（脆いテスト）になります。</p>
+<p>このオラクル問題に対し、私たちは以下の 3 つのアサーションパターンを組み合わせて対処しました。</p>
+<ol>
+<li><strong>許容レンジ（Range Assertion）</strong>: 比率や分布が健全な帯域に収まっているかを検証する（例: 出生男児比率が 400‰〜600‰ に収まること）。</li>
+<li><strong>非静止アサーション（Non-stagnation）</strong>: 状態が初期値から一切動かない凍結状態（人口凍結）に陥っていないかを検証する。</li>
+<li><strong>メタモルフィック関係（Metamorphic Testing）</strong>: 正解の値が事前に分からないアルゴリズムをテストする際、入力を変化させたときに出力がどう相対的に変化すべきかという「変形関係」を検証する手法です<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。施策ありと施策なしを並行して走らせたとき、最終結果が一致せず有意に乖離（Diverge）していることをアサーションすることで、施策の実装漏れを確実に検出できます。</li>
+</ol>
+<h3 id="長期テストの限界と書けないことの境界">長期テストの限界と「書けないこと」の境界</h3>
+<p>長期テストを導入したからといって、シミュレーションのあらゆる不具合が自動的に防げるわけではありません。</p>
+<p>実際のコードコメントにも明記されている通り、私たちが配備した <code>long_run_test.rs</code> は、人口凍結（施策差分経由）、施策未結合、出生男女比の偏向を検知できますが、成人男女の不均衡（パターン3）は検証項目に含めていないため、このテスト単体ではすり抜けます。初期状態の成人は男性比率が約 694‰ と高めに設定されており、テストが明示的に成人の男女比率をアサーションしない限り、長期テストであっても検知はできません。</p>
+<p>また、長期テストだけに頼って 1 期の単体テストを疎かにすると、長期テストが失敗した際に「1,250 期のどのステップの、どの計算式で狂いが生じたのか」という原因特定（デバッグ）が困難を極めます。原因を局所化する単体テストと、結果の妥当性を担保する長期推移テストの二層構造が不可欠です。</p>
+<p>以前、別の記事「<a href="/blog/ai-series-code-regression">AI が連続で書いたコードをレビューせず放置したら、機能が壊れてテストコードだけが残った</a>」でも触れたように、テストが緑であることそのものを過信してはならず、そのテストが「何を保証し、何を保証していないのか」の境界を常に把握しておく必要があります。</p>
+<h2 id="aiエージェント協業時代における品質ゲートの再定義">AIエージェント協業時代における品質ゲートの再定義</h2>
+<p>昨今、Claude Code や自律ワーカーをはじめとする AI エージェントを活用して、コードの実装から単体テストの作成、PR の作成までを自動化する開発スタイルが急速に普及しています。私たちの自作ゲーム開発でも、まさにこのエージェント協業体制によってシミュレーションエンジンを実装していました。この実体験において、今回の教訓は極めて重要な示唆を与えています。</p>
+<h3 id="エージェントに渡すテスト計画の範囲">エージェントに渡すテスト計画の範囲</h3>
+<p>AI エージェントは、与えられた関数のシグネチャや仕様書に基づき、1 ステップの整合性や不変条件（保存則など）を満たすコードと単体テストを極めて迅速かつ高精度に生成します。計算式の型チェックや、三面等価の等式が成り立つことの検証コードを書かせることにおいて、エージェントは非常に強力です。</p>
+<p>しかし、1 期の単体テストが緑になったからといって、期をまたぐ振る舞いが健全である保証にはなりません。なお、今回 50 年分の推移を回して原因を突き止める作業そのものは、エージェントに任せています。テストの計画に「1 期の計算だけでなく、長期の計算でも破綻しないこと」と最初から書いておけば、長期のテストも作ってくれたのではないかと考えています。</p>
+<h3 id="テスト通過ci-緑を過信しない姿勢">テスト通過（CI 緑）を過信しない姿勢</h3>
+<p>「テストが通っている」という事実は、「仕様が完全に守られている」ことと同義ではありません。既存のテストスイートそのものが、1 ステップの局所的で弱い挙動しか前提にしていない可能性があるからです。</p>
+<p>テストがすべて成功しているときこそ、「このテストは 1 期の Safety しか見ていないのではないか」「時間経過に伴うドリフトを疑うテストが存在しているか」という批判的な視点を持つことが不可欠です。</p>
+<h3 id="テストの計画に長期の範囲を入れる">テストの計画に長期の範囲を入れる</h3>
+<p>局所的なテストだけでは足りません。1 期分に限らず、25 期（1 年）や 10 年のように、期をまたいで進めるテストを計画に含めておく必要があります。誰がテストを書くかより、計画の段階で長期の範囲が入っているかのほうが大事だと考えています。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-1期の不変条件テストユニットテストや保存則テストだけでシミュレーションの正しさを保証できないのはなぜですか">Q. 1期の不変条件テスト（ユニットテストや保存則テスト）だけでシミュレーションの正しさを保証できないのはなぜですか？</h3>
+<p><strong>A.</strong> 1期の不変条件テストは「その 1 ステップの中で悪いことが起きないこと（Safety）」しか検証できず、微小な端数切り捨てや処理順序の偏りが期をまたいで累積するドリフト（累積誤差）を原理的に検出できないためです。例えば、毎期の人口保存則や資金保存則が 100% 満たされていても、端数切り捨てで変化量が毎期ゼロになれば人口は静止し、男女比の計算が毎回一方に丸められれば長期で極端な偏向が生じます。</p>
+<h3 id="q-長期シミュレーションテストにおいて期待値テストオラクルはどのように設計すべきですか">Q. 長期シミュレーションテストにおいて「期待値（テストオラクル）」はどのように設計すべきですか？</h3>
+<p><strong>A.</strong> 厳密な 1 点の一致ではなく、「許容レンジ（分布幅）」「非静止アサーション」「施策間の乖離（メタモルフィック関係）」という 3 つの判定基準で設計します。長期実行では状態の相互作用によって 1 人単位の厳密解を固定することが困難なため、男女比などの比率が健全な帯域（例: 400‰〜600‰）に収まっていること、状態が初期値から凍結せず推移していること、施策の有無で将来の推移が有意に分岐することをアサーションします。</p>
+<h3 id="q-aiエージェントと協業してシミュレーションやバッチ処理を開発する際設けるべき品質ゲートは何ですか">Q. AIエージェントと協業してシミュレーションやバッチ処理を開発する際、設けるべき品質ゲートは何ですか？</h3>
+<p><strong>A.</strong> 1 ステップのコードレビューや単体テストの合否だけに頼るのではなく、時間を早送りして長期間の推移を観測する「決定論的シミュレーションテスト（DST）」を必須のゲートとして課すことです。1 期の不変条件を満たすテストだけでは、期をまたぐ微小な偏向や施策の結合漏れは捕まりません。「50年〜100年分を瞬時に回して推移と分布を確かめる自動テスト」をゲートに組み込むことが最も確実な防壁となります。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本記事で解説した知見と設計判断の基準は、以下の 5 点に集約されます。</p>
+<ul>
+<li><strong>1期の不変条件（Safety）は長期の健全性（Liveness）を保証しない</strong>: 1 ステップ内の保存則が完全に成立していても、端数切り捨てによる人口凍結や順序固定による偏向吸収は発生する。</li>
+<li><strong>決定論性を崩さずに端数を制御するには累積剰余バッファが有効</strong>: 乱数に頼らず、余りを状態として期をまたいで持ち越すことで、微小な変化量であっても長期の期待値を厳密に維持できる。</li>
+<li><strong>長期テストのオラクルは「レンジ・非静止・施策差分」で設計する</strong>: 厳密な 1 点の一致ではなく、分布の健全帯域、状態の推移、施策ごとの分岐（メタモルフィック関係）を検証する。</li>
+<li><strong>単体テストと長期テストは両輪である</strong>: 原因の特定には局所の単体テストが、結果の妥当性には長期推移テストが必要であり、二層構造で品質を担保する。</li>
+<li><strong>テストの計画に長期の範囲を入れる</strong>: 1 期の計算だけでなく、1 年・10 年と期をまたいで進めても破綻しないことを、最初からテストの計画に含めておく。</li>
+</ul>
+<p>状態が期をまたいで積み上がる複雑なシミュレーションやバッチ処理のアーキテクチャ設計、AI エージェントと協業する開発プロセスの品質ゲート設計について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8905452/">Stochastic rounding: implementation, error analysis and applications</a> Matteo Croci, Massimiliano Fasi, Nicholas J. Higham, Maryam Mikaitis、Royal Society Open Science, Vol. 9, Issue 3、2022年3月。Section 6: Rounding error analysis with SR (§6.1)。固定的な切り捨てや丸めによる停滞（stagnation）現象の数学的解析。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://lamport.azurewebsites.net/pubs/proving.pdf">Proving the Correctness of Multiprocess Programs</a> Leslie Lamport、IEEE Transactions on Software Engineering, Vol. SE-3, No. 2、1977年3月、pp.125-143。Safety property（悪いことが起きない）と Liveness property（望ましいことが起きる）の二分法の導入。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://doi.org/10.1016/0020-0190%2885%2990056-0">Defining Liveness</a> Bowen Alpern, Fred B. Schneider、Information Processing Letters, Vol. 21, Issue 4、1985年10月。すべてのプログラム特性が Safety と Liveness の積集合として表現される定理の証明。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://www.informs-sim.org/wsc10papers/016.pdf">VERIFICATION AND VALIDATION OF SIMULATION MODELS</a> Robert G. Sargent、Proceedings of the 2010 Winter Simulation Conference、2010年12月、pp.166-183。Model verification（仕様通りの正しさ）と Model validation（動的振る舞いの妥当性）の分離、および operational validity。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://tigerbeetle.com/blog/2026-08-20-protocol-aware-dst/">Protocol-Aware Deterministic Simulation Testing</a> TigerBeetle チーム、2026年8月20日、公式技術ブログ。セクション3。プロトコル認識型シミュレーションによるレプリカ単位の Deep Safety / Deep Liveness 不変条件検証、回復停止の検知。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://tigerbeetle.com/blog/2023-07-06-simulation-testing-for-liveness/">Simulation Testing For Liveness</a> TigerBeetle チーム、2023年7月6日、公式技術ブログ。セクション3。シミュレータ VOPR による Liveness 検証手法、長期間シミュレーションによる状態遷移の進行監視。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://www.foundationdb.org/files/fdb-paper.pdf">FoundationDB: A Distributed Unbundled Transactional Key Value Store</a> Jingyu Zhou et al.、Proceedings of the 2021 International Conference on Management of Data (SIGMOD ‘21)、2021年6月。Section 4: Simulation Testing pp.2657-2658。離散イベントシミュレーションによる Time Dilation（時間早送り）、完全決定論的シミュレーションと疑似乱数シード。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-7-2" data-footnote-backref="" aria-label="Back to reference 7-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://zenn.dev/hacobell_dev/articles/48672302988d40">「正解が分からない」アルゴリズムをどうテストするか</a> kam6ri、Hacobell Tech Blog、2025年12月18日。Property-based Testing と Metamorphic Testing による正解が定まらないロジックの検証手法。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

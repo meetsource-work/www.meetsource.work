@@ -1,0 +1,352 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>「安いモデルは雑」は作業の型で逆転する ── Claude Code サブエージェント3モデルの実測比較 | Meetsource</title><meta name="description" content="Claude Code のサブエージェント委任におけるモデル順位は、タスクが局所的な事実抽出か広域の網羅探索かという作業の型によって逆転します。Haiku 5.5・Sonnet 5.5・Opus 5.5 の同一タスク実測に基づき、死んだ URL や引用改変の発生差、所要時間・費用を比較した選定基準を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/subagent-model-ranking-inversion"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="「安いモデルは雑」は作業の型で逆転する ── Claude Code サブエージェント3モデルの実測比較 | Meetsource"><meta property="og:description" content="Claude Code のサブエージェント委任におけるモデル順位は、タスクが局所的な事実抽出か広域の網羅探索かという作業の型によって逆転します。Haiku 5.5・Sonnet 5.5・Opus 5.5 の同一タスク実測に基づき、死んだ URL や引用改変の発生差、所要時間・費用を比較した選定基準を解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/subagent-model-ranking-inversion"><meta property="og:image" content="https://www.meetsource.work/blog/subagent-model-ranking-inversion-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-07T12:55:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="「安いモデルは雑」は作業の型で逆転する ── Claude Code サブエージェント3モデルの実測比較 | Meetsource"><meta name="twitter:description" content="Claude Code のサブエージェント委任におけるモデル順位は、タスクが局所的な事実抽出か広域の網羅探索かという作業の型によって逆転します。Haiku 5.5・Sonnet 5.5・Opus 5.5 の同一タスク実測に基づき、死んだ URL や引用改変の発生差、所要時間・費用を比較した選定基準を解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/subagent-model-ranking-inversion-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"「安いモデルは雑」は作業の型で逆転する ── Claude Code サブエージェント3モデルの実測比較","description":"Claude Code のサブエージェント委任におけるモデル順位は、タスクが局所的な事実抽出か広域の網羅探索かという作業の型によって逆転します。Haiku 5.5・Sonnet 5.5・Opus 5.5 の同一タスク実測に基づき、死んだ URL や引用改変の発生差、所要時間・費用を比較した選定基準を解説します。","datePublished":"2026-11-07T12:55:00.000Z","image":"https://www.meetsource.work/blog/subagent-model-ranking-inversion-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/subagent-model-ranking-inversion"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"サブエージェントに安いモデル（Haiku 5.5）を使うとハルシネーションが増えるのではないですか？","acceptedAnswer":{"@type":"Answer","text":"一概に増えるとは限らず、作業の型によってはむしろ減少する傾向が観察されました。 当ブログの実測では、原典が与えられた狭く深い事実確認において、Haiku 5.5 は誤り 0 件で未確認事項を正確に書き分けた一方、Sonnet 5.5 は届かない死んだ URL を根拠としたり原典外の数値を記載したりしました。小型モデルは過度な知識補完を行わず指示に忠実に従う傾向があると考えられ、局所的なファクトチェックでは安価なモデルのほうが正確な結果を得られる場合があります。"}},{"@type":"Question","name":"Claude Code の Explore サブエージェントは環境変数でモデルを変更できますか？","acceptedAnswer":{"@type":"Answer","text":"環境変数 CLAUDE_CODE_SUBAGENT_MODEL 単体では Explore サブエージェントのモデルは変更されず、親セッションのモデルが継承されます。 Explore のモデルを確実に指定するには、プロジェクト固有またはユーザー設定のサブエージェント定義ファイル（~/.claude/agents/Explore.md）で model を指定するか、Agent 呼び出し時に per-invocation パラメータ（model: opus や model: haiku）を明示的に指定する必要があります。"}},{"@type":"Question","name":"サブエージェントの API コストを抑えるために最も効果的なプロンプト設計は何ですか？","acceptedAnswer":{"@type":"Answer","text":"出力トークンの生成量を抑える設計に徹することです。 Claude の API 料金体系では全モデルで出力トークン単価が入力単価の 5 倍に設定されているため、不要な逐語引用やファイル全体のコピーをさせず、要約・意訳や構造化データのみを出力させるよう指示することで、コストを大幅に削減できます。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-07T12:55:00.000Z" data-astro-cid-7jjqptxk> 2026.11.07 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#ai-cost-optimization</span><span class="tag" data-astro-cid-7jjqptxk>#llm</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>「安いモデルは雑」は作業の型で逆転する ── Claude Code サブエージェント3モデルの実測比較</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/subagent-model-ranking-inversion-hero.webp" alt="「安いモデルは雑」は作業の型で逆転する ── Claude Code サブエージェント3モデルの実測比較" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>Claude Code におけるサブエージェント委任とは、メインセッションのコンテキスト肥大化を防ぎつつ、独立したコンテキストと制約されたツール群を持つ自律ワーカーに特定タスクを並列・集中的に実行させて要約結果のみを受け取る仕組みです<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。この仕組みを活用して開発業務やパイプラインの自動化を進める際、多くのチームで「計画や設計は Claude Opus、コード実装は Claude Sonnet、雑用や補助作業は Claude Haiku」というピラミッド型のモデル構成が定着しています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>しかし、この階層構造の根底には「安いモデル＝雑、高いモデル＝正確」という一律の思い込みが存在します。その結果、工程の性質を考慮せず漫然と Sonnet や Opus を一律に使い続け、API コストの急増やモデル利用枠の枯渇に悩まされるケースが後を絶ちません。</p>
+<p>当ブログの運営リポジトリ（非公開）のブログ執筆パイプライン実務環境において、同一タスクを Claude Haiku 5.5、Claude Sonnet 5.5、Claude Opus 5.5 の 3 モデルに委任して実機検証を行いました。その結果、原典照合を伴う「狭く深い事実確認」では、最も安価な Haiku 5.5 が Sonnet 5.5 よりも届かない死んだ URL や原典外の数値を生成せず正確であり、空間全体を走査する「広域の網羅探索」では Opus 5.5 が不可欠であるという、作業の型による順位逆転が観測されました。</p>
+<p>本記事では、この一次実測データをもとに、サブエージェントのモデル選定基準と、親セッションの透過課金やモデル解決仕様などのハーネス設定について解説します。</p>
+<h2 id="検証環境と調査スコープ">検証環境と調査スコープ</h2>
+<p>実測データの客観性と再現性を担保するため、検証環境および調査スコープの境界を定義します。</p>
+<h3 id="検証環境スペック">検証環境スペック</h3>
+<p>実機計測は、当ブログの運営リポジトリ（非公開）における自動執筆パイプラインの運用セッション内で実施しました。</p>
+<ul>
+<li><strong>CLI ツール</strong>: Claude Code 2.1.318</li>
+<li><strong>OS</strong>: macOS Sequoia 15.3（Apple Silicon）</li>
+<li><strong>計測期間</strong>: 2026-11-06T02:31:13Z 〜 2026-11-06T04:21:12Z</li>
+<li><strong>比較対象モデル</strong>: Claude Haiku 5.5（<code>claude-haiku-5-5</code>）、Claude Sonnet 5.5（<code>claude-sonnet-5-5</code>）、Claude Opus 5.5（<code>claude-opus-5-5</code>）</li>
+</ul>
+<h3 id="調査スコープの境界">調査スコープの境界</h3>
+<p>本検証では、サブエージェントに課される典型的な作業を以下の 2 つの型に分類して実測を行いました。</p>
+<ol>
+<li><strong>狭く深い事実抽出・調査タスク</strong>: 原典キャッシュファイルからの情報抽出（本文抽出タスク）、および外部ドキュメントの Web 検索・取得（Web 調査タスク）の 2 企画における実測。</li>
+<li><strong>広域網羅の探索タスク</strong>: リポジトリ内の全公開記事（frontmatter および結論部）を横断走査し、未解決の課題やテーマの穴を洗い出す Explore タスク（源泉C）における実測。</li>
+</ol>
+<h3 id="交絡要因の排除">交絡要因の排除</h3>
+<p>モデル単体での純粋なコストと挙動を評価するため、以下の交絡要因を実測により特定し、計測から排除しました。</p>
+<ul>
+<li><strong>親セッションの advisor（Opus）透過課金の切り離し</strong>: 事前検証試行において、サブエージェント単体の呼び出し費用（$0.443）のうち 72%（$0.318）が親セッションで有効化されていた advisor（Opus 5.5）への課金であることが判明しました。そのため、モデル比較の実測セッションでは親の <code>/advisor</code> を無効化して計測を実施しています。</li>
+<li><strong>Explore サブエージェントの設定解決仕様の確認</strong>: Claude Code の組み込み Explore サブエージェントは、ユーザー設定（<code>~/.claude/agents/Explore.md</code>）等で上書きされている場合、デフォルトモデルがその指定（<code>model: haiku</code> など）に解決されます<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。そのため、後述の広域探索タスクではプロンプトや呼び出しパラメータで <code>model: opus</code> を明示指定して実行条件を揃えました。</li>
+</ul>
+<h3 id="本記事で書けること書けないことの境界">本記事で書けること・書けないことの境界</h3>
+<p>一次計測ログに基づき、事実として確認された範囲と解釈の境界を明確にします。</p>
+<ul>
+<li><strong>書けること</strong>: 2026-11-06 に実施した 2 件の調査タスクにおいて Haiku 5.5 が Sonnet 5.5 よりも誤りが少なく正確であった事実、源泉C において Opus 5.5 が最多の候補数と逐語引用の改変ゼロを記録した事実、および advisor 透過課金や Explore モデル解決の仕様挙動。</li>
+<li><strong>書けないこと</strong>: あらゆる調査タスクにおいて常に Haiku 5.5 が Sonnet 5.5 より正確であるという一般化（計測対象は 2 企画の局所タスクであり母数は 2 件）。また、Sonnet 5.5 がなぜ死んだ URL や原典外の数値を生成したのかという内部推論機序の断定、および Opus 5.5 を使わずに Sonnet 5.5 を複数回実行して合算した場合のコスト・品質に関する未計測の反実仮想。</li>
+</ul>
+<h2 id="評価基準と前提となるアーキテクチャ概念">評価基準と前提となるアーキテクチャ概念</h2>
+<p>サブエージェントのモデル選定を評価するにあたり、前提となるアーキテクチャ設計パターンと評価基準を整理します。</p>
+<h3 id="オーケストレーターワーカーパターンとコンテキスト分離">オーケストレーター・ワーカーパターンとコンテキスト分離</h3>
+<p>Anthropic のエージェント設計パターンにおいて、親エージェントが複雑なタスクを分割し、独立したサブワーカーに並列委任して結果を集約する「オーケストレーター・ワーカー」パターンが推奨されています<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>Claude Code のサブエージェント機能は、このパターンをコマンドライン環境で体現したものです。サブエージェントに独立したコンテキストウィンドウを与えて探索を行わせ、最終的な要約のみをメインセッションに返却させることで、メインコンテキストの消費を大幅に抑制します<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="比較する2つの作業の型">比較する2つの「作業の型」</h3>
+<p>本記事では、サブエージェントに委任するタスクを以下の 2 つに大別して評価します。</p>
+<ul>
+<li><strong>狭く深い事実抽出型</strong>: 限られた入力（原典ドキュメントや検索結果）から、正確な事実・数値・引用を抜き出し、未確認事項を漏れなく識別して報告するタスク。</li>
+<li><strong>広域の網羅的洗い出し型</strong>: 多数のローカルファイルや広大な情報空間を横断走査し、全体の傾向を把握した上で、重複なく候補を構造化して抽出するタスク。</li>
+</ul>
+<h3 id="4つの評価基準">4つの評価基準</h3>
+<p>モデルの適性を判断するため、以下の 4 つの観点から観察を行いました。</p>
+<ol>
+<li><strong>事実一致率・ハルシネーション</strong>: 原典に存在しない数値の混入や、HTTP 404 / 410 などアクセス不能な死んだ URL の有無。</li>
+<li><strong>逐語引用の忠実度</strong>: 原文からの勝手な英単語への置き換えや、不要な語句の挿入などの改変の有無。</li>
+<li><strong>網羅度・安定性</strong>: 抽出された候補の件数、および複数回試行における起点データの重複安定性。</li>
+<li><strong>実行時間と API コスト</strong>: タスク完了までの所要秒数、トークン消費量、およびプロンプトキャッシュ適用後の実質費用。</li>
+</ol>
+<h3 id="出力トークンのコスト構造と逐語引用の特性">出力トークンのコスト構造と逐語引用の特性</h3>
+<p>Claude の API 料金体系において、全てのモデルで出力トークン単価は入力トークン単価の <strong>5 倍</strong> に設定されています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>モデル</th><th>入力単価（/MTok）</th><th>出力単価（/MTok）</th><th>プロンプトキャッシュ読出（/MTok）</th></tr></thead><tbody><tr><td><strong>Claude Opus 5.5</strong></td><td>$4.00</td><td>$20.00</td><td>$0.20</td></tr><tr><td><strong>Claude Sonnet 5.5</strong></td><td>$2.00</td><td>$10.00</td><td>$0.10</td></tr><tr><td><strong>Claude Haiku 5.5</strong>（100K以下）</td><td>$0.10</td><td>$0.50</td><td>$0.01</td></tr></tbody></table>
+<p>LLM のハルシネーションに関する研究では、外部コンテキストからの断片コピー率が高いほど文脈不整合ハルシネーションが減少するという負の相関が報告されています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。一方で、LLM に長大な文章の逐語コピーを行わせることは、出力トークン単価が 5 倍である観点から極めてコスト効率が悪くなります。そのため、後述するように「無理にコピペを強制せず、要約や意訳に徹するプロンプト設計」が重要となります。</p>
+<h2 id="狭く深い調査におけるモデル特性の観察">狭く深い調査におけるモデル特性の観察</h2>
+<p>局所的なドキュメント抽出および Web 検索を伴うファクトチェックタスクにおいて、Haiku 5.5 と Sonnet 5.5 の実機挙動を比較しました<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<h3 id="タスク1-本文抽出タスク原典キャッシュ約40kb">タスク1: 本文抽出タスク（原典キャッシュ約40KB）</h3>
+<p>手元のキャッシュファイル（6本・約40KB）から客観的事実の行のみを抽出するタスクでの実測結果です。</p>
+<ul>
+<li><strong>Haiku 5.5</strong>: 所要時間 70 秒、費用 <strong>$0.0147</strong>、抽出事実 60 行。原典との突き合わせ照合（抜き取り 26 点）を実施した結果、事実の誤りは <strong>0 件</strong> でした。また、草稿が前提としていたコミットハッシュや Issue 番号、夏時間表記が原典ドキュメント内に存在しないことも正確に注記しました。</li>
+<li><strong>Sonnet 5.5</strong>: 所要時間 51 秒、費用 <strong>$0.204</strong>、抽出事実 96 行。</li>
+</ul>
+<p>Sonnet 5.5 は抽出行数が多く所要時間も短い傾向がありましたが、費用は Haiku 5.5 の約 <strong>14 倍</strong> に達しました（※Sonnet 側は 26 点の抜き取り照合までは実施しておらず、このタスクで直接比較可能なのは主に所要時間と費用差です）。</p>
+<h3 id="タスク2-web-調査タスクwebsearchwebfetch-あり">タスク2: Web 調査タスク（WebSearch・WebFetch あり）</h3>
+<p>外部ドキュメントを検索し、技術的主張の裏付けとなる URL と事実を収集するタスクでの実測結果です。</p>
+<ul>
+<li><strong>Haiku 5.5</strong>: 所要時間 104 秒、費用 <strong>$0.124</strong>、収集 URL 11 本。URL の疎通確認では 11 本中 10 本が正常（HTTP 200）で、残る 1 本（HTTP 401 の Stack Overflow ミラーサイト）についても「二次情報」である旨を明記していました。また、Git 公式ドキュメントの記述を原典どおりに引用し、ボット遮断により本文を取得できなかったページは「検索結果のみ」と書き分けました。</li>
+<li><strong>Sonnet 5.5</strong>: 所要時間 65 秒、費用 <strong>$0.421</strong>、収集 URL 16 本。しかし、収集した URL のうち 2 本がアクセス不能な死んだ URL（HTTP 404 が 1 本、HTTP 410 が 1 本）であり、存在しない 410（Gone）の URL を <code>receive.autogc</code> の根拠として記載していました。また、事前検証試行では原典で裏付けられない数値を事実欄に記載する事象も確認されました。</li>
+</ul>
+<h3 id="局所タスクで観測された逆転現象">局所タスクで観測された逆転現象</h3>
+<p>狭く深い事実抽出において、Haiku 5.5 は死んだ URL を根拠にせず、原典にない前提や読めなかったページを「未確認」「検索結果のみ」と正確に申告しました。Web 調査タスクでの費用は Haiku 5.5（$0.124）が Sonnet 5.5（$0.421）の約 <strong>3 分の 1</strong> であり、本文抽出タスクでは約 <strong>14 分の 1</strong> に抑えられました。</p>
+<p>この要因として、Haiku 5.5 はプロンプトの制約に対する忠実度が高く、自身の知識ベースによる過度な補完を行わないため、結果としてハルシネーションが抑制された可能性が推測されます。また、情報が不足した際に無理に回答を埋めず、フォールバックとして「未確認」と正直に申告する挙動が機能したと考えられます。</p>
+<p>ただし、この実測は母数 n=2 の局所観察に基づくものであり、すべての調査タスクで常に Haiku 5.5 が Sonnet 5.5 を上回ると無制限に一般化できるわけではありません。</p>
+<h2 id="広域網羅の洗い出しにおけるモデル特性の観察">広域網羅の洗い出しにおけるモデル特性の観察</h2>
+<p>次に、探索空間が広く網羅性と安定性が問われるタスクとして、リポジトリ内の全記事を横断走査する Explore タスクにおいて、Haiku 5.5、Sonnet 5.5、Opus 5.5 の 3 モデルを同一プロンプトで比較しました<sup><a href="#user-content-fn-7" id="user-content-fnref-7-2" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<h3 id="3モデルの実測データ比較">3モデルの実測データ比較</h3>
+<p>全公開記事の frontmatter と結論部を走査し、未解決の課題やテーマの穴を洗い出すタスクにおける複数回試行の実測結果です。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>モデル</th><th>試行回数</th><th>候補件数</th><th>起点記事の重複安定度</th><th>逐語引用の改変</th><th>1回あたり費用</th><th>所要時間</th></tr></thead><tbody><tr><td><strong>Claude Haiku 5.5</strong></td><td>4本</td><td>2〜8件</td><td>延べ14本（重複3本）</td><td>0件（空白差1件）</td><td>平均 $0.082</td><td>45〜60秒</td></tr><tr><td><strong>Claude Sonnet 5.5</strong></td><td>2本</td><td>13〜16件</td><td>16/14本（重複10本）</td><td><strong>2件発生</strong></td><td>$0.235〜$0.289</td><td><strong>56〜71秒（最速）</strong></td></tr><tr><td><strong>Claude Opus 5.5</strong></td><td>2本</td><td><strong>23〜24件</strong></td><td><strong>21/24本（重複17本）</strong></td><td><strong>0件（完全一致）</strong></td><td>約 $1.10</td><td>約 190秒</td></tr></tbody></table>
+<h3 id="各モデルの観察結果">各モデルの観察結果</h3>
+<p>各モデルの挙動には、明確な性質の違いが現れました。</p>
+<ul>
+<li><strong>Haiku 5.5 の網羅性不足</strong>: コストは平均 $0.082 と非常に安価で逐語引用の改変もありませんでしたが、候補件数が 2〜8 件にとどまりました。4 本の試行を合わせても起点となった記事は延べ 14 本（複数回出現したのは 3 本のみ）であり、空間全体の網羅性が著しく不足していました。</li>
+<li><strong>Sonnet 5.5 の引用改変</strong>: 所要時間 56〜71 秒と最速で、候補件数も 13〜16 件と一定の網羅性を示しました。しかし、逐語引用において以下の <strong>2 件の勝手な改変</strong> が発生しました。
+<ol>
+<li><a href="/blog/ai-pipeline-gate-roi">過去の ROI 検証記事</a> からの引用において、原文の「平均コスト変化」を「平均コストchange」と一部英単語化して出力した。</li>
+<li><a href="/blog/ai-agent-supervision-cost">過去の監視コスト検証記事</a> からの引用において、原文『「監視コスト」を人間の分単位で』という記述に対し、原文にない「ログ」という単語を挿入した。</li>
+</ol>
+</li>
+<li><strong>Opus 5.5 の圧倒的な網羅性と忠実度</strong>: 候補件数は 23〜24 件と最も多く、2 回の試行で起点となった記事の重複も 17 本と高い安定性を示しました。また、29 行におよぶ逐語引用において改変は <strong>0 件</strong> でした。費用は 1 回あたり約 $1.10、所要時間は約 190 秒を要しました。</li>
+</ul>
+<h3 id="広域探索で観測された逆転現象">広域探索で観測された逆転現象</h3>
+<p>狭く深い調査とは一転して、広大な情報空間の探索ではモデルの順位が逆転しました。Haiku 5.5 では全体の網羅が困難であり、Sonnet 5.5 は速度と件数に優れるものの細部の言い換え癖による引用改変を引き起こしました。漏れのない洗い出しと厳密な引用の一致を両立するためには、Opus 5.5 の高度な文脈把握能力が必要となりました。</p>
+<p>なお、試行回数は Haiku 4本、Sonnet 2本、Opus 2本に限られており、Sonnet 5.5 を複数回実行して合算した場合に $1.10 より低コストで同等の網羅性と正確性を得られたかという反実仮想については計測を行っていません。</p>
+<h2 id="共通点と相違点の比較モデル選定マトリクス">共通点と相違点の比較（モデル選定マトリクス）</h2>
+<p>3 つのモデルを同一条件下で比較検証した結果、モデルの優劣は固定的なピラミッドではなく、タスクが求める「局所の忠実性（狭く深い事実確認）」か「広域の空間把握（網羅的な探索）」かという作業の型によって順位が逆転することが実測により裏付けられました。</p>
+<p>各モデルの公式な位置づけ<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>と実測結果に基づく比較マトリクスを以下に示します。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>評価項目</th><th>Claude Haiku 5.5</th><th>Claude Sonnet 5.5</th><th>Claude Opus 5.5</th></tr></thead><tbody><tr><td><strong>狭く深い調査での精度</strong></td><td><strong>◎ 誤り0件・未確認を申告</strong></td><td>△ 届かない死んだ URL を根拠化</td><td>未計測（局所タスクでは未検証）</td></tr><tr><td><strong>広域網羅での探索力</strong></td><td>× 候補2〜8件（網羅性不足）</td><td>◯ 候補13〜16件（所要時間最速）</td><td><strong>◎ 候補23〜24件・高安定</strong></td></tr><tr><td><strong>逐語引用の忠実度</strong></td><td>◯ 改変0件（空白差のみ）</td><td>× 引用改変2件（英単語化・語句挿入）</td><td><strong>◎ 改変0件（29行完全一致）</strong></td></tr><tr><td><strong>API基本単価（MTok）</strong></td><td>入力 $0.10 / 出力 $0.50</td><td>入力 $2.00 / 出力 $10.00</td><td>入力 $4.00 / 出力 $20.00</td></tr><tr><td><strong>狭く深い調査での実測費用</strong></td><td><strong>$0.015〜$0.124</strong></td><td>$0.204〜$0.421</td><td>未計測</td></tr><tr><td><strong>広域探索での実測費用</strong></td><td>平均 $0.082</td><td>$0.235〜$0.289</td><td>約 $1.03〜$1.12</td></tr><tr><td><strong>推奨ユースケース</strong></td><td>原典抽出・事実確認・単体調査</td><td>中規模タスク・汎用処理</td><td>広域探索・全件洗い出し・高難度計画</td></tr></tbody></table>
+<p>このように、局所的な事実抽出であれば Haiku 5.5 が最も安価（Web 調査で Sonnet の約 3 分の 1、本文抽出で約 14 分の 1）かつ安全であり、全体空間の網羅探索であれば 1 回約 $1.10 の Opus 5.5 への投資が十分に正当化されます。Sonnet 5.5 は速度と汎用性に優れますが、引用の厳密性が問われる調査では注意が必要です。</p>
+<h2 id="ベストプラクティスと推奨実装">ベストプラクティスと推奨実装</h2>
+<p>実測結果を踏まえ、Claude Code サブエージェントの実務的な選定手順と設定実装例を提示します。</p>
+<h3 id="作業の型によるモデル選定フロー">作業の型によるモデル選定フロー</h3>
+<p>サブエージェントにタスクを委任する際は、以下の判定基準でモデルを決定します。</p>
+<ol>
+<li><strong>入力が局所的で事実確認が主目的か？</strong><br>
+→ <code>model: haiku</code> を採用。ファイル書き込みツールを禁止し、低コストで忠実な抽出を行わせる。</li>
+<li><strong>多数のファイルを横断走査し、漏れのない洗い出しが必要か？</strong><br>
+→ <code>model: opus</code> を採用。Explore サブエージェントを上書きし、深い探索と正確な引用を担保する。</li>
+<li><strong>一般的なコード実装や中規模の要約処理か？</strong><br>
+→ <code>model: sonnet</code> を採用。速度と知性のバランスを活かす。</li>
+</ol>
+<h3 id="コード例1-狭く深い調査用カスタムサブエージェント設定">コード例1: 狭く深い調査用カスタムサブエージェント設定</h3>
+<p>原典ドキュメントや Web 検索結果から正確な事実のみを抽出するため、<code>model: haiku</code> を指定し、書き込み系ツールを制限したサブエージェント定義です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>---</span></span>
+<span class="line"><span>name: researcher</span></span>
+<span class="line"><span>description: 渡された一次資料やWeb検索から、正確な事実・数値・引用を狭く深く調査する</span></span>
+<span class="line"><span>model: haiku</span></span>
+<span class="line"><span>tools:</span></span>
+<span class="line"><span>  - Read</span></span>
+<span class="line"><span>  - Glob</span></span>
+<span class="line"><span>  - Grep</span></span>
+<span class="line"><span>  - WebSearch</span></span>
+<span class="line"><span>  - WebFetch</span></span>
+<span class="line"><span>disallowedTools:</span></span>
+<span class="line"><span>  - Write</span></span>
+<span class="line"><span>  - Edit</span></span>
+<span class="line"><span>  - Bash</span></span>
+<span class="line"><span>---</span></span>
+<span class="line"><span>あなたは事実調査に特化したリサーチャーです。</span></span>
+<span class="line"><span>提供されたコンテキストや検索結果から客観的な事実のみを抽出してください。</span></span>
+<span class="line"><span>未確認の数値や推測を事実に混ぜず、確認できなかった項目は明示的に「未確認」と報告してください。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><code>model: haiku</code> を指定することで、トークン単価を最小限に抑えつつ、過度な創作を抑制したファクトチェックを実現します。<code>disallowedTools</code> でファイル編集を遮断し、要約テキストのみを返却させます。</p>
+<h3 id="コード例2-広域網羅探索用カスタムサブエージェント設定">コード例2: 広域網羅探索用カスタムサブエージェント設定</h3>
+<p>リポジトリ全体の横断探索において、組み込み Explore のモデルを <code>model: opus</code> に固定するためのサブエージェント定義です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>---</span></span>
+<span class="line"><span>name: Explore</span></span>
+<span class="line"><span>description: コードベース全体やドキュメント群を横断走査し、網羅的な分析を行う</span></span>
+<span class="line"><span>model: opus</span></span>
+<span class="line"><span>tools:</span></span>
+<span class="line"><span>  - Read</span></span>
+<span class="line"><span>  - Glob</span></span>
+<span class="line"><span>  - Grep</span></span>
+<span class="line"><span>disallowedTools:</span></span>
+<span class="line"><span>  - Write</span></span>
+<span class="line"><span>  - Edit</span></span>
+<span class="line"><span>---</span></span>
+<span class="line"><span>あなたはコードベース全体の広域走査を担当するアナリストです。</span></span>
+<span class="line"><span>指定された条件に合致するすべての候補を漏れなく洗い出し、重複を排除して構造化してください。</span></span>
+<span class="line"><span>引用を行う際は、原文の表記を1文字も改変せずに逐語で保持してください。</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>プロジェクト固有の <code>.claude/agents/Explore.md</code>（またはユーザー設定 <code>~/.claude/agents/Explore.md</code>）に配置することで、環境設定にかかわらず常に Opus 5.5 の網羅性を発揮させます。</p>
+<h3 id="コード例3-当ブログパイプラインにおける実物設定抜粋">コード例3: 当ブログパイプラインにおける実物設定抜粋</h3>
+<p>当ブログの運営リポジトリ（非公開）において、調査スキルの手順を <code>model: haiku</code> に切り替えた際の実装記述です。</p>
+<p>引用元: 当ブログ運営リポジトリ（非公開）の SKILL.md</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#179299">4.</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">サブエージェントによる詳細調査 (狭く深く)</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">: Agent ツール（</span><span style="color:#40A02B">`subagent_type: general-purpose`</span><span style="color:#4C4F69">、</span><span style="color:#40A02B">`model: haiku`</span><span style="color:#4C4F69">、フォアグラウンド </span><span style="color:#40A02B">`run_in_background: false`</span><span style="color:#4C4F69">）で「狭く深い詳細リサーチ」を委託してください。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#7C7F93">   **</span><span style="color:#40A02B">`</span><span style="color:#40A02B;font-weight:bold">model: haiku</span><span style="color:#40A02B">`</span><span style="color:#D20F39;font-weight:bold"> にする理由</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">: 狭く深い調査で問われるのは網羅より正確さで、その点では Haiku 5.5 が Sonnet 5.5 を上回ったためです。2026-11-06 に #325・#324 の plan.md でこのプロンプトを両モデルに渡して比べたところ、Haiku は逐語引用が原典どおりで、検索要約にしか無い数値や読めなかったページを「未確認」「検索結果のみ」と書き分けました。Sonnet は届かない URL（404・410）を根拠にし、原典に無い数値を事実欄に載せました。コストは Haiku が Sonnet の約1/3（#324: $0.124 対 $0.421）です。代わりに Haiku は集める情報源が少ないので、手順5の検収と、design 段で足りない根拠が見つかったときの追加調査で補ってください。</span><span style="color:#40A02B">`model: haiku`</span><span style="color:#4C4F69"> は Haiku 5.5（</span><span style="color:#40A02B">`claude-haiku-5-5`</span><span style="color:#4C4F69">）に割り当たることを同日確認済みです。プロンプト:</span></span>
+<span class="line"></span></code></pre>
+<p>実務のスキル定義において、単にモデルを変更するだけでなく「なぜそのモデルにするのか」の根拠と留意点を指示内に明記しています。</p>
+<h3 id="ハーネス設計の注意点">ハーネス設計の注意点</h3>
+<p>モデルの性能を正しく引き出すため、以下のハーネス設計を推奨します。</p>
+<ul>
+<li><strong>親セッションの advisor 透過課金の確認</strong>: サブエージェントを実行する親セッションで <code>/advisor</code> が有効化されていると、意図しない上位モデルの呼び出しが透過的に発生し、費用が急増する可能性があります。計測・自動化スクリプト実行時は親セッションの設定を確認してください。</li>
+<li><strong>出力トークンを抑制するプロンプト設計</strong>: 出力トークン単価は入力の 5 倍であるため、長大なコピペをさせず、要約・箇条書き・差分情報のみを出力させるプロンプトを設計します。</li>
+<li><strong>フォールバックの明示指示</strong>: 「分からない場合は未確認と書く」という指示をプロンプトに明記することで、小型モデルの正確性を高めることができます。</li>
+</ul>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-サブエージェントに安いモデルhaiku-55を使うとハルシネーションが増えるのではないですか">Q. サブエージェントに安いモデル（Haiku 5.5）を使うとハルシネーションが増えるのではないですか？</h3>
+<p><strong>A.</strong> 一概に増えるとは限らず、作業の型によってはむしろ減少する傾向が観察されました。</p>
+<p>当ブログの実測では、原典が与えられた狭く深い事実確認において、Haiku 5.5 は誤り 0 件で未確認事項を正確に書き分けた一方、Sonnet 5.5 は届かない死んだ URL を根拠としたり原典外の数値を記載したりしました。小型モデルは過度な知識補完を行わず指示に忠実に従う傾向があると考えられ、局所的なファクトチェックでは安価なモデルのほうが正確な結果を得られる場合があります。</p>
+<h3 id="q-claude-code-の-explore-サブエージェントは環境変数でモデルを変更できますか">Q. Claude Code の Explore サブエージェントは環境変数でモデルを変更できますか？</h3>
+<p><strong>A.</strong> 環境変数 <code>CLAUDE_CODE_SUBAGENT_MODEL</code> 単体では Explore サブエージェントのモデルは変更されず、親セッションのモデルが継承されます。</p>
+<p>Explore のモデルを確実に指定するには、プロジェクト固有またはユーザー設定のサブエージェント定義ファイル（<code>~/.claude/agents/Explore.md</code>）で <code>model</code> を指定するか、Agent 呼び出し時に per-invocation パラメータ（<code>model: opus</code> や <code>model: haiku</code>）を明示的に指定する必要があります。</p>
+<h3 id="q-サブエージェントの-api-コストを抑えるために最も効果的なプロンプト設計は何ですか">Q. サブエージェントの API コストを抑えるために最も効果的なプロンプト設計は何ですか？</h3>
+<p><strong>A.</strong> 出力トークンの生成量を抑える設計に徹することです。</p>
+<p>Claude の API 料金体系では全モデルで出力トークン単価が入力単価の 5 倍に設定されているため、不要な逐語引用やファイル全体のコピーをさせず、要約・意訳や構造化データのみを出力させるよう指示することで、コストを大幅に削減できます。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本記事の実機検証から得られた、サブエージェント選定の具体的な指針は以下のとおりです。</p>
+<ul>
+<li><strong>モデルの順位は作業の型によって逆転する</strong>: 狭く深い事実確認では Haiku 5.5 が Sonnet 5.5 より正確であり、広域の網羅探索では Opus 5.5 が不可欠である。</li>
+<li><strong>「安いモデル＝雑」という固定観念を捨てる</strong>: 局所的な抽出タスクでは Haiku 5.5 の指示忠実性と余計な補完をしない性質が有効に機能し、コストも大幅に削減できる。</li>
+<li><strong>広域探索ではフロンティアモデルの文脈把握力に投資する</strong>: 全体空間からの漏れのない洗い出しや引用の完全性を担保するには、Opus 5.5 への投資が正当化される。</li>
+<li><strong>ハーネスの交絡要因を排除して実機ログで検証する</strong>: 親セッションの advisor 透過課金やサブエージェントのモデル解決仕様を確認し、カタログスペックだけでなく実務環境の実機ログに基づいて選定を行う。</li>
+</ul>
+<p>自社システムや業務パイプラインにおける AI エージェントのオーケストレーション設計や、サブエージェントのモデル選定・コスト最適化について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://code.claude.com/docs/en/sub-agents">Create custom subagents</a> Anthropic、2026年9月7日確認。サブエージェントのフロントマター仕様（name, model, tools等）は §Built-in subagents / §Configure subagents、Explore のモデル継承とカスタム Explore.md による上書き仕様は §Built-in subagents (Explore)、コンテキスト分離と要約返却の仕様は §Overview。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://tech-lab.sios.jp/archives/51207">Claude Code サブエージェントの最適構成：Opus で考え、Sonnet で動かす</a> SIOS Technology、2026年2月4日。「計画は Opus、実行は Sonnet」というピラミッド型構成の紹介は記事導入部、バックグラウンド実行とファイル出力による並列化設計は §並列実行。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://zenn.dev/scalar_sol_blog/articles/20261103-104939-claude-code-model-split">Claude Code を Sonnet で動かし、判断だけ Opus に相談させ、下働きは Haiku に任せる設定を検証する</a> Scalar Solution Blog、2026年11月5日。<code>CLAUDE_CODE_SUBAGENT_MODEL</code> 単体では Explore が切り替わらず親モデルを維持する実機挙動は §検証 1、<code>advisorModel</code> に Opus を指定した際の透過的呼び出しの実測は §検証 2。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://www.anthropic.com/research/building-effective-agents">Building Effective AI Agents</a> Anthropic、2024年12月19日。オーケストレーター・ワーカーパターンの設計と並列委任は §Orchestrator-workers、単純で予測可能なワークフローから開始する原則は §When (and when not) to use agents。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://platform.claude.com/docs/en/about-claude/pricing">Pricing</a> Anthropic、2026年11月7日確認。全モデルにおける出力単価が入出力比 5 倍であること、および Opus 5.5（$4/$20）、Sonnet 5.5（$2/$10）、Haiku 5.5（100K以下 $0.10/$0.50、100K超 $0.50/$2.50）の基本料金は料金表、プロンプトキャッシュ読出料金（Opus $0.20, Sonnet $0.10, Haiku $0.01）は Prompt caching 表。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://arxiv.org/abs/2510.00508">Copy-Paste to Mitigate Large Language Model Hallucinations</a> Yongchao Long et al.、2025年10月1日（arXiv:2510.00508）。外部コンテキストからの断片コピー率と文脈不整合ハルシネーションの負の相関は Abstract・§1 Introduction、自己回帰生成における知識競合（パラメトリック記憶への引きずられ）の指摘は §2 Related Work。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p>当ブログの一次計測ログ（非公開テキスト） meetsource、2026年11月6日計測（<code>hands-on-log.md</code>）。本文抽出タスク実測（Haiku $0.0147 vs Sonnet $0.204）は §1、Web 調査タスク実測（Haiku $0.124 vs Sonnet $0.421・届かない死んだ URL）は §1、源泉C 3モデル実測（Haiku 2〜8件、Sonnet 13〜16件・引用改変2件、Opus 23〜24件・改変0件・約$1.1）は §2、advisor 透過課金排除（事前検証で費用72%がOpus課金）と Explore モデル解決は §3。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-7-2" data-footnote-backref="" aria-label="Back to reference 7-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://platform.claude.com/docs/en/models/overview">Models overview</a> Anthropic、2026年11月7日確認。Haiku 5.5（高ボリューム・低遅延の分類・抽出）、Sonnet 5.5（スピードと知性の最良のバランス）、Opus 5.5（長時間の自律コーディング・知識労働）の各モデル位置づけは §Model comparison（Compare models）。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

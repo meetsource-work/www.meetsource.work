@@ -1,0 +1,204 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>GitHub Actions を macOS から Ubuntu に移して費用を 1/10 にするときに踏んだ 3 つの罠 ── Taskwarrior 3 の MSRV 1.91.1 と ${{ env.ImageOS }} の空振り | Meetsource</title><meta name="description" content="GitHub Actions の Private リポジトリで macOS ランナーの 10 倍課金とキュー枯渇を解消するため ubuntu-latest へ移行する際、最新ツールの apt 不在、Cargo.toml の MSRV 1.91.1 乖離、actions/cache の key 式で ${{ env.ImageOS }} が空振りするスコープ仕様という 3 つの実務トラップを一次実測ログから解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/github-actions-macos-to-ubuntu-cache-traps"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="GitHub Actions を macOS から Ubuntu に移して費用を 1/10 にするときに踏んだ 3 つの罠 ── Taskwarrior 3 の MSRV 1.91.1 と ${{ env.ImageOS }} の空振り | Meetsource"><meta property="og:description" content="GitHub Actions の Private リポジトリで macOS ランナーの 10 倍課金とキュー枯渇を解消するため ubuntu-latest へ移行する際、最新ツールの apt 不在、Cargo.toml の MSRV 1.91.1 乖離、actions/cache の key 式で ${{ env.ImageOS }} が空振りするスコープ仕様という 3 つの実務トラップを一次実測ログから解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/github-actions-macos-to-ubuntu-cache-traps"><meta property="og:image" content="https://www.meetsource.work/blog/github-actions-macos-to-ubuntu-cache-traps-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-06T19:15:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="GitHub Actions を macOS から Ubuntu に移して費用を 1/10 にするときに踏んだ 3 つの罠 ── Taskwarrior 3 の MSRV 1.91.1 と ${{ env.ImageOS }} の空振り | Meetsource"><meta name="twitter:description" content="GitHub Actions の Private リポジトリで macOS ランナーの 10 倍課金とキュー枯渇を解消するため ubuntu-latest へ移行する際、最新ツールの apt 不在、Cargo.toml の MSRV 1.91.1 乖離、actions/cache の key 式で ${{ env.ImageOS }} が空振りするスコープ仕様という 3 つの実務トラップを一次実測ログから解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/github-actions-macos-to-ubuntu-cache-traps-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"GitHub Actions を macOS から Ubuntu に移して費用を 1/10 にするときに踏んだ 3 つの罠 ── Taskwarrior 3 の MSRV 1.91.1 と ${{ env.ImageOS }} の空振り","description":"GitHub Actions の Private リポジトリで macOS ランナーの 10 倍課金とキュー枯渇を解消するため ubuntu-latest へ移行する際、最新ツールの apt 不在、Cargo.toml の MSRV 1.91.1 乖離、actions/cache の key 式で ${{ env.ImageOS }} が空振りするスコープ仕様という 3 つの実務トラップを一次実測ログから解説します。","datePublished":"2026-11-06T19:15:00.000Z","image":"https://www.meetsource.work/blog/github-actions-macos-to-ubuntu-cache-traps-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/github-actions-macos-to-ubuntu-cache-traps"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"actions/cache の key に ImageOS を直接指定しても unknown になるのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"GitHub Actions の式構文における env コンテキストにはホストランナープロセスの環境変数が含まれないためです。${{ env.ImageOS }} は常に空文字列と評価されます。ホスト環境変数をキーに含めるには、事前ステップで echo \"IMAGE_OS=${ImageOS:-unknown}\" >> \"$GITHUB_ENV\" を実行してコンテキストに明示的に転写する必要があります。"}},{"@type":"Question","name":"GitHub Actions で macOS ランナーから Ubuntu ランナーへ移行するとどれくらいコストを削減できますか？","acceptedAnswer":{"@type":"Answer","text":"実行分数あたりの単価が約 1/10（約 10.3 倍の単価差）に削減されます。GitHub 公式の料金表では、Linux 2-core が $0.006/分であるのに対し、macOS 3-core / 4-core は $0.062/分です。さらに、macOS arm64 ランナー特有の容量制限によるキュー待ちタイムアウト失敗を回避し、CI 実行の安定供給が得られます。"}},{"@type":"Question","name":"Ubuntu LTS の apt にない最新ツールを CI で高速に動かすにはどうすればよいですか？","acceptedAnswer":{"@type":"Answer","text":"初回実行時にソースコードをビルドして成果物を actions/cache に保存し、2 回目以降はビルドをスキップする構成にします。初回ビルドに数分のオーバーヘッドが発生しますが、キャッシュヒット時は重いコンパイル処理をスキップでき、Private リポジトリでのコンテナイメージ管理のような追加の運用コストを負わずに済みます。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-06T19:15:00.000Z" data-astro-cid-7jjqptxk> 2026.11.07 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#github-actions</span><span class="tag" data-astro-cid-7jjqptxk>#ci-cd</span><span class="tag" data-astro-cid-7jjqptxk>#actions-cache</span><span class="tag" data-astro-cid-7jjqptxk>#ubuntu</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>GitHub Actions を macOS から Ubuntu に移して費用を 1/10 にするときに踏んだ 3 つの罠 ── Taskwarrior 3 の MSRV 1.91.1 と ${{ env.ImageOS }} の空振り</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/github-actions-macos-to-ubuntu-cache-traps-hero.webp" alt="GitHub Actions を macOS から Ubuntu に移して費用を 1/10 にするときに踏んだ 3 つの罠 ── Taskwarrior 3 の MSRV 1.91.1 と ${{ env.ImageOS }} の空振り" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>GitHub Actions のランナー移行とは、ワークフローの <code>runs-on</code> ラベルを変更し、実行環境を macOS や Windows から Linux（Ubuntu 等）へ切り替えることで、実行時間枠の消費レートを最適化する運用手法です。</p>
+<p>Private リポジトリで CI を回していると、macOS ランナーの課金負担は無視できない課題になります。GitHub Actions の公式料金表によると、Linux 2-core (x64) が 1 分あたり $0.006 であるのに対し、macOS 3-core / 4-core は 1 分あたり $0.062 に設定されており、分単価の比率は約 <strong>10.3 倍</strong> に達します<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。さらに課金だけでなく、macOS arm64 ランナー特有のインフラ容量制限によるキュー枯渇も深刻な問題です。筆者が運用する Private リポジトリの CI 実行ログ（run <code>39649785823</code>）では、ジョブが 15 分 1 秒間キューで待たされた末に、<code>The job was not acquired by Runner of type hosted even after multiple attempts</code> というアノテーションを残してタイムアウト失敗しました。</p>
+<p>通常時（run <code>39690862495</code>）の所要時間は 1 分 19 秒（ジョブ実行時間は 1 分 17 秒）ですが、10 倍レート換算では 1 回のプッシュで約 13 分相当のランナー枠を消費します。自律型エージェントとの協業により 1 日 40 回前後のプッシュが発生する開発運用では、1 日で約 520 分相当の枠が消費され、ランナー不足で CI が赤（ビルド失敗）になる事態が頻発していました。</p>
+<p>そこでコストを 1/10 に圧縮し、キュー枯渇を回避するため、ワークフローを <code>ubuntu-latest</code> へ移行することを決断しました。しかし、単にラベルを書き換えるだけでは済まず、3 つの実務トラップに直面することになりました。</p>
+<p>Private リポジトリでの継続的な CI 運用において、macOS ランナーと Ubuntu ランナーには実行コストと安定供給の面で顕著な差が存在します。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>比較軸</th><th>macOS ランナー（arm64）</th><th>Ubuntu ランナー（<code>ubuntu-latest</code> ＋ キャッシュ）</th></tr></thead><tbody><tr><td>実行単価（分単価）</td><td>$0.062 / 分（基準の約 10.3 倍）</td><td>$0.006 / 分（基準単価）</td></tr><tr><td>キュー供給の安定性</td><td>容量制限による枯渇リスクあり（15 分タイムアウト実測）</td><td>実測において容量制限による待機がなく即時実行</td></tr><tr><td>外部ツールの導入</td><td>Homebrew 等で最新版を導入可能</td><td>公式 apt はバージョンが古い場合あり（自前ビルド要）</td></tr><tr><td>初回セットアップ時間</td><td>パッケージ導入のみ（全体 1 分強）</td><td>初回ビルドで約 6 分半（Taskwarrior 3 実測）</td></tr><tr><td>キャッシュヒット時</td><td>-</td><td>ビルドステップ全スキップにより短縮見込み（※所要時間は未計測）</td></tr></tbody></table>
+<p>単価を 1/10 に抑え、キュー枯渇を回避できる一方で、Ubuntu では最新ツールを自前ビルドしてキャッシュする設計が必要となります。</p>
+<h2 id="なぜ-ubuntu-移行とキャッシュ設計を採用したのか実務で直面した3つの罠">なぜ Ubuntu 移行とキャッシュ設計を採用したのか：実務で直面した3つの罠</h2>
+<h3 id="罠1-ubuntu-lts-の-apt-パッケージの古さとバイナリ不在">罠1: Ubuntu LTS の apt パッケージの古さとバイナリ不在</h3>
+<p>macOS 環境では Homebrew 経由で最新ツールを簡単に導入できていましたが、Ubuntu ランナーへ切り替えた瞬間に最初の壁にぶつかりました。テストの前提ツールとして要求される Taskwarrior 3 が、Ubuntu LTS の公式 apt リポジトリに存在しなかったのです。</p>
+<p>Ubuntu 24.04 LTS (Noble) の公式パッケージを確認すると、バージョンは <code>2.6.2+dfsg-1build2</code> で止まっています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。次期 LTS である Ubuntu 26.04 (Resolute) のパッケージ情報を見ても <code>2.6.2+dfsg-3</code> であり、依然として 2 系のままです<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>さらに GitHub Releases の配布アセットを確認したところ、提供されているのはソースコードの tarball（<code>task-3.5.0.tar.gz</code>、約 947 KiB）のみで、Linux 向けのコンパイル済みバイナリは配布されていませんでした<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>そこで CI ワークフロー側でソースビルドを行い、その成果物を <code>actions/cache@v6</code><sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup> でキャッシュ保存する方針を採りました。初回のみビルドを行い、2 回目以降はビルドを丸ごとスキップする構成です。</p>
+<p>説明用コードとして、apt に存在せずバイナリ配布もないツールをソースから cmake ビルドし、<code>actions/cache@v6</code> で版ごとにキャッシュ保存するワークフローのステップを示します。</p>
+<p>引用元: プロジェクトA（非公開）の .github/workflows/test.yml（抜粋）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#7C7F93">      -</span><span style="color:#1E66F5"> id</span><span style="color:#179299">:</span><span style="color:#40A02B"> task-cache</span></span>
+<span class="line"><span style="color:#1E66F5">        uses</span><span style="color:#179299">:</span><span style="color:#40A02B"> actions/cache@v6</span></span>
+<span class="line"><span style="color:#1E66F5">        with</span><span style="color:#179299">:</span></span>
+<span class="line"><span style="color:#1E66F5">          path</span><span style="color:#179299">:</span><span style="color:#40A02B"> ~/.local/taskwarrior</span></span>
+<span class="line"><span style="color:#1E66F5">          key</span><span style="color:#179299">:</span><span style="color:#40A02B"> taskwarrior-${{ runner.os }}-${{ runner.arch }}-${{ env.TASKWARRIOR_VERSION }}</span></span>
+<span class="line"><span style="color:#7C7F93">      -</span><span style="color:#1E66F5"> if</span><span style="color:#179299">:</span><span style="color:#40A02B"> steps.task-cache.outputs.cache-hit != 'true'</span></span>
+<span class="line"><span style="color:#1E66F5">        run</span><span style="color:#179299">:</span><span style="color:#8839EF"> |</span></span>
+<span class="line"><span style="color:#40A02B">          sudo apt-get update &#x26;&#x26; sudo apt-get install -y uuid-dev</span></span>
+<span class="line"><span style="color:#40A02B">          curl -fsSL "https://github.com/GothenburgBitFactory/taskwarrior/releases/download/v${TASKWARRIOR_VERSION}/task-${TASKWARRIOR_VERSION}.tar.gz" | tar xz</span></span>
+<span class="line"><span style="color:#40A02B">          cmake -S "task-${TASKWARRIOR_VERSION}" -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/.local/taskwarrior"</span></span>
+<span class="line"><span style="color:#40A02B">          cmake --build build -j"$(nproc)"</span></span>
+<span class="line"><span style="color:#40A02B">          cmake --install build</span></span>
+<span class="line"><span style="color:#7C7F93">      -</span><span style="color:#1E66F5"> run</span><span style="color:#179299">:</span><span style="color:#40A02B"> echo "$HOME/.local/taskwarrior/bin" >> "$GITHUB_PATH"</span></span>
+<span class="line"><span style="color:#7C7F93">      -</span><span style="color:#1E66F5"> run</span><span style="color:#179299">:</span><span style="color:#40A02B"> task --version</span></span>
+<span class="line"></span></code></pre>
+<p>このステップでは、<code>~/.local/taskwarrior</code> をキャッシュ対象とし、キャッシュミス時（<code>cache-hit != 'true'</code>）のみビルドステップを実行してバイナリを <code>$GITHUB_PATH</code> に通します。必要な依存パッケージ（<code>uuid-dev</code>）のみを apt で最小限インストールしています。</p>
+<h3 id="罠2-msrv-の思い込みと一次ソースcargotomlの実測乖離">罠2: MSRV の思い込みと一次ソース（Cargo.toml）の実測乖離</h3>
+<p>次に直面したのが、言語ツールチェーンのバージョン要件（MSRV: Minimum Supported Rust Version）をめぐる罠でした。</p>
+<p>当初、ワークフローのコメントには「ランナー標準の cmake と rust（MSRV 1.88）を使い」と書かれていました。しかし、実際にジョブを動かすとコンパイルエラーが発生して停止してしまったのです。</p>
+<p>この「1.88」という数値について、書き手自身にも記憶がありませんでした。当時エージェントと協働してワークフローを組んでいたため、エージェントが推測で記述した可能性が高いと考えられます。</p>
+<p>誰かがどこかに書いた誤りや勘違いが AI によって広まってしまう構造がある現代において、Web の二次解説や AI の提示を鵜呑みにせず、一次ソースで確かめる姿勢が不可欠です。</p>
+<p>そこで配布 tarball 内の一次ソースコード（<code>src/taskchampion-cpp/Cargo.toml</code>）を直接開いて確認したところ、6 行目に次の記述がありました<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="toml"><code><span class="line"><span style="color:#4C4F69">rust-version </span><span style="color:#179299">=</span><span style="color:#40A02B"> "1.91.1"</span><span style="color:#9CA0B0;font-style:italic">   # MSRV</span></span>
+<span class="line"></span></code></pre>
+<p>実際の要件は 1.88 ではなく <strong>1.91.1</strong> だったのです。GitHub Actions の Ubuntu ランナーにプリインストールされている Rust のバージョンがこの要件を満たしていなかったため、ビルドが失敗していました。</p>
+<p>一次ソースの実測で判明した MSRV 1.91.1 を満たすため、ビルド直前に <code>rustup</code> で stable へ引き上げる修正を加えました。</p>
+<p>引用元: プロジェクトA（非公開）の .github/workflows/test.yml（抜粋）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#7C7F93">      -</span><span style="color:#1E66F5"> if</span><span style="color:#179299">:</span><span style="color:#40A02B"> steps.task-cache.outputs.cache-hit != 'true'</span></span>
+<span class="line"><span style="color:#1E66F5">        run</span><span style="color:#179299">:</span><span style="color:#8839EF"> |</span></span>
+<span class="line"><span style="color:#40A02B">          rustup update stable &#x26;&#x26; rustup default stable</span></span>
+<span class="line"><span style="color:#40A02B">          sudo apt-get update &#x26;&#x26; sudo apt-get install -y uuid-dev</span></span>
+<span class="line"><span style="color:#40A02B">          curl -fsSL "https://github.com/GothenburgBitFactory/taskwarrior/releases/download/v${TASKWARRIOR_VERSION}/task-${TASKWARRIOR_VERSION}.tar.gz" | tar xz</span></span>
+<span class="line"><span style="color:#40A02B">          cmake -S "task-${TASKWARRIOR_VERSION}" -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/.local/taskwarrior"</span></span>
+<span class="line"><span style="color:#40A02B">          cmake --build build -j"$(nproc)"</span></span>
+<span class="line"><span style="color:#40A02B">          cmake --install build</span></span>
+<span class="line"></span></code></pre>
+<p>修正後のプッシュで実行された run <code>39736993347</code> のログ出力は以下の通りです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>✓ test in 6m24s (ID 119684902669)</span></span>
+<span class="line"><span>- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>所要時間 6 分 24 秒でジョブは無事に成功し、初回ビルドとキャッシュ保存が完了しました。ランナー標準の Rust ツールチェーンの版数に依存せず、ビルド直前に <code>rustup update stable &#x26;&#x26; rustup default stable</code> を実行してバージョン要件を確実に満たす設計が重要になります。</p>
+<h3 id="罠3-キャッシュキーにおける--envimageos--の空振りと-github_env-転写">罠3: キャッシュキーにおける ${{ env.ImageOS }} の空振りと $GITHUB_ENV 転写</h3>
+<p>ビルドが成功して安心したのも束の間、成功時のログに表示された 1 行のアノテーションが第 3 の罠の引き金となりました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>GitHub Actions の公式 Issue #14748 によると、<code>ubuntu-latest</code> は 2026 年 10 月 19 日から Ubuntu 26.04 への移行が順次開始され、11 月 19 日までに完了する予定とアナウンスされていました<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>もし Ubuntu 24 環境でビルドしたバイナリ（libuuid 等の共有ライブラリに依存）を、移行後の Ubuntu 26 ランナーがキャッシュからそのまま引き当ててしまうと、共有ライブラリの ABI 不整合によって実行時にサイレントクラッシュするリスクが生じます。</p>
+<p>CI 実行ログにプラットフォーム側から直接届く事前シグナルは非常に便利であり、環境更新によるサイレントな破壊を先回りで防ぐための貴重な一次情報として見逃さずに活かすべきです。</p>
+<p>そこで、OS のメジャーバージョン差分をキャッシュキーに組み込み、ランナーが切り替わった際には自動的にキャッシュミスさせて再ビルドが走るように設計することにしました。ランナーイメージ構築スクリプト（<code>configure-environment.sh</code>）を確認すると、イメージ構築時に <code>/etc/environment</code> へ <code>ImageOS</code> という環境変数が設定されていることがわかります<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<p>この変数を利用するため、キャッシュキーを次のように記述しました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#1E66F5">key</span><span style="color:#179299">:</span><span style="color:#40A02B"> taskwarrior-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS || 'unknown' }}-${{ env.TASKWARRIOR_VERSION }}</span></span>
+<span class="line"></span></code></pre>
+<p>ところが、実際に生成されたキャッシュキーを確認すると、期待した <code>ubuntu24</code> ではなく <code>unknown</code> にフォールバックし、<code>taskwarrior-Linux-X64-unknown-3.5.0</code> と評価されてしまっていたのです。</p>
+<p>原因は GitHub Actions の式構文における <strong>コンテキストスコープ仕様</strong> にありました。GitHub Actions の公式ドキュメントには次のように明記されています<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<blockquote><p>“The env context contains variables that have been set in a workflow, job, or step. It does not contain variables inherited by the runner process.”</p></blockquote>
+<p>つまり、ワークフローの式（<code>${{ ... }}</code>）内で参照できる <code>env</code> コンテキストには、ワークフローファイル自身で定義された変数や <code>$GITHUB_ENV</code> に明示的に書き込まれた変数が入り、ホストランナープロセスの OS 環境変数は含まれません。そのため、<code>${{ env.ImageOS }}</code> は常に空文字列と判定され、フォールバックの <code>'unknown'</code> が採用されていたのです。</p>
+<p>解決策は、シェルステップ内で OS 環境変数 <code>$ImageOS</code> を読み取り、公式の手順に従って <code>$GITHUB_ENV</code> へ転写することです<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。</p>
+<p>引用元: プロジェクトA（非公開）の .github/workflows/test.yml（抜粋）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#7C7F93">      -</span><span style="color:#1E66F5"> run</span><span style="color:#179299">:</span><span style="color:#40A02B"> echo "IMAGE_OS=${ImageOS:-unknown}" >> "$GITHUB_ENV"</span></span>
+<span class="line"><span style="color:#7C7F93">      -</span><span style="color:#1E66F5"> id</span><span style="color:#179299">:</span><span style="color:#40A02B"> task-cache</span></span>
+<span class="line"><span style="color:#1E66F5">        uses</span><span style="color:#179299">:</span><span style="color:#40A02B"> actions/cache@v6</span></span>
+<span class="line"><span style="color:#1E66F5">        with</span><span style="color:#179299">:</span></span>
+<span class="line"><span style="color:#1E66F5">          path</span><span style="color:#179299">:</span><span style="color:#40A02B"> ~/.local/taskwarrior</span></span>
+<span class="line"><span style="color:#1E66F5">          key</span><span style="color:#179299">:</span><span style="color:#40A02B"> taskwarrior-${{ runner.os }}-${{ runner.arch }}-${{ env.IMAGE_OS }}-${{ env.TASKWARRIOR_VERSION }}</span></span>
+<span class="line"></span></code></pre>
+<p>修正後のプッシュで実行された run <code>39768918905</code> のステップログ出力は以下の通りです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>IMAGE_OS: ubuntu24</span></span>
+<span class="line"><span>Cache saved with key: taskwarrior-Linux-X64-ubuntu24-3.5.0</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>シェルステップ内で <code>$ImageOS</code> を取得して <code>$GITHUB_ENV</code> に追記したことで、後続ステップの式構文から <code>${{ env.IMAGE_OS }}</code> として正しく <code>ubuntu24</code> が参照され、意図通りのキャッシュキーが生成・保存されました。</p>
+<p>この修正コミットは直前の試行からわずか 51 秒後に行われており、書き手自身にも手動でデバッグした記憶がありません。エージェントが自律検証によって仕様の食い違いを即座に検知し、修正したと推測されます。人間が細部の仕様をすべて記憶していなくても、仕組みによって自律的に誤りに気づき正しく修正できることこそが、協業基盤が健全に機能している証拠といえます。</p>
+<h2 id="メリットの裏にあるトレードオフと適用限界">メリットの裏にあるトレードオフと適用限界</h2>
+<p>macOS ランナーから Ubuntu ランナーへの移行と、ソースビルド＋<code>actions/cache@v6</code> 構成の導入には明確なメリットがありますが、同時に運用上のトレードオフと適用限界が存在します。</p>
+<p>第 1 に、初回ビルド時間のオーバーヘッドです。Ubuntu ランナーの実行単価は 1/10 に抑えられますが、キャッシュが存在しない初回実行時には、Taskwarrior 3 の cmake ビルドに約 6 分半（実測 6 分 24 秒）を要します。2 回目以降はキャッシュヒットによりビルド全体がスキップされるため大幅な時間短縮が見込めますが（※キャッシュヒット時の所要時間自体は未計測）、ブランチの新設やキャッシュ失効時には初回ビルドの待ち時間が発生します。</p>
+<p>第 2 に、GitHub Actions のキャッシュ失効ポリシーと容量制限です。公式仕様により、7 日間アクセスされなかったキャッシュエントリは自動的に退役（削除）されます<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。また、リポジトリ全体でのキャッシュサイズ上限は 10 GB に制限されています。プッシュ頻度が極端に低いリポジトリや、膨大なキャッシュを消費する大規模プロジェクトでは、キャッシュミスが頻発して再ビルドのコストが嵩む可能性があります。</p>
+<p>第 3 に、事前ビルド済み Docker コンテナイメージ配布との比較です。「なぜ Docker Hub や GitHub Packages にビルド済みコンテナイメージを用意して <code>container:</code> で動かさないのか」という代替案も考えられます。しかし Private リポジトリにおいてコンテナ運用を採用すると、レジストリ認証用シークレットの管理、ベース OS の脆弱性パッチ適用、コンテナイメージを自動更新するための別ワークフローの維持など、運用オーバーヘッドが急増します。単一の依存ツールを解決する目的であれば、ワークフロー内で完結する <code>actions/cache</code> 構成の方が、長期的な保守コストを格段に低く抑えられます。</p>
+<p>第 4 に、OS メジャー更新時の挙動です。今回のようにキャッシュキーに OS バージョン（<code>ubuntu24</code>）を組み込む設計は、ランナーが Ubuntu 26 に切り替わった際に ABI 不整合のバイナリを読み込まず、クリーンに再ビルドを行わせるための安全装置として機能します。一方で、移行直後の最初のビルドジョブでは必ずキャッシュミスが発生し、約 6 分半のビルド時間が加算される点は事前に運用計画として織り込んでおく必要があります。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>本記事で採用した設計は、現在の環境制約に基づいた最適解です。したがって、将来的に前提条件が変化すれば、選択すべき構成も変わります。</p>
+<p>まず、Ubuntu の公式 apt リポジトリや信頼できる PPA で Taskwarrior 3 系が標準提供されるようになれば、自前での cmake ビルドやキャッシュ設計は一切不要になり、<code>sudo apt-get install</code> の 1 行で完結します。ただし、次期 LTS である Ubuntu 26.04 (Resolute) のパッケージ情報でも依然として 2.6 系が維持されている現状を踏まえると、短期間で apt 化される可能性は低いと考えられます。</p>
+<p>次に、GitHub Releases で Linux 向けのコンパイル済みバイナリが配布されるようになった場合です。バイナリ配布が開始されれば、重いコンパイル処理を行わずに直接 curl して展開するだけの軽量なステップへ移行できます。</p>
+<p>また、GitHub Actions のランナー仕様が拡充され、ホストランナーの OS バージョンが <code>runner.os_version</code> のようなコンテキストで直接公開されれば、<code>$GITHUB_ENV</code> への明示的な転写ステップを挟む必要はなくなります。</p>
+<p>前提技術が進化すれば個別のワークフロー記述は変化しますが、今回の実践から得られた 2 つのコア教訓は色褪せません。</p>
+<p>1 つ目は、<strong>AI や Web 検索が提示する「それらしい設定記法」を鵜呑みにせず、公式ドキュメントの仕様定義や配布ソースの一次実測値で確かめる姿勢</strong> です。MSRV の乖離や式構文のコンテキストスコープは、二次解説をなぞるだけでは決して見抜けない落とし穴でした。</p>
+<p>2 つ目は、<strong>CI 実行ログのアノテーションのように、プラットフォーム側から直接届く事前シグナルを見逃さずに先回りで活かす設計思想</strong> です。予告された環境更新を事前に察知し、キャッシュキーに OS 識別子を組み込んでおいたことで、将来の予期せぬ環境破壊を未然に防ぐ堅牢なパイプラインを構築できました。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-actionscache-の-key-に-imageos-を直接指定しても-unknown-になるのはなぜですか">Q. actions/cache の key に ImageOS を直接指定しても unknown になるのはなぜですか？</h3>
+<p><strong>A.</strong> GitHub Actions の式構文における <code>env</code> コンテキストにはホストランナープロセスの環境変数が含まれないためです。<code>${{ env.ImageOS }}</code> は常に空文字列と評価されます。ホスト環境変数をキーに含めるには、事前ステップで <code>echo "IMAGE_OS=${ImageOS:-unknown}" >> "$GITHUB_ENV"</code> を実行してコンテキストに明示的に転写する必要があります。</p>
+<h3 id="q-github-actions-で-macos-ランナーから-ubuntu-ランナーへ移行するとどれくらいコストを削減できますか">Q. GitHub Actions で macOS ランナーから Ubuntu ランナーへ移行するとどれくらいコストを削減できますか？</h3>
+<p><strong>A.</strong> 実行分数あたりの単価が約 1/10（約 10.3 倍の単価差）に削減されます。GitHub 公式の料金表では、Linux 2-core が $0.006/分であるのに対し、macOS 3-core / 4-core は $0.062/分です。さらに、macOS arm64 ランナー特有の容量制限によるキュー待ちタイムアウト失敗を回避し、CI 実行の安定供給が得られます。</p>
+<h3 id="q-ubuntu-lts-の-apt-にない最新ツールを-ci-で高速に動かすにはどうすればよいですか">Q. Ubuntu LTS の apt にない最新ツールを CI で高速に動かすにはどうすればよいですか？</h3>
+<p><strong>A.</strong> 初回実行時にソースコードをビルドして成果物を <code>actions/cache</code> に保存し、2 回目以降はビルドをスキップする構成にします。初回ビルドに数分のオーバーヘッドが発生しますが、キャッシュヒット時は重いコンパイル処理をスキップでき、Private リポジトリでのコンテナイメージ管理のような追加の運用コストを負わずに済みます。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>macOS ランナーから Ubuntu ランナーへの移行とキャッシュ設計において、現場で確認すべき判断軸を整理します。</p>
+<ul>
+<li><strong>macOS ランナーから Ubuntu ランナーへの移行は、分単価を約 1/10 に圧縮し、キュー待ちタイムアウトを回避する強力な手段である。</strong></li>
+<li><strong>Ubuntu LTS の apt や GitHub Releases に依存バイナリがないツールは、初回ソースビルドと <code>actions/cache@v6</code> の組み合わせで最小限の運用コストで高速化できる。</strong></li>
+<li><strong>ツールの MSRV やバージョン要件は、ドキュメントや Web・AI の二次解説を過信せず、配布ソース（<code>Cargo.toml</code> 等）の一次実測値から特定しなければならない。</strong></li>
+<li><strong>GitHub Actions の式における <code>env</code> コンテキストにはランナーの OS 環境変数は入らないため、<code>${{ env.ImageOS }}</code> をキャッシュキーに使うには <code>$GITHUB_ENV</code> への明示的な転写が不可欠である。</strong></li>
+<li><strong>CI ログに届くプラットフォーム移行のアノテーションは、将来のサイレントな環境破壊を防ぐ貴重な一次シグナルとして先回りで活用すべきである。</strong></li>
+</ul>
+<p>CI/CD パイプラインの最適化、GitHub Actions のコスト削減やランナー移行設計、自律型 AI エージェントの運用基盤構築について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://docs.github.com/en/billing/concepts/product-billing/github-actions">About billing for GitHub Actions</a> GitHub, Inc. 公式ドキュメント（2026年11月確認）。Linux 2-core ($0.006/分) と macOS 3/4-core ($0.062/分) の料金単価比率（約 10.3 倍）は料金表セクション。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://packages.ubuntu.com/noble/taskwarrior">Ubuntu packages: taskwarrior (noble)</a> Canonical Ltd. 公式パッケージ情報（2026年11月確認）。Ubuntu 24.04 LTS (noble) における公式パッケージバージョンが <code>2.6.2+dfsg-1build2</code> であることはパッケージ詳細ページ。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://packages.ubuntu.com/resolute/taskwarrior">Ubuntu packages: taskwarrior (resolute)</a> Canonical Ltd. 公式パッケージ情報（2026年11月確認）。Ubuntu 26.04 (resolute) における公式パッケージバージョンが <code>2.6.2+dfsg-3</code> であることはパッケージ詳細ページ。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://github.com/GothenburgBitFactory/taskwarrior/releases/tag/v3.5.0">Taskwarrior Release v3.5.0</a> GothenburgBitFactory リリース情報（2026年11月確認）。リリース v3.5.0 の存在確認（アセットがソース tarball のみで Linux バイナリが非配布である点は一次検証ログに依拠）。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://raw.githubusercontent.com/actions/cache/main/README.md">actions/cache README</a> GitHub, Inc. 公式リポジトリ README（2026年11月確認）。キャッシュキーにおけるコンテキスト参照や前段ステップ出力をキーに組み込む仕様は「Creating a cache key」セクション。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://raw.githubusercontent.com/GothenburgBitFactory/taskwarrior/v3.5.0/src/taskchampion-cpp/Cargo.toml">Taskwarrior v3.5.0 Cargo.toml</a> GothenburgBitFactory ソースコード（2026年11月確認）。Taskwarrior 3.5.0 の MSRV が <code>1.91.1</code> であることは 6 行目の <code>rust-version = "1.91.1"</code>。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://github.com/actions/runner-images/issues/14748">runner-images Issue #14748</a> GitHub, Inc. 公式 Issue（2026年10月）。<code>ubuntu-latest</code> の Ubuntu 26.04 への移行が 2026年10月19日開始、11月19日完了予定である移行アナウンスは Issue 本文。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://raw.githubusercontent.com/actions/runner-images/main/images/ubuntu/scripts/build/configure-environment.sh">runner-images configure-environment.sh</a> GitHub, Inc. 公式リポジトリ（2026年11月確認）。<code>ImageOS</code> がランナーイメージ構築時に <code>/etc/environment</code> に設定される OS 環境変数である実装は <code>set_etc_environment_variable "ImageOS"</code> の定義箇所。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/contexts#env-context">Contexts reference (env context)</a> GitHub, Inc. 公式ドキュメント（2026年11月確認）。<code>env</code> コンテキストがワークフロー・ジョブ・ステップで設定された変数を含み、ランナープロセスが継承した環境変数を含まない仕様は「env context」セクション。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#setting-an-environment-variable">Workflow commands for GitHub Actions (Setting an environment variable)</a> GitHub, Inc. 公式ドキュメント（2026年11月確認）。<code>$GITHUB_ENV</code> への書き込みによって後続ステップに環境変数を引き渡す手順は「Setting an environment variable」セクション。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy">Caching dependencies to speed up workflows</a> GitHub, Inc. 公式ドキュメント（2026年11月確認）。キャッシュの 7 日間非アクセス失効ポリシーおよびリポジトリあたり 10 GB の制限は「Usage limits and eviction policy」セクション。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

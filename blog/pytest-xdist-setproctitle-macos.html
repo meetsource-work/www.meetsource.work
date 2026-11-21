@@ -1,0 +1,349 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>pytest-xdist が macOS で遅い原因と切り分け方法 ── setproctitle と launchservicesd の仕組み | Meetsource</title><meta name="description" content="pytest-xdist が macOS で遅くなる原因の1つは、任意依存パッケージの setproctitle がテストごとにプロセス名を書き換え、macOS の launchservicesd に通知を送り続けることにあります。空テスト 2000 件の 3 往復比較（約 3.6〜4.8 倍差）と単一プロセス実験の結果をもとに、仕組みと切り分け手順、PYTEST_CURRENT_TEST との違いを解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/pytest-xdist-setproctitle-macos"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="pytest-xdist の並列テストが、setproctitle の有無だけで約 4 倍遅くなった ── macOS の launchservicesd が CPU を使っていた"><meta property="og:description" content="自分のテストコードには重い処理がないのに並列化で遅い。空テスト 2000 件を 3 往復で測ったところ、任意依存の setproctitle の有無だけで実行時間に 3.6〜4.8 倍の差が出ました。原因の切り分け手順を整理します。"><meta property="og:url" content="https://www.meetsource.work/blog/pytest-xdist-setproctitle-macos"><meta property="og:image" content="https://www.meetsource.work/blog/pytest-xdist-setproctitle-macos-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-13T16:20:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="pytest-xdist の並列テストが、setproctitle の有無だけで約 4 倍遅くなった ── macOS の launchservicesd が CPU を使っていた"><meta name="twitter:description" content="自分のテストコードには重い処理がないのに並列化で遅い。空テスト 2000 件を 3 往復で測ったところ、任意依存の setproctitle の有無だけで実行時間に 3.6〜4.8 倍の差が出ました。原因の切り分け手順を整理します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/pytest-xdist-setproctitle-macos-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"pytest-xdist が macOS で遅い原因と切り分け方法 ── setproctitle と launchservicesd の仕組み","description":"pytest-xdist が macOS で遅くなる原因の1つは、任意依存パッケージの setproctitle がテストごとにプロセス名を書き換え、macOS の launchservicesd に通知を送り続けることにあります。空テスト 2000 件の 3 往復比較（約 3.6〜4.8 倍差）と単一プロセス実験の結果をもとに、仕組みと切り分け手順、PYTEST_CURRENT_TEST との違いを解説します。","datePublished":"2026-11-13T16:20:00.000Z","image":"https://www.meetsource.work/blog/pytest-xdist-setproctitle-macos-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/pytest-xdist-setproctitle-macos"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"PYTEST_CURRENT_TEST 環境変数を無効化すれば launchservicesd の負荷は下がりますか？","acceptedAnswer":{"@type":"Answer","text":"下がりません。PYTEST_CURRENT_TEST は pytest がテスト実行中に os.environ へ設定する環境変数であり、setproctitle によるプロセス名書き換えや Launch Services への IPC 呼び出しとは無関係な別の機構です。"}},{"@type":"Question","name":"pytest-xdist を使わなければ、setproctitle による launchservicesd の負荷は起きませんか？","acceptedAnswer":{"@type":"Answer","text":"いいえ、pytest-xdist を使わない単一プロセスでも、setproctitle() を呼べば launchservicesd の CPU 負荷は発生します。単一プロセスで setproctitle() を 2000 回連続呼び出しした実験でも launchservicesd の CPU 増分が 1.86 秒発生しました。並列実行時に顕在化しやすいのは、pytest-xdist がテスト 1 件ごとに 2 回 setproctitle() を呼び出し、複数ワーカーから同時に高頻度で実行されるためです。"}},{"@type":"Question","name":"テストコードで import xdist.remote して worker_title を上書きすれば回避できますか？","acceptedAnswer":{"@type":"Answer","text":"その方法では回避できません。pytest-xdist のワーカーは execnet 経由で __channelexec__ というモジュール空間でコードを実行するため、通常の import xdist.remote で読み込んだモジュールオブジェクトを書き換えてもワーカー側の実行には反映されないためです。回避する場合は conftest.py の pytest_configure 内で __channelexec__ 側の worker_title を差し替える手法が報告されています。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-13T16:20:00.000Z" data-astro-cid-7jjqptxk> 2026.11.14 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#python</span><span class="tag" data-astro-cid-7jjqptxk>#testing</span><span class="tag" data-astro-cid-7jjqptxk>#parallel-execution</span><span class="tag" data-astro-cid-7jjqptxk>#macos</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>pytest-xdist が macOS で遅い原因と切り分け方法 ── setproctitle と launchservicesd の仕組み</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/pytest-xdist-setproctitle-macos-hero.webp" alt="pytest-xdist が macOS で遅い原因と切り分け方法 ── setproctitle と launchservicesd の仕組み" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>macOS 上で <code>pytest-xdist</code> を使ってテストを並列実行しているのに、ワーカー数を増やしても期待どおりに速くならないことがあります。自分のテストコードに重い計算や I/O が見当たらないにもかかわらず、Activity Monitor や <code>ps</code> を見ると <code>launchservicesd</code> が CPU を消費しているケースです。</p>
+<p><code>pytest-xdist</code> における <code>setproctitle</code> 起因の速度劣化とは、任意依存パッケージの <code>setproctitle</code>（プロセスの表示名を書き換えるライブラリ）が導入された環境でワーカーがテストごとにプロセス名を更新し、macOS のシステムデーモンである <code>launchservicesd</code>（アプリケーションの起動や名称変更の通知を仲介するバックグラウンドプロセス）への通知ブロードキャストが連鎖して CPU 負荷と実行時間が増大する現象です。</p>
+<p>空のテスト 2000 件を <code>pytest -n 8</code> で実行した筆者の実機計測では、<code>setproctitle</code> が入っているかいないかだけで wall time が約 3.6〜4.8 倍（<code>4.19〜4.94s</code> 対 <code>0.94〜1.15s</code>）異なりました。なお、macOS 上で並列テストが遅くなる別の事例として、<a href="/blog/parallel-test-macos-git-maintenance">opendirectoryd / XProtect の競合と Git の自動保守が原因になったケース</a>もありますが、あちらは <code>unittest</code> の並列実行に伴うものであり、<code>setproctitle</code> は関係しない別機構の問題です。</p>
+<p>本記事では、3 往復の交互比較実験と単一プロセス実験の実測データをもとに、なぜ <code>pytest-xdist</code> と <code>setproctitle</code> の組み合わせで <code>launchservicesd</code> の負荷が跳ね上がるのか、誤認しやすい環境変数 <code>PYTEST_CURRENT_TEST</code> との違い、そして手元の環境で影響を切り分けて対処するやり方を整理します。</p>
+<h2 id="検証環境と調査スコープ">検証環境と調査スコープ</h2>
+<p>本記事の後半で示すベンチマークは、以下の検証環境および固定バージョンの組み合わせで実施しました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>項目</th><th>設定・バージョン</th></tr></thead><tbody><tr><td><strong>計測日</strong></td><td>2026年11月10日</td></tr><tr><td><strong>OS・ビルド</strong></td><td><code>macOS 27.0.1</code>（<code>BuildVersion: 26A434</code>）</td></tr><tr><td><strong>論理コア数</strong></td><td><code>hw.ncpu: 8</code></td></tr><tr><td><strong>計測対象デーモン</strong></td><td><code>launchservicesd</code>（<code>/System/Library/CoreServices/launchservicesd</code>）</td></tr><tr><td><strong>ホスト側 Python（計測スクリプト用）</strong></td><td><code>Python 3.15.2</code></td></tr><tr><td><strong>テスト実行用仮想環境</strong></td><td><code>uv venv -q -p 3.13</code> で作成した <code>Python 3.13</code>（2 環境）</td></tr><tr><td><strong>主要パッケージ</strong></td><td><code>pytest 9.2.0</code>、<code>pytest-xdist 3.8.0</code>、<code>setproctitle 1.3.8</code></td></tr></tbody></table>
+<p>本検証には以下のスコープ境界と計測上の制約があります。</p>
+<ul>
+<li><strong>ハードウェア機種・メモリ容量</strong>: 環境確認コマンドで取得していないため、Apple Silicon の世代や搭載メモリ容量は特定していません。</li>
+<li><strong>システム全体の CPU 差分</strong>: <code>launchservicesd</code> の CPU 時間は <code>ps -Ao pid,cputime,comm</code> による累積 CPU 時間の差分で算出しているため、計測中にバックグラウンドの他アプリや OS 処理が <code>launchservicesd</code> を叩いた影響は分離していません。</li>
+<li><strong>デーモン内部のコールスタック</strong>: <code>sample</code> や <code>spindump</code> による <code>launchservicesd</code> 内部のプロファイリングは行っていません。</li>
+<li><strong>他条件への一般化</strong>: 実務の重いテスト（1 件あたり数百 ms〜数秒）や、異なる Python・<code>pytest-xdist</code> バージョンで同じ倍率になるかは未計測です。</li>
+</ul>
+<h2 id="pytest-xdist-が-macos-で遅い原因とは何か--3-者の絡む仕組み">pytest-xdist が macOS で遅い原因とは何か ── 3 者の絡む仕組み</h2>
+<p><code>pytest-xdist</code>・<code>setproctitle</code>・<code>launchservicesd</code> の 3 者がどのようにつながっているかを、各プロジェクトの実装と外部の検証記録から追っていきます。</p>
+<h3 id="pytest-xdist-側の挙動1-テストあたり-2-回の呼び出し">pytest-xdist 側の挙動：1 テストあたり 2 回の呼び出し</h3>
+<p><code>pytest-xdist</code> v3.8.0 の <code>src/xdist/remote.py</code> では、<code>setproctitle</code> を任意依存として読み込む構造になっています<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<ul>
+<li>35〜40 行目で <code>from setproctitle import setproctitle</code> を <code>try</code> / <code>except ImportError</code> で読み込み、未導入時は何もしないフォールバック関数を定義しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+<li>66〜71 行目の <code>worker_title(title: str) -> None</code> 内で <code>setproctitle(title)</code> を呼び出し、例外が出ても握りつぶします<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+<li><code>WorkerInteractor.run_one_test</code>（228〜234 行目）では、テスト実行の直前に <code>worker_title("[pytest-xdist running] %s" % item.nodeid)</code> を、直後に <code>worker_title("[pytest-xdist idle]")</code> を呼び出します<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+</ul>
+<p>つまり、<strong>1 テストあたり 2 回</strong>（2000 件のテストなら計 4000 回）<code>setproctitle()</code> が呼ばれます。この連携は、長時間かかるテストやハング時の状態を <code>top</code> や <code>ps</code> で把握しやすくするための <code>"bonus goodie"</code> として導入された経緯があります<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>なお、公式に「無効化機能がない」と明記されているわけではありませんが、少なくとも <code>xdist/remote.py</code> 内に <code>setproctitle</code> の呼び出しを抑止するオプションや環境変数による分岐は見当たらず、実装構造上は <code>setproctitle</code> が環境に導入されていれば無条件に呼ばれる形になっています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-5" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="setproctitle-と-launchservicesd-の挙動macos-固有の通知ブロードキャスト">setproctitle と launchservicesd の挙動：macOS 固有の通知ブロードキャスト</h3>
+<p><code>setproctitle</code>（<code>py-setproctitle</code>）側の <code>src/spt_status.c</code> を見ると、<code>set_ps_display()</code> は <code>argv</code> 領域を書き換えたあと、<code>#ifdef PS_USE_DARWIN</code> の分岐で <code>darwin_set_process_title()</code> を無条件に呼び出します<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。一方、Linux 環境（<code>PS_USE_PRCTL</code>）では <code>prctl(PR_SET_NAME, ...)</code> と <code>argv</code> の書き換えを行うだけで、macOS のような Launch Services への IPC 呼び出しは存在しません<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>macOS 向けの <code>src/darwin_set_process_name.c</code> では、初回実行時に <code>LSApplicationCheckIn</code> でプロセスを Launch Services に登録し、以降は呼び出しごとに <code>LSSetApplicationInformationItem</code> を実行して表示名を更新します<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。<code>py-setproctitle</code> の Issue #170 での報告によると、この呼び出しのたびに <code>launchservicesd</code> が全 Launch Services クライアントへ <code>kLSNotifyApplicationNameChanged</code> と <code>kLSNotifyApplicationInformationKeyChanged</code> の 2 件の通知をシステム全体へブロードキャストします<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。環境変数による opt-out も同 Issue で議論されていますが、2026年11月14日時点では Open のまま未実装です<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<h3 id="他環境での深刻化事例と類似事象">他環境での深刻化事例と類似事象</h3>
+<p>後述する筆者の実測（2000 件・<code>-n 8</code>）ではデスクトップのフリーズには至りませんでしたが、外部ではワーカー数や更新頻度によって深刻な UI ハングが起きた事例が報告されています。</p>
+<ul>
+<li><strong>Jochen Wersdörfer 氏の事例</strong>: <code>pytest-xdist</code> の実行中にデスクトップ全体がフリーズし、<code>lsappinfo listen</code> で計測したところ 1 分間に 11,773 件の application-name 通知（うち 11,769 件が 2 つの pytest ワーカー由来）が送出されていたと報告されています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</li>
+<li><strong>BenchBox の事例</strong>: <code>mutmut</code> の推移的依存によって <code>setproctitle</code> が環境に混入し、2 ワーカーで毎秒 200 回以上の更新が走った結果、<code>launchservicesd</code> が 200%+ CPU・約 900 MB RSS、<code>runningboardd</code> が約 50% CPU に達し、<code>WindowServer</code> が飢餓状態になったと記録されています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</li>
+<li><strong>他ツールでの同型問題</strong>: Ray でもタスクごとの <code>setproctitle</code> 更新により Apple Silicon (M4) 上で <code>WindowServer</code> がハングする問題が報告され<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>、Launch Services への IPC 呼び出しをスキップしてローカルスレッド名のみを設定する修正がマージされました<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。Node.js 等が利用する libuv でも、<code>uv_set_process_title</code> による同型の Launch Services 通知ストームが報告されています<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。</li>
+</ul>
+<h3 id="pytest_current_test-との違い">PYTEST_CURRENT_TEST との違い</h3>
+<p>プロセス実行中のテストを把握する仕組みとして <code>PYTEST_CURRENT_TEST</code> がありますが、これはプロセスタイトルを書き換える機構とは別物です。<code>pytest</code> の公式ドキュメントにあるとおり、<code>PYTEST_CURRENT_TEST</code> はテストの <code>setup</code> / <code>call</code> / <code>teardown</code> 各ステージで <code>os.environ</code> へテスト名を設定する環境変数であり、<code>argv</code> や Launch Services には触れません<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。</p>
+<p>実際、筆者が社内で残していた初期の検証メモでも、誤って <code>PYTEST_CURRENT_TEST</code> を無効化する案を対策候補に挙げていましたが、実機検証の段階で機構と無関係であると気づき訂正しています。</p>
+<h2 id="setproctitle-の有無と-os-ごとの違い">setproctitle の有無と OS ごとの違い</h2>
+<p>ここまでの実装差を踏まえ、<code>setproctitle</code> の有無および OS による挙動の違いを 3 条件で比較します。macOS 環境では <code>setproctitle</code> が存在するか否かだけで Launch Services への IPC と通知ブロードキャストの有無が切り替わり、同じテスト数でも実行時間とシステム負荷が大きく変わります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>比較軸</th><th><code>pytest-xdist</code> + <code>setproctitle</code> 有り（macOS）</th><th><code>pytest-xdist</code> + <code>setproctitle</code> 無し（macOS）</th><th><code>setproctitle</code> 有り（Linux / <code>PS_USE_PRCTL</code>）</th></tr></thead><tbody><tr><td><strong>1 テストあたりのタイトル更新動作</strong></td><td><code>running</code> / <code>idle</code> の計 2 回 <code>setproctitle()</code> を実行<sup><a href="#user-content-fn-1" id="user-content-fnref-1-6" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></td><td>フォールバック関数が何もしない<sup><a href="#user-content-fn-1" id="user-content-fnref-1-7" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></td><td><code>running</code> / <code>idle</code> の計 2 回 <code>setproctitle()</code> を実行<sup><a href="#user-content-fn-1" id="user-content-fnref-1-8" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></td></tr><tr><td><strong>macOS <code>launchservicesd</code> への影響</strong></td><td><code>LSSetApplicationInformationItem</code> 経由で通知を毎回ブロードキャストし CPU 負荷が発生<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-5" id="user-content-fnref-5-3" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup></td><td>影響なし（IPC 呼び出し自体が発生しない）</td><td>該当なし（<code>prctl</code> と <code>argv</code> 書き換えのみで IPC なし）<sup><a href="#user-content-fn-3" id="user-content-fnref-3-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup></td></tr><tr><td><strong><code>pytest-xdist</code> 側の無効化オプション</strong></td><td><code>xdist/remote.py</code> 内に設定・環境変数分岐は見当たらない<sup><a href="#user-content-fn-1" id="user-content-fnref-1-9" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></td><td>不要</td><td><code>xdist/remote.py</code> 内に設定・環境変数分岐は見当たらない<sup><a href="#user-content-fn-1" id="user-content-fnref-1-10" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></td></tr><tr><td><strong>確認方法</strong></td><td><code>python -c "import setproctitle"</code> が成功する、<code>lsappinfo listen</code> で通知が見える<sup><a href="#user-content-fn-5" id="user-content-fnref-5-4" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup></td><td><code>ModuleNotFoundError</code> になる</td><td><code>python -c "import setproctitle"</code> が成功する</td></tr></tbody></table>
+<p>したがって、macOS で <code>pytest-xdist</code> が想定より遅い場合は、まず環境に <code>setproctitle</code> が入っているかを確認し、有り／無しの比較で <code>launchservicesd</code> の CPU 増分を切り分けるのが有効です。</p>
+<h2 id="実機ベンチマーク3-往復交互比較と単一プロセス実験">実機ベンチマーク：3 往復交互比較と単一プロセス実験</h2>
+<p>ここからは、筆者が 2026年11月10日に実施した 2 つの実機実験の結果と、そこから言える事実と、断定できない点（留保）を分けて示します。</p>
+<h3 id="実験-apytest--n-8空のテスト-2000-件の-3-往復交互比較">実験 A：pytest -n 8（空のテスト 2000 件）の 3 往復交互比較</h3>
+<p>外部要因やキャッシュの影響を均すため、<code>setproctitle</code> 有り（<code>with</code>）と無し（<code>without</code>）の 2 つの仮想環境を交互に 3 ラウンド実行し、各ラン前後の <code>launchservicesd</code> 累積 CPU 時間差分と wall time を比較しました。</p>
+<p><strong>目的</strong>: <code>setproctitle</code> 有り／無しの 2 つの仮想環境を交互に実行し、<code>ps -Ao pid,cputime,comm</code> の差分から <code>launchservicesd</code> の CPU 増分と wall time を記録します。</p>
+<p>引用元: 筆者の検証記録（2026年11月）の run.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>"""setproctitle の有無で pytest-xdist 実行中の launchservicesd CPU 時間を比べる。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>usage: python3 run.py &#x3C;venv-with> &#x3C;venv-without> &#x3C;testdir> &#x3C;rounds></span></span>
+<span class="line"><span>"""</span></span>
+<span class="line"><span>import subprocess, sys, time</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def lsd_cpu():</span></span>
+<span class="line"><span>    out = subprocess.run(["ps", "-Ao", "pid,cputime,comm"], capture_output=True, text=True).stdout</span></span>
+<span class="line"><span>    for line in out.splitlines():</span></span>
+<span class="line"><span>        if line.endswith("/launchservicesd"):</span></span>
+<span class="line"><span>            t = line.split()[1]  # [[dd-]hh:]mm:ss.cc</span></span>
+<span class="line"><span>            parts = t.replace("-", ":").split(":")</span></span>
+<span class="line"><span>            secs = 0.0</span></span>
+<span class="line"><span>            for p in parts:</span></span>
+<span class="line"><span>                secs = secs * 60 + float(p)</span></span>
+<span class="line"><span>            return secs</span></span>
+<span class="line"><span>    raise SystemExit("launchservicesd not found")</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def run(venv, testdir):</span></span>
+<span class="line"><span>    c0, t0 = lsd_cpu(), time.monotonic()</span></span>
+<span class="line"><span>    r = subprocess.run([f"{venv}/bin/python", "-m", "pytest", "-q", "-p", "no:cacheprovider",</span></span>
+<span class="line"><span>                        "-n", "8", testdir], capture_output=True, text=True)</span></span>
+<span class="line"><span>    wall, dc = time.monotonic() - t0, lsd_cpu() - c0</span></span>
+<span class="line"><span>    tail = r.stdout.strip().splitlines()[-1] if r.stdout.strip() else r.stderr[-200:]</span></span>
+<span class="line"><span>    return wall, dc, r.returncode, tail</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>with_v, without_v, testdir, rounds = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])</span></span>
+<span class="line"><span>for i in range(rounds):</span></span>
+<span class="line"><span>    for label, v in (("with", with_v), ("without", without_v)):</span></span>
+<span class="line"><span>        wall, dc, rc, tail = run(v, testdir)</span></span>
+<span class="line"><span>        print(f"round={i+1} setproctitle={label:7} rc={rc} wall={wall:6.2f}s launchservicesd_cpu_delta={dc:6.2f}s | {tail}", flush=True)</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><strong>実行結果</strong>（筆者の検証記録における実測出力）:</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>round=1 setproctitle=with    rc=0 wall=  4.94s launchservicesd_cpu_delta=  4.30s | 2000 passed in 4.01s</span></span>
+<span class="line"><span>round=1 setproctitle=without rc=0 wall=  1.15s launchservicesd_cpu_delta=  0.01s | 2000 passed in 0.75s</span></span>
+<span class="line"><span>round=2 setproctitle=with    rc=0 wall=  4.53s launchservicesd_cpu_delta=  4.34s | 2000 passed in 4.22s</span></span>
+<span class="line"><span>round=2 setproctitle=without rc=0 wall=  0.94s launchservicesd_cpu_delta=  0.04s | 2000 passed in 0.79s</span></span>
+<span class="line"><span>round=3 setproctitle=with    rc=0 wall=  4.19s launchservicesd_cpu_delta=  4.92s | 2000 passed in 3.87s</span></span>
+<span class="line"><span>round=3 setproctitle=without rc=0 wall=  1.15s launchservicesd_cpu_delta=  0.42s | 2000 passed in 0.99s</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><strong>解説</strong>: <code>-p no:cacheprovider</code> で <code>pytest</code> 側のキャッシュを無効化したうえで、<code>time.monotonic()</code> による wall time と <code>ps</code> による <code>launchservicesd</code> の累積 CPU 時間差分を 1 ラウンドごとに交互記録しています。</p>
+<p>同じ検証を手元で再現する際は、次のように 2 つの仮想環境（<code>v_with</code> / <code>v_without</code>）と 2000 件の空テスト（<code>test_many.py</code>）を用意して <code>run.py</code> を実行します。</p>
+<p><strong>目的</strong>: 比較用の 2 つの仮想環境と 2000 件の空テストを用意し、<code>run.py</code> で 3 ラウンドの交互計測を実行します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">mkdir</span><span style="color:#40A02B"> -p</span><span style="color:#40A02B"> ./exp/tests</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">python3</span><span style="color:#40A02B"> -c</span><span style="color:#40A02B"> '</span></span>
+<span class="line"><span style="color:#40A02B">import pathlib</span></span>
+<span class="line"><span style="color:#40A02B">pathlib.Path("./exp/tests/test_many.py").write_text(</span></span>
+<span class="line"><span style="color:#40A02B">    "import pytest\n@pytest.mark.parametrize(\"i\", range(2000))\ndef test_x(i):\n    assert i >= 0\n"</span></span>
+<span class="line"><span style="color:#40A02B">)</span></span>
+<span class="line"><span style="color:#40A02B">'</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">uv</span><span style="color:#40A02B"> venv</span><span style="color:#40A02B"> -q</span><span style="color:#40A02B"> -p</span><span style="color:#FE640B"> 3.13</span><span style="color:#40A02B"> ./exp/v_with</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#1E66F5;font-style:italic"> uv</span><span style="color:#40A02B"> pip</span><span style="color:#40A02B"> install</span><span style="color:#40A02B"> -q</span><span style="color:#40A02B"> -p</span><span style="color:#40A02B"> ./exp/v_with/bin/python</span><span style="color:#40A02B"> pytest</span><span style="color:#40A02B"> pytest-xdist</span><span style="color:#40A02B"> setproctitle</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">uv</span><span style="color:#40A02B"> venv</span><span style="color:#40A02B"> -q</span><span style="color:#40A02B"> -p</span><span style="color:#FE640B"> 3.13</span><span style="color:#40A02B"> ./exp/v_without</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#1E66F5;font-style:italic"> uv</span><span style="color:#40A02B"> pip</span><span style="color:#40A02B"> install</span><span style="color:#40A02B"> -q</span><span style="color:#40A02B"> -p</span><span style="color:#40A02B"> ./exp/v_without/bin/python</span><span style="color:#40A02B"> pytest</span><span style="color:#40A02B"> pytest-xdist</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">python3</span><span style="color:#40A02B"> run.py</span><span style="color:#40A02B"> ./exp/v_with</span><span style="color:#40A02B"> ./exp/v_without</span><span style="color:#40A02B"> ./exp/tests</span><span style="color:#FE640B"> 3</span></span>
+<span class="line"></span></code></pre>
+<p><strong>解説</strong>: <code>uv venv -q -p 3.13</code> で Python バージョンと <code>pytest</code>・<code>pytest-xdist</code> の条件を揃え、<code>setproctitle</code> の有無だけを変えています。</p>
+<p>3 往復（各条件 3 ラン、計 6 ラン）の計測結果を一覧に整理すると次のようになります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>ラウンド</th><th><code>setproctitle</code></th><th>終了コード</th><th>wall time</th><th><code>launchservicesd</code> CPU 増分</th><th><code>pytest</code> 出力末尾</th><th>wall 比（有り / 無し）</th></tr></thead><tbody><tr><td>1</td><td>有り (<code>with</code>)</td><td>0</td><td>4.94s</td><td>4.30s</td><td><code>2000 passed in 4.01s</code></td><td>約 4.30 倍</td></tr><tr><td>1</td><td>無し (<code>without</code>)</td><td>0</td><td>1.15s</td><td>0.01s</td><td><code>2000 passed in 0.75s</code></td><td>—</td></tr><tr><td>2</td><td>有り (<code>with</code>)</td><td>0</td><td>4.53s</td><td>4.34s</td><td><code>2000 passed in 4.22s</code></td><td>約 4.82 倍</td></tr><tr><td>2</td><td>無し (<code>without</code>)</td><td>0</td><td>0.94s</td><td>0.04s</td><td><code>2000 passed in 0.79s</code></td><td>—</td></tr><tr><td>3</td><td>有り (<code>with</code>)</td><td>0</td><td>4.19s</td><td>4.92s</td><td><code>2000 passed in 3.87s</code></td><td>約 3.64 倍</td></tr><tr><td>3</td><td>無し (<code>without</code>)</td><td>0</td><td>1.15s</td><td>0.42s</td><td><code>2000 passed in 0.99s</code></td><td>—</td></tr></tbody></table>
+<p>全 6 ランでテストは正常終了（<code>rc=0</code>、<code>2000 passed</code>）し、この規模ではデスクトップのフリーズも起きませんでした。一方で、<code>with</code> 側は <code>without</code> 側より wall time が約 3.6〜4.8 倍遅く、<code>launchservicesd</code> の CPU 増分も桁違いに大きい結果（<code>4.30〜4.92s</code> 対 <code>0.01〜0.42s</code>）となりました。ただし、<code>ps</code> はシステム全体の <code>launchservicesd</code> CPU 時間を取得しているため、Round 3 の <code>without</code>（<code>0.42s</code>）のようにバックグラウンドの他処理による負荷が混入しうる点は留保する必要があります。</p>
+<h3 id="実験-bpytest-xdist-を外した単一プロセスでの切り分け">実験 B：pytest-xdist を外した単一プロセスでの切り分け</h3>
+<p><code>pytest-xdist</code> のワーカー間通信やプロセス起動コストが主因ではないことを確かめるため、<code>pytest-xdist</code> を外した単一プロセスで <code>setproctitle()</code> を 0 回と 2000 回呼ぶ比較を行いました。</p>
+<p><strong>目的</strong>: <code>pytest-xdist</code> を介さず、単一プロセス内で <code>setproctitle()</code> を指定回数ループ実行したときの wall time と <code>launchservicesd</code> の CPU 増分を測ります。</p>
+<p>引用元: 筆者の検証記録（2026年11月）の spt.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>import subprocess, sys, time</span></span>
+<span class="line"><span>from setproctitle import setproctitle</span></span>
+<span class="line"><span>def cpu():</span></span>
+<span class="line"><span>    for l in subprocess.run(["ps","-Ao","cputime,comm"],capture_output=True,text=True).stdout.splitlines():</span></span>
+<span class="line"><span>        if l.endswith("/launchservicesd"):</span></span>
+<span class="line"><span>            s=0.0</span></span>
+<span class="line"><span>            for p in l.split()[0].replace("-",":").split(":"): s=s*60+float(p)</span></span>
+<span class="line"><span>            return s</span></span>
+<span class="line"><span>n=int(sys.argv[1]); c0=cpu(); t0=time.monotonic()</span></span>
+<span class="line"><span>for i in range(n): setproctitle(f"title {i}")</span></span>
+<span class="line"><span>print(f"calls={n} wall={time.monotonic()-t0:.2f}s launchservicesd_cpu_delta={cpu()-c0:.2f}s")</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><strong>実行結果</strong>（筆者の検証記録における実測出力）:</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>calls=0 wall=0.00s launchservicesd_cpu_delta=0.11s</span></span>
+<span class="line"><span>calls=2000 wall=1.49s launchservicesd_cpu_delta=1.86s</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><strong>解説</strong>: <code>setproctitle(f"title {i}")</code> を 2000 回呼ぶだけで <code>wall=1.49s</code> かかり、<code>launchservicesd</code> の CPU 増分が <code>1.86s</code> 発生しています。これにより、負荷源が <code>pytest-xdist</code> の並列通信ではなく <code>setproctitle()</code> 呼び出し自体にあることが裏付けられました。</p>
+<p>ただし、実験 B は <code>n=0</code> と <code>n=2000</code> を各 1 回ずつしか計測していないため、<code>n=0</code> でも <code>0.11s</code> 増えている背景ノイズのばらつき幅は不明です。また、実験 A の CPU 増分（<code>4.30〜4.92s</code>）と実験 B（<code>1.86s</code>）の差が、<code>pytest-xdist</code> の 1 テスト 2 回呼び出し（計 4000 回）によるものか、8 ワーカー並列呼び出しによる競合オーバーヘッドかは、このログからは切り分けていません。</p>
+<h2 id="macos-で-setproctitle-の影響を切り分けて対処するやり方">macOS で setproctitle の影響を切り分けて対処するやり方</h2>
+<p>手元のプロジェクトで <code>pytest-xdist</code> の並列テストが遅いと感じた場合は、次の手順で原因を切り分けられます。</p>
+<h3 id="1-環境に-setproctitle-が混入していないか確認する">1. 環境に setproctitle が混入していないか確認する</h3>
+<p><code>pytest-xdist</code> は <code>setproctitle</code> を必須依存にしていないため、<code>mutmut</code> のような別パッケージの推移的依存として意図せず入っていることがあります<sup><a href="#user-content-fn-7" id="user-content-fnref-7-2" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。まずはテスト実行用の仮想環境で、次のコマンドを実行して導入有無とバージョンを確認します。</p>
+<p><strong>目的</strong>: テスト実行用の仮想環境に <code>setproctitle</code> がインストールされているかとその場所を確認します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">python</span><span style="color:#40A02B"> -c</span><span style="color:#40A02B"> "import setproctitle; print(setproctitle.__version__, setproctitle.__file__)"</span></span>
+<span class="line"></span></code></pre>
+<p><strong>解説</strong>: <code>ModuleNotFoundError</code> が出れば未導入であり、本記事の事象には該当しません。バージョンとパスが表示された場合は、プロジェクトで使っている依存関係の確認コマンド（パッケージマネージャの依存ツリー表示など）で、どのパッケージから引き込まれているかを辿ります。</p>
+<h3 id="2-有り無しの交互計測で影響割合を把握する">2. 有り／無しの交互計測で影響割合を把握する</h3>
+<p>テストスイート全体の遅さのうち、<code>setproctitle</code> と <code>launchservicesd</code> が占める割合を知りたい場合は、一時的に <code>setproctitle</code> を外した検証用の仮想環境を作り、先ほどの <code>run.py</code> のように有り／無しを交互に数ラウンド実行して wall time の差を比べます。</p>
+<h3 id="3-外せない場合の回避策と注意点">3. 外せない場合の回避策と注意点</h3>
+<p>他の依存関係から <code>setproctitle</code> をアンインストールできない場合、テストコード側で単純に <code>import xdist.remote</code> して <code>worker_title</code> を書き換えても効きません。<code>pytest-xdist</code> のワーカーは <code>execnet</code> 経由で <code>xdist/remote.py</code> のコードを <code>__channelexec__</code> というモジュール空間で実行するため、通常の <code>import</code> で読み込んだモジュールオブジェクトとは別物になるためです<sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7-3" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>回避策としては、<code>conftest.py</code> の <code>pytest_configure</code> フック内で <code>__channelexec__</code> フレームにある <code>worker_title</code> を何もしない関数に差し替える手法が、Jochen Wersdörfer 氏の検証記事や BenchBox のドキュメントで紹介されています<sup><a href="#user-content-fn-6" id="user-content-fnref-6-3" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7-4" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。なお、本記事ではこの回避コード自体の動作検証は行っていないため、具体的な実装例と適用時の注意点は一次情報（<sup><a href="#user-content-fn-6" id="user-content-fnref-6-4" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7-5" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>）を参照してください。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-pytest_current_test-環境変数を無効化すれば-launchservicesd-の負荷は下がりますか">Q. PYTEST_CURRENT_TEST 環境変数を無効化すれば launchservicesd の負荷は下がりますか？</h3>
+<p><strong>A.</strong> 下がりません。<code>PYTEST_CURRENT_TEST</code> は <code>pytest</code> がテスト実行中に <code>os.environ</code> へ設定する環境変数であり、<code>setproctitle</code> によるプロセス名書き換えや Launch Services への IPC 呼び出しとは無関係な別の機構です<sup><a href="#user-content-fn-11" id="user-content-fnref-11-2" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。</p>
+<h3 id="q-pytest-xdist-を使わなければsetproctitle-による-launchservicesd-の負荷は起きませんか">Q. pytest-xdist を使わなければ、setproctitle による launchservicesd の負荷は起きませんか？</h3>
+<p><strong>A.</strong> いいえ、<code>pytest-xdist</code> を使わない単一プロセスでも、<code>setproctitle()</code> を呼べば <code>launchservicesd</code> の CPU 負荷は発生します。単一プロセスで <code>setproctitle()</code> を 2000 回連続呼び出しした実験でも <code>launchservicesd</code> の CPU 増分が 1.86 秒発生しました。並列実行時に顕在化しやすいのは、<code>pytest-xdist</code> がテスト 1 件ごとに 2 回 <code>setproctitle()</code> を呼び出し<sup><a href="#user-content-fn-1" id="user-content-fnref-1-11" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>、複数ワーカーから同時に高頻度で実行されるためです。</p>
+<h3 id="q-テストコードで-import-xdistremote-して-worker_title-を上書きすれば回避できますか">Q. テストコードで import xdist.remote して worker_title を上書きすれば回避できますか？</h3>
+<p><strong>A.</strong> その方法では回避できません。<code>pytest-xdist</code> のワーカーは <code>execnet</code> 経由で <code>__channelexec__</code> というモジュール空間でコードを実行するため、通常の <code>import xdist.remote</code> で読み込んだモジュールオブジェクトを書き換えてもワーカー側の実行には反映されないためです<sup><a href="#user-content-fn-6" id="user-content-fnref-6-5" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7-6" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。回避する場合は <code>conftest.py</code> の <code>pytest_configure</code> 内で <code>__channelexec__</code> 側の <code>worker_title</code> を差し替える手法が報告されています<sup><a href="#user-content-fn-6" id="user-content-fnref-6-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li>macOS で <code>pytest-xdist</code> の並列テストが期待どおり速くならない場合、任意依存の <code>setproctitle</code> が 1 テストあたり 2 回プロセス名を書き換え、<code>launchservicesd</code> への通知ブロードキャストを引き起こしている可能性があります。</li>
+<li><code>setproctitle</code> 有り／無しの仮想環境を交互に計測する比較実験では、空のテスト 2000 件（<code>pytest -n 8</code>）で実行時間に約 3.6〜4.8 倍の差（<code>4.19〜4.94s</code> 対 <code>0.94〜1.15s</code>）が出ました。</li>
+<li>単一プロセスでの <code>setproctitle()</code> 2000 回呼び出しでも <code>launchservicesd</code> の CPU 増分が 1.86 秒生じており、負荷の主因は並列通信ではなく <code>setproctitle()</code> 自体の macOS 実装にあります。</li>
+<li><code>PYTEST_CURRENT_TEST</code> は環境変数でありプロセス名書き換えとは無関係なため、これを無効化しても問題は解決しません。</li>
+<li>まずは環境に <code>setproctitle</code> が推移的依存として紛れ込んでいないかを確認し、外せない場合は <code>conftest.py</code> での <code>__channelexec__</code> 差し替えなどの回避策を検討するのが現実的です。</li>
+</ul>
+<p>プロジェクトの要件に応じたテスト高速化・PoC 検証や、開発環境のパフォーマンス改善支援について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://github.com/pytest-dev/pytest-xdist/blob/v3.8.0/src/xdist/remote.py">pytest-xdist <code>src/xdist/remote.py</code> (v3.8.0)</a> pytest-dev、tag <code>v3.8.0</code>。<code>setproctitle</code> の任意 import とフォールバック定義は L35-40、<code>worker_title()</code> での例外無視は L66-71、<code>run_one_test</code> での 1 テスト 2 回呼び出し（running / idle）は L228-234。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-1-5" data-footnote-backref="" aria-label="Back to reference 1-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-1-6" data-footnote-backref="" aria-label="Back to reference 1-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-1-7" data-footnote-backref="" aria-label="Back to reference 1-7" class="data-footnote-backref">↩<sup>7</sup></a> <a href="#user-content-fnref-1-8" data-footnote-backref="" aria-label="Back to reference 1-8" class="data-footnote-backref">↩<sup>8</sup></a> <a href="#user-content-fnref-1-9" data-footnote-backref="" aria-label="Back to reference 1-9" class="data-footnote-backref">↩<sup>9</sup></a> <a href="#user-content-fnref-1-10" data-footnote-backref="" aria-label="Back to reference 1-10" class="data-footnote-backref">↩<sup>10</sup></a> <a href="#user-content-fnref-1-11" data-footnote-backref="" aria-label="Back to reference 1-11" class="data-footnote-backref">↩<sup>11</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://github.com/pytest-dev/pytest-xdist/pull/696">Use setproctitle if available to show state · Pull Request #696 · pytest-dev/pytest-xdist</a> pytest-dev、2021年8月25日提出・2021年9月3日マージ。<code>setproctitle</code> 連携が <code>"bonus goodie"</code>（長時間テストやハング時の状態可視化用途）として導入された経緯。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://github.com/dvarrazzo/py-setproctitle/blob/master/src/spt_status.c">py-setproctitle <code>src/spt_status.c</code></a> Daniele Varrazzo（<code>dvarrazzo/py-setproctitle</code>）、<code>master</code> ブランチ。<code>set_ps_display</code> 内での <code>#ifdef PS_USE_DARWIN</code> による <code>darwin_set_process_title</code> の無条件呼び出し、および Linux（<code>PS_USE_PRCTL</code>）との実装差。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-3-3" data-footnote-backref="" aria-label="Back to reference 3-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://github.com/dvarrazzo/py-setproctitle/blob/master/src/darwin_set_process_name.c">py-setproctitle <code>src/darwin_set_process_name.c</code></a> Daniele Varrazzo（<code>dvarrazzo/py-setproctitle</code>）、<code>master</code> ブランチ。<code>launch_services_init</code> による Launch Services 未公開関数の取得、初回チェックイン <code>LSApplicationCheckIn</code>、呼び出しごとの <code>LSSetApplicationInformationItem</code> 実行の実装。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://github.com/dvarrazzo/py-setproctitle/issues/170">macOS: each setproctitle() call broadcasts LaunchServices notifications system-wide · Issue #170 · dvarrazzo/py-setproctitle</a> <code>dvarrazzo/py-setproctitle</code> Issue #170、2026年10月20日起票（2026年11月14日時点で Open）。<code>kLSNotifyApplicationNameChanged</code> と <code>kLSNotifyApplicationInformationKeyChanged</code> の 2 件のシステム全体へのブロードキャスト、<code>lsappinfo listen</code> による観測、環境変数 opt-out 案が未実装である点。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-5-3" data-footnote-backref="" aria-label="Back to reference 5-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-5-4" data-footnote-backref="" aria-label="Back to reference 5-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://wersdoerfer.de/blogs/ephes_blog/pytest-macos-desktop-freezes/">When pytest Froze My Mac: Following the Launch Services Trail</a> Jochen Wersdörfer、2026年9月11日公開。<code>pytest-xdist</code> 実行中のデスクトップフリーズ事例、<code>lsappinfo listen</code> での 1 分間 11,773 件（うち 11,769 件が pytest ワーカー由来）の観測、<code>execnet</code> の <code>__channelexec__</code> と <code>conftest.py</code> による回避策。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-6-3" data-footnote-backref="" aria-label="Back to reference 6-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-6-4" data-footnote-backref="" aria-label="Back to reference 6-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-6-5" data-footnote-backref="" aria-label="Back to reference 6-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-6-6" data-footnote-backref="" aria-label="Back to reference 6-6" class="data-footnote-backref">↩<sup>6</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://benchbox.dev/docs/development/pytest-xdist-safety.html">Pytest xdist Safety — BenchBox Documentation</a> BenchBox Documentation。<code>mutmut</code> の推移的依存での混入事例、毎秒約 200+ 更新時の <code>launchservicesd</code> 200%+ CPU / 約 900 MB RSS と <code>runningboardd</code> 約 50% CPU 消費、<code>tests/conftest.py</code> の <code>pytest_configure</code> 回避策と <code>import xdist.remote</code> が効かない理由。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-7-2" data-footnote-backref="" aria-label="Back to reference 7-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-7-3" data-footnote-backref="" aria-label="Back to reference 7-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-7-4" data-footnote-backref="" aria-label="Back to reference 7-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-7-5" data-footnote-backref="" aria-label="Back to reference 7-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-7-6" data-footnote-backref="" aria-label="Back to reference 7-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-7-7" data-footnote-backref="" aria-label="Back to reference 7-7" class="data-footnote-backref">↩<sup>7</sup></a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://github.com/ray-project/ray/issues/61495">[Core] .remote() calls freeze macOS UI on Apple Silicon (M4) · Issue #61495 · ray-project/ray</a> <code>ray-project/ray</code> Issue #61495、2026年3月4日起票。Apple Silicon (M4) 環境でタスクごとの <code>setproctitle</code> 更新により <code>WindowServer</code> がハングした事例。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://github.com/ray-project/ray/pull/63366">[core] Patch <code>setproctitle</code> to skip launch services IPC calls · Pull Request #63366 · ray-project/ray</a> <code>ray-project/ray</code> PR #63366、2026年5月20日マージ。Ray における Launch Services IPC 呼び出しをスキップしローカルスレッド名設定のみへ変更した修正事例。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://github.com/libuv/libuv/issues/5300">darwin: uv_set_process_title registers every process with LaunchServices, causing launchservicesd storms · Issue #5300 · libuv/libuv</a> <code>libuv/libuv</code> Issue #5300、2026年9月25日起票。<code>uv_set_process_title</code> による同型の Launch Services 通知ストーム（Node.js / vitest ワーカー起動時の <code>launchservicesd</code> 高負荷）の報告。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://docs.pytest.org/en/stable/example/simple.html">Basic usage and examples — pytest documentation</a> pytest documentation。<code>PYTEST_CURRENT_TEST</code> 環境変数の仕様（<code>setup</code> / <code>call</code> / <code>teardown</code> の各ステージを環境変数として記録する仕組みであり、プロセス名変更ではない点）。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-11-2" data-footnote-backref="" aria-label="Back to reference 11-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

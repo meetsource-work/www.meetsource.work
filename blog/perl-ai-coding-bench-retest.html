@@ -1,0 +1,365 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>AI コーディングで Perl はどれだけ割を食うか ── 13言語ベンチを Perl だけ追試した | Meetsource</title><meta name="description" content="公開ベンチマーク ai-coding-lang-bench における Perl の AI コーディング効率とは、新規作成（v1）では試行錯誤で時間を要する一方、既存コードへの機能拡張（v2）では JavaScript に迫る全体4位の速さを示すという非対称な特性です。Claude Code による追試ログと失敗原因の内訳から、既存 Perl 資産の保守・拡張における判断軸を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/perl-ai-coding-bench-retest"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="AI コーディングで Perl は割を食うのか？13言語ベンチの「新規13位・拡張4位」を手元で追試した"><meta property="og:description" content="ゼロからの新規作成（v1）では64bit整数演算の罠で12ターンかかった一方、既存コードの機能拡張（v2）は全試行4〜5ターンで一発通過。公開ベンチと追試ログから Perl × Claude Code の実力を解剖します。"><meta property="og:url" content="https://www.meetsource.work/blog/perl-ai-coding-bench-retest"><meta property="og:image" content="https://www.meetsource.work/blog/perl-ai-coding-bench-retest-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-16T03:05:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="AI コーディングで Perl は割を食うのか？13言語ベンチの「新規13位・拡張4位」を手元で追試した"><meta name="twitter:description" content="ゼロからの新規作成（v1）では64bit整数演算の罠で12ターンかかった一方、既存コードの機能拡張（v2）は全試行4〜5ターンで一発通過。公開ベンチと追試ログから Perl × Claude Code の実力を解剖します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/perl-ai-coding-bench-retest-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"AI コーディングで Perl はどれだけ割を食うか ── 13言語ベンチを Perl だけ追試した","description":"公開ベンチマーク ai-coding-lang-bench における Perl の AI コーディング効率とは、新規作成（v1）では試行錯誤で時間を要する一方、既存コードへの機能拡張（v2）では JavaScript に迫る全体4位の速さを示すという非対称な特性です。Claude Code による追試ログと失敗原因の内訳から、既存 Perl 資産の保守・拡張における判断軸を解説します。","datePublished":"2026-10-16T03:05:00.000Z","image":"https://www.meetsource.work/blog/perl-ai-coding-bench-retest-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/perl-ai-coding-bench-retest"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Claude Code で Perl を書かせると、Python や JavaScript よりコストや時間がかかりますか？","acceptedAnswer":{"@type":"Answer","text":"ゼロからコードを立ち上げる新規作成（v1）では時間がかかりやすい一方、既存コードに機能を追加する拡張（v2）では Python や JavaScript とほぼ変わらない速度で完了します。公開ベンチマーク（各20試行平均）でも、Perl の新規作成（v1）は 84.4s±43.1s（平均 9.3 ターン）と上位言語の約2.5倍かかったのに対し、機能拡張（v2）は 45.7s±6.8s（平均 7.5 ターン）で JavaScript（45.1s）と0.6秒差の全体4位でした。手元での3試行の追試でも、機能拡張（v2）は全試行が4〜5ターン（25.4〜31.1s）でテストを一発通過しています。"}},{"@type":"Question","name":"なぜ Perl の新規作成（v1）では MiniHash のような64bit整数演算でターン数が増えやすいのですか？","acceptedAnswer":{"@type":"Answer","text":"Perl の標準算術演算は64bit整数がオーバーフローすると自動的に倍精度浮動小数点数（53ビット精度・10進で約16桁）へ変換され、下位ビットが丸められる仕様になっているためです。use integer; プラグマを使えば CPU ネイティブの64bit 2の補数整数としてラップアラウンド計算できますが、AI エージェントがそれを避けて32bit分割計算を自前実装しようとすると、ビット演算や初期値定数の16進変換ミス（仕様書の19桁定数 1469598103934665603 と標準 FNV-1a の20桁定数 14695981039346656037 の取り違え）が起きやすくなります。"}},{"@type":"Question","name":"既存の Perl システムを AI で保守しやすくするために、TypeScript 等への全面リプレイスより先にできることは何ですか？","acceptedAnswer":{"@type":"Answer","text":"全面リプレイスに着手する前に、既存の Perl リポジトリへ自動テスト（prove 等）を整備し、CLAUDE.md や Agent Skills によるハーネス（64bit整数演算での use integer; 指定や、sed -i ではなく Edit ツールを使う編集規律など）を用意することです。10万行の Perl システムを Claude Code で TypeScript へ移行した事例では、コード変換自体は1週間で終わったものの、800件以上の挙動差分を潰す仕様パリティ検証に2ヶ月半（379ラウンド）を要しています。既存のコード構造とテストがある状態（v2 フェーズ相当）なら、Perl のままでも AI エージェントは少ないターン数で安定して機能拡張を行えます。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-16T03:05:00.000Z" data-astro-cid-7jjqptxk> 2026.10.16 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#perl</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#token-efficiency</span><span class="tag" data-astro-cid-7jjqptxk>#legacy-modernization</span><span class="tag" data-astro-cid-7jjqptxk>#ai-cost-optimization</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>AI コーディングで Perl はどれだけ割を食うか ── 13言語ベンチを Perl だけ追試した</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/perl-ai-coding-bench-retest-hero.webp" alt="AI コーディングで Perl はどれだけ割を食うか ── 13言語ベンチを Perl だけ追試した" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>Perl の既存システムを保守しながら Claude Code などの AI コーディングエージェントを使い始めると、「AI は Python や TypeScript ばかり得意で、Perl では古い記法や構文エラーで試行錯誤が増え、時間やトークンの面で割を食うのではないか」という懸念にぶつかります。AI コーディングの効率を高めるために、いっそ TypeScript 等へ全面リプレイスすべきか迷っている現場も少なくありません。</p>
+<p><strong>AI コーディングにおける Perl の効率特性とは、ゼロから実装を立ち上げる新規作成（v1）では言語固有の数値仕様や編集ツールの罠で試行錯誤が増えやすい一方、既存のコードベースに機能を追加する拡張（v2）では Ruby・Python・JavaScript のトップ3に迫る速さと安定性を発揮するという非対称な構造のことです。</strong></p>
+<p>2026年3月に遠藤侑介氏（@mametter）が公開し InfoQ でも報じられた「13言語・15条件×20試行＝600回の Claude Code ベンチマーク」では、Ruby・Python・JavaScript が総合時間の上位を占め、Perl は15条件中7位（平均 <code>130.2s±44.2s</code>、平均コスト <code>$0.55</code>）でした<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。しかし総合順位だけを見て「Perl は AI に向かない」と結論づけるのは早計です。フェーズ別の内訳と、公開リポジトリ（<code>mame/ai-coding-lang-bench</code>）の手順に沿って2026年10月に手元で実施した追試ログ（一次検証ログ）を突き合わせると、ゼロからの立ち上げ（v1）と既存コードの機能拡張（v2）でまったく異なる景色が見えてきます。</p>
+<p>既刊の <a href="/blog/token-efficiency-by-language">プログラミング言語別のトークン効率を検証した記事</a> では TypeScript・Python・Bash の3言語で新規実装時のトークン消費を比較し、<a href="/blog/perl-ec-modernization-before-replace">Perl 製 EC サイトの段階的モダナイゼーションを解説した記事</a> では全面リプレイスに踏み切る前の環境整備を扱いましたが、本記事では公開ベンチマークの <code>SPEC-v1.txt</code> / <code>SPEC-v2.txt</code> を用いた Perl の実測追試データから、どこでターン数が跳ね上がり、なぜ既存コードの拡張ではトップ層並みに速いのかを解明します。</p>
+<h2 id="検証環境と調査スコープ--公開ベンチマークと手元追試の条件">検証環境と調査スコープ ── 公開ベンチマークと手元追試の条件</h2>
+<p>本記事では、2026年3月5日に公開された元ベンチマーク（600回試行）のデータ<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>と、2026年10月16日に手元で実施した Perl 単体の追試ログ（3試行・計6実行の一次検証ログ）の2つを分析対象とします。それぞれの実行環境は以下のとおりです。</p>
+<ul>
+<li><strong>元ベンチマークの計測環境（2026年3月公開）</strong><sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>
+<ul>
+<li><strong>Claude Code バージョン</strong>: <code>2.1.68 (Claude Code)</code>（モデル: Claude Opus 4.6、high effort）</li>
+<li><strong>Perl バージョン</strong>: <code>This is perl 5, version 38, subversion 2 (v5.38.2) built for x86_64-linux-gnu-thread-multi</code></li>
+<li><strong>試行回数</strong>: 13言語・15条件 × 各20試行（v1・v2 の2フェーズ合計600実行）</li>
+</ul>
+</li>
+<li><strong>手元での追試環境（2026年10月16日実施・一次検証ログ）</strong>
+<ul>
+<li><strong>計測日時</strong>: <code>2026-10-16T01:43:13Z</code> 〜 <code>2026-10-16T01:46:41Z</code></li>
+<li><strong>Claude Code バージョン</strong>: <code>2.1.301 (Claude Code)</code></li>
+<li><strong>モデル</strong>: <code>claude-opus-5-5</code></li>
+<li><strong>Perl バージョン</strong>: <code>This is perl 5, version 42, subversion 2 (v5.42.2) built for darwin-2level</code></li>
+<li><strong>実行コマンド</strong>: <code>ruby benchmark.rb --lang perl --trials 3</code>（Perl 1言語のみ3試行、v1・v2 計6実行）</li>
+</ul>
+</li>
+</ul>
+<p>手元の追試は Perl 1言語のみ（3試行）であり、モデルの世代（Claude Opus 4.6 と Claude Opus 5.5）や CLI バージョン、試行回数（20試行と3試行）が元ベンチマークとは異なります。したがって、追試データから「他言語に対する Perl の相対順位が上がった／下がった」と主張することはせず、「Perl 内部における v1（新規作成）と v2（機能拡張）の非対称性が半年後の環境でも再現されるか」および「v1 でターン数を消費した具体的な原因は何か」を観察スコープとします。</p>
+<h2 id="評価基準とタスク仕様--v1新規作成と-v2機能拡張は何が違うか">評価基準とタスク仕様 ── v1（新規作成）と v2（機能拡張）は何が違うか</h2>
+<p><code>mame/ai-coding-lang-bench</code> のベンチマークは、外部ライブラリ禁止（<code>External libraries: NOT allowed</code>）・標準ライブラリのみ許可（<code>Standard library: Allowed</code>）という制約下で、簡易版 Git である実行ファイル <code>minigit</code> を実装させる2段階のタスクで構成されています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<ol>
+<li><strong>Phase 1（v1: ゼロからの新規作成）</strong>: 空のディレクトリからスタートし、<code>minigit init</code>、<code>minigit add &#x3C;file></code>、<code>minigit commit -m "&#x3C;message>"</code>、<code>minigit log</code> の4コマンドと、64bit符号なし整数演算を用いた独自ハッシュ関数 <code>MiniHash</code> を実装して <code>test-v1.sh</code>（全11テスト項目）を通過させます<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</li>
+<li><strong>Phase 2（v2: 既存コードへの機能拡張）</strong>: v1 で生成されたディレクトリをそのままコピー（<code>FileUtils.cp_r(v1_dir, v2_dir)</code>）した状態からスタートし、<code>minigit status</code>、<code>minigit diff &#x3C;commit1> &#x3C;commit2></code>、<code>minigit checkout &#x3C;commit_hash></code>、<code>minigit reset &#x3C;commit_hash></code>、<code>minigit rm &#x3C;file></code>、<code>minigit show &#x3C;commit_hash></code> の6コマンドを追加して <code>test-v2.sh</code>（全30テスト項目）を通過させます<sup><a href="#user-content-fn-6" id="user-content-fnref-6-3" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7-2" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup><sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</li>
+</ol>
+<p><code>benchmark.rb</code> は各フェーズで <code>claude -p</code> を実行し、モデルが応答を返した API ラウンドトリップ数（<code>num_turns</code>）、入出力およびキャッシュトークン数、所要時間、そして空行を除いたコード行数（<code>File.readlines(f).count { |l| !l.strip.empty? }</code>）を集計します<sup><a href="#user-content-fn-8" id="user-content-fnref-8-2" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<p>私自身は、AI コーディングのコストや速度を比較する際、料金改定やベースシステムプロンプトのサイズ変更で陳腐化するドル換算金額ではなく、<strong>ターン数（API 往復回数）・トークン数（特にリトライのたびに過去の会話履歴プレフィックスが累積する <code>cache_read_input_tokens</code>）・所要時間</strong> を主軸に据えて評価しています。</p>
+<p>Claude API の自動プロンプトキャッシュ（Prompt Caching）では、マルチターン会話において <code>tools</code> → <code>system</code> → <code>messages</code> の順でプレフィックスがキャッシュされ、ツール実行やテスト失敗でターン数が増えるほど過去のコンテキスト全体を読み直す <code>cache_read_input_tokens</code> が累積します<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。また、<code>Claude Opus 4.6</code>（Base Input <code>$5 / MTok</code>、5m Cache Writes <code>$6.25 / MTok</code>、1h Cache Writes <code>$10 / MTok</code>、Cache Hits <code>$0.50 / MTok</code>、Output <code>$25 / MTok</code>）と <code>Claude Opus 5.5</code>（Base Input <code>$4 / MTok</code>、5m Cache Writes <code>$5 / MTok</code>、1h Cache Writes <code>$8 / MTok</code>、Cache Hits <code>$0.20 / MTok</code>、Output <code>$20 / MTok</code>）ではトークン単価自体が改定されている上、CLI バージョン間のキャッシュ TTL 設定（5m / 1h）やシステムプロンプト長の違いで初回キャッシュ書込み量（<code>cache_creation_input_tokens</code>）も変動します<sup><a href="#user-content-fn-9" id="user-content-fnref-9-2" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。だからこそ、試行錯誤の有無を直接反映するターン数と <code>cache_read</code> トークン内訳を見る必要があります。</p>
+<h2 id="13言語ベンチマーク600回試行に見る-perl-の非対称性--新規作成は13位機能拡張は4位">13言語ベンチマーク（600回試行）に見る Perl の非対称性 ── 新規作成は13位、機能拡張は4位</h2>
+<p>まず、遠藤侑介氏が公開した600回試行ベンチマークのレポート（<code>results/report.md</code> および解説記事）から、上位3言語と Perl のフェーズ別データを比較します<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4-3" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p><strong>元ベンチマークの主要4言語（Ruby・Python・JavaScript・Perl）を比較すると、Perl はゼロからの新規作成（v1）では <code>84.4s±43.1s</code> と上位3言語の約2.5倍の時間を要して15条件中13位に沈んでいますが、既存コードを拡張する v2 では <code>45.7s±6.8s</code> となり、3位 JavaScript（<code>45.1s</code>）とわずか0.6秒差の全体4位に付けています。</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="left">言語（条件）</th><th align="right">v1 時間 (s)</th><th align="right">v1 ターン数</th><th align="right">v2 時間 (s)</th><th align="right">v2 ターン数</th><th align="right">合計時間 (s)</th><th align="right">平均 Cache Read</th><th align="right">最終 LOC</th><th align="right">平均コスト</th><th align="right">テスト合格</th></tr></thead><tbody><tr><td align="left"><strong>Ruby</strong></td><td align="right"><code>33.2s±2.5s</code></td><td align="right"><code>6.0</code></td><td align="right"><code>40.0s±3.0s</code></td><td align="right"><code>7.0</code></td><td align="right"><code>73.1s±4.2s</code></td><td align="right"><code>253,371</code></td><td align="right"><code>219</code></td><td align="right"><code>$0.36</code></td><td align="right"><code>40/40</code></td></tr><tr><td align="left"><strong>Python</strong></td><td align="right"><code>32.9s±1.3s</code></td><td align="right"><code>6.0</code></td><td align="right"><code>41.8s±4.5s</code></td><td align="right"><code>7.1</code></td><td align="right"><code>74.6s±4.5s</code></td><td align="right"><code>262,243</code></td><td align="right"><code>235</code></td><td align="right"><code>$0.38</code></td><td align="right"><code>40/40</code></td></tr><tr><td align="left"><strong>JavaScript</strong></td><td align="right"><code>36.0s±3.5s</code></td><td align="right"><code>6.0</code></td><td align="right"><code>45.1s±4.1s</code></td><td align="right"><code>7.3</code></td><td align="right"><code>81.1s±5.0s</code></td><td align="right"><code>264,579</code></td><td align="right"><code>248</code></td><td align="right"><code>$0.39</code></td><td align="right"><code>40/40</code></td></tr><tr><td align="left"><strong>Perl</strong></td><td align="right"><code>84.4s±43.1s</code></td><td align="right"><code>9.3</code> (<code>9.2</code>)</td><td align="right"><code>45.7s±6.8s</code></td><td align="right"><code>7.5</code></td><td align="right"><code>130.2s±44.2s</code></td><td align="right"><code>371,364</code></td><td align="right"><code>315</code></td><td align="right"><code>$0.55</code></td><td align="right"><code>40/40</code></td></tr></tbody></table>
+<p><strong>つまり Perl が総合7位（<code>$0.55</code>）に落ちた差の大半は v1（新規作成フェーズ）の試行錯誤にあり、土台となるコードが存在する v2（機能拡張フェーズ）に限れば、静的型検査付きの <code>Typescript</code>（v2 <code>63.1s±17.8s</code>、総合 <code>133.0s</code>）や <code>Python/mypy</code>（v2 <code>72.6s±14.4s</code>、総合 <code>125.3s</code>）、<code>Ruby/steep</code>（v2 <code>81.6s±8.8s</code>、総合 <code>186.6s</code>）を大きく引き離して動的スクリプト言語トップ層と並走しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-5" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</strong></p>
+<p>（※注: Perl の v1 平均ターン数は20試行の合計185ターン÷20＝9.25のため、<code>results/report.md</code> では四捨五入の <code>9.3</code>、Zenn・DEV Community 記事では切り捨ての <code>9.2</code> と記載されています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-6" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4-5" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。）</p>
+<p><code>results/report.md</code> に記録された Perl 全20試行の個別データ（<code>Full Results</code> / <code>Full Tokens</code>）を掘り下げると、この非対称性はさらに鮮明になります<sup><a href="#user-content-fn-4" id="user-content-fnref-4-6" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<ul>
+<li><strong>v1（新規作成）の激しいばらつき</strong>: 最速だった Trial 8 は <code>42.5s</code>（6ターン、LOC <code>183</code>、Cache Read <code>119,997</code>、v1 コスト <code>$0.1790</code>）で完了している一方、最遅の Trial 12 は <code>228.7s</code>（20ターン、LOC <code>162</code>、Output <code>12,670</code>、Cache Read <code>606,244</code>、v1 コスト <code>$0.7816</code>）まで膨らんでおり、20回中8回で10ターン以上を要していました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-7" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+<li><strong>v2（機能拡張）の極めて高い安定性</strong>: 同じ20試行の v2 を見ると、<strong>全20試行すべてが6〜9ターン（最短 Trial 4 の <code>37.0s</code>/6ターン〜最長 Trial 3 の <code>68.8s</code>/9ターン）</strong> の狭いレンジに収まっています。v1 で20ターン（<code>228.7s</code>）かかった Trial 12 でさえ、v2 は8ターン・<code>42.1s</code>（Output <code>2,419</code>、Cache Read <code>171,997</code>、v2 コスト <code>$0.2438</code>）でスムーズに完了していました<sup><a href="#user-content-fn-4" id="user-content-fnref-4-8" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+</ul>
+<p>もちろん、この数値は遠藤侑介氏による単一のベンチマーク実験（外部ライブラリを使わない約200行規模（InfoQ の表現）の <code>minigit</code> 実装課題）に基づくものであり、InfoQ が報じたコミュニティ議論でも指摘されているとおり、大規模システムの長期保守性そのものを直接測ったものではありません<sup><a href="#user-content-fn-1" id="user-content-fnref-1-7" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。しかし「ゼロから書くときに特定の罠でリトライが多発し、既存の構造に乗せる機能拡張ではトップ層並みに速い」という傾向がなぜ生じるのかは、手元で追試してセッショントランスクリプトを覗くことで具体的に特定できます。</p>
+<h2 id="手元での追試結果と実行ログ解剖--なぜ-v1-で12ターンかかりv2-は4ターンで通ったのか">手元での追試結果と実行ログ解剖 ── なぜ v1 で12ターンかかり、v2 は4ターンで通ったのか</h2>
+<p>2026年10月16日、公開リポジトリと同じ <code>ruby benchmark.rb --lang perl --trials 3</code> を Claude Code <code>2.1.301</code>（<code>claude-opus-5-5</code>）・Perl <code>v5.42.2</code> の環境で実行し、全6セッションのツール呼び出しとエラー出力を一次検証ログとして記録しました。</p>
+<h3 id="3試行計6実行の計測結果と元ベンチとの比較">3試行（計6実行）の計測結果と元ベンチとの比較</h3>
+<p><strong>手元で実施した Perl 3試行の追試でも、v1（新規作成）は <code>29.3s</code>〜<code>60.5s</code>（3〜12ターン、平均 <code>41.1±16.9s</code>）とばらついたのに対し、v2（機能拡張）は全3試行が <code>25.4s</code>〜<code>31.1s</code>（4〜5ターン、平均 <code>27.4±3.2s</code>）で一発通過し、元ベンチマークで見られた非対称構造と矛盾しない結果でした。</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="left">試行</th><th align="right">v1 時間 (s)</th><th align="right">v1 ターン</th><th align="right">v1 Cache Read</th><th align="right">v1 出力</th><th align="right">v1 コスト</th><th align="right">v2 時間 (s)</th><th align="right">v2 ターン</th><th align="right">v2 Cache Read</th><th align="right">v2 出力</th><th align="right">v2 コスト</th><th align="right">最終 LOC</th><th align="center">テスト合否</th></tr></thead><tbody><tr><td align="left"><strong>Trial 1</strong></td><td align="right"><code>29.3</code></td><td align="right"><code>4</code></td><td align="right"><code>132,806</code></td><td align="right"><code>2,590</code></td><td align="right"><code>$0.3717</code></td><td align="right"><code>31.1</code></td><td align="right"><code>5</code></td><td align="right"><code>178,776</code></td><td align="right"><code>2,602</code></td><td align="right"><code>$0.3879</code></td><td align="right"><code>166</code></td><td align="center"><code>11/11</code>・<code>30/30</code></td></tr><tr><td align="left"><strong>Trial 2</strong></td><td align="right"><code>33.6</code></td><td align="right"><code>3</code></td><td align="right"><code>93,791</code></td><td align="right"><code>2,419</code></td><td align="right"><code>$0.3252</code></td><td align="right"><code>25.4</code></td><td align="right"><code>4</code></td><td align="right"><code>137,717</code></td><td align="right"><code>2,022</code></td><td align="right"><code>$0.3358</code></td><td align="right"><code>127</code></td><td align="center"><code>11/11</code>・<code>30/30</code></td></tr><tr><td align="left"><strong>Trial 3</strong></td><td align="right"><code>60.5</code></td><td align="right"><code>12</code></td><td align="right"><code>514,546</code></td><td align="right"><code>5,254</code></td><td align="right"><code>$0.5036</code></td><td align="right"><code>25.8</code></td><td align="right"><code>4</code></td><td align="right"><code>139,035</code></td><td align="right"><code>2,156</code></td><td align="right"><code>$0.3450</code></td><td align="right"><code>168</code></td><td align="center"><code>11/11</code>・<code>30/30</code></td></tr><tr><td align="left"><strong>3試行平均</strong></td><td align="right"><strong><code>41.1±16.9</code></strong></td><td align="right"><strong><code>6.3</code></strong></td><td align="right"><strong><code>247,047.7</code></strong></td><td align="right"><strong><code>3,421.0</code></strong></td><td align="right"><strong><code>$0.4001</code></strong></td><td align="right"><strong><code>27.4±3.2</code></strong></td><td align="right"><strong><code>4.3</code></strong></td><td align="right"><strong><code>151,842.7</code></strong></td><td align="right"><strong><code>2,260.0</code></strong></td><td align="right"><strong><code>$0.3562</code></strong></td><td align="right"><strong><code>153.7</code></strong></td><td align="center"><strong>100% パス</strong></td></tr></tbody></table>
+<p><strong>Trial 1・2 の v1 は3〜4ターンで即座に完了した一方、Trial 3 の v1 だけが12ターンを要し、<code>cache_read</code> トークンが <code>514,546</code>（Trial 2 の <code>93,791</code> の約5.5倍）まで膨らんだことが平均値を押し上げています。</strong></p>
+<p>元ベンチマーク（Opus 4.6・20試行平均）の合計 <code>16.8</code> ターン（v1 <code>9.3</code> + v2 <code>7.5</code>）・<code>130.2s</code> と比較すると、今回の追試（Opus 5.5・3試行平均）は合計 <code>10.7</code> ターン（v1 <code>6.3</code> + v2 <code>4.3</code>）・<code>68.6±15.4s</code> へとターン数も所要時間も短くなっています。ただし、モデル・CLI・OS（元ベンチは <code>x86_64-linux</code>、追試は <code>darwin</code>）・試行数がすべて異なり追試は3試行なので、この短縮がモデルの改善によるものかは切り分けられません。一方で、1試行あたりの平均ドルコストは <code>$0.7564</code>（v1 <code>$0.4001</code> + v2 <code>$0.3562</code>）となり、元ベンチマークの <code>$0.55</code> より高くなっています。実測で確認できたのは、初回ターンに書き込まれる <code>cache_creation_tokens</code> が v1 平均 <code>35,283.3</code> トークン、v2 平均 <code>35,080.0</code> トークン（1試行の合計 <code>70,363.3</code> トークン）で、元ベンチの1試行平均（v1 + v2）<code>27,452</code><sup><a href="#user-content-fn-4" id="user-content-fnref-4-9" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup> の約2.5倍に増えている点です。この増加がドル差の主因だろうと推測しています。<code>70,363.3</code> トークンを1時間キャッシュ書込み単価 <code>$8 / MTok</code><sup><a href="#user-content-fn-9" id="user-content-fnref-9-3" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup> で換算すると約 <code>$0.56</code> に相当します（追試のトランスクリプトでは <code>ephemeral_5m_input_tokens</code> がすべて <code>0</code> で、書込みは1時間キャッシュに計上されていました）。ドル換算金額だけではターン数の改善が見えなくなるため、やはりターン数と <code>cache_read</code> トークンで評価することが不可欠です。</p>
+<h3 id="v1-でターン数が34倍に跳ね上がった2つの原因trial-3-の12ターン解剖">v1 でターン数が3〜4倍に跳ね上がった2つの原因（Trial 3 の12ターン解剖）</h3>
+<p>なぜ Trial 1（4ターン・<code>29.3s</code>）と Trial 2（3ターン・<code>33.6s</code>）は一発で通り、Trial 3（12ターン・<code>60.5s</code>）だけ3〜4倍のターン数を要したのでしょうか。生成されたコードとトランスクリプトを比較すると、原因は <code>SPEC-v1.txt</code> のセクション3で必須とされている独自ハッシュ関数 <code>MiniHash</code> の実装方法にありました<sup><a href="#user-content-fn-5" id="user-content-fnref-5-3" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p><code>MiniHash</code> は、64bit符号なし整数 <code>h = 1469598103934665603</code> を初期値とし、入力の各バイト <code>b</code> に対して <code>h = h XOR b</code> と <code>h = (h * 1099511628211) mod 2^64</code> を繰り返して16文字の16進文字列を返す FNV-1a 風のアルゴリズムです<sup><a href="#user-content-fn-5" id="user-content-fnref-5-4" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>ここで Perl 固有の数値仕様が絡みます。Perl の公式ドキュメント（<code>perlnumber</code>）が規定するとおり、Perl の標準算術演算子（<code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>%</code>）は、演算結果がネイティブの64bit整数（IV / UV）の範囲を超えてオーバーフローすると、自動的に倍精度浮動小数点数（NV、仮数部 <code>53 binary digits</code>＝10進で約16桁の精度）へ変換して計算します<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。そのため、何も宣言せずに64bit整数同士を掛け算すると、下位ビットの情報落ち（<code>loss of information</code>）が起きてハッシュ値が壊れてしまいます<sup><a href="#user-content-fn-10" id="user-content-fnref-10-2" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。</p>
+<h4 id="成功ルートtrial-1trial-2-use-integer-による一発通過">成功ルート（Trial 1・Trial 2）: <code>use integer;</code> による一発通過</h4>
+<p>4ターンで完了した Trial 1 と3ターンで完了した Trial 2 は、Perl 標準の <code>use integer;</code> プラグマを使ってこの問題を1行で解決していました<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。Trial 1 が生成した <code>minihash</code> 関数を取り出し、<code>test-v1.sh</code> の Test 11 と同じリファレンス入力 <code>"test hash\n"</code> を渡して検証する完全なスクリプトは以下のとおりです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>#!/usr/bin/env perl</span></span>
+<span class="line"><span>use strict;</span></span>
+<span class="line"><span>use warnings;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>sub minihash {</span></span>
+<span class="line"><span>    my ($data) = @_;</span></span>
+<span class="line"><span>    use integer;    # wrapping signed 64-bit arithmetic == mod 2^64</span></span>
+<span class="line"><span>    my $h = 1469598103934665603;</span></span>
+<span class="line"><span>    for my $b (unpack 'C*', $data) {</span></span>
+<span class="line"><span>        $h ^= $b;</span></span>
+<span class="line"><span>        $h *= 1099511628211;</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>    return sprintf '%016x', $h;</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>print minihash("test hash\n"), "\n";</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>Trial 1 の実行セッションで <code>bash test-v1.sh</code> を走らせた際のテスト出力（抜粋）は以下のとおりです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>PASS: hash accuracy: MiniHash matches reference</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>========================</span></span>
+<span class="line"><span>PASSED: 11</span></span>
+<span class="line"><span>FAILED: 0</span></span>
+<span class="line"><span>TOTAL:  11</span></span>
+<span class="line"><span>========================</span></span>
+<span class="line"><span>ALL TESTS PASSED</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><code>perldoc integer</code> に記載されているとおり、<code>use integer;</code> を宣言したレキシカルスコープ内では浮動小数点演算への自動昇格が抑止され、CPU ネイティブの2の補数整数（64-bit 環境では <code>-(2**63).. (2**63-1)</code>）によるラップアラウンド演算（<code>wrap-around</code>）が強制されます<sup><a href="#user-content-fn-11" id="user-content-fnref-11-2" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>。2の補数表現における符号付き64bit整数の乗算ラップアラウンドは、ビット列として見れば符号なし64bit整数の <code>mod 2^64</code> と下位64ビットが完全に一致するため、<code>SPEC-v1.txt</code> の10進リテラル <code>1469598103934665603</code> をそのまま書いて掛け算するだけで正確な値（<code>4f49d3ce1abb6851</code>）が得られます。</p>
+<h4 id="失敗ルートtrial-3-32bit分割での-fnv-1a-定数取り違えと-sed--i-構文エラー">失敗ルート（Trial 3）: 32bit分割での FNV-1a 定数取り違えと <code>sed -i</code> 構文エラー</h4>
+<p>一方、Trial 3 のエージェントは Perl の浮動小数点オーバーフローを警戒しつつも <code>use integer;</code> を使わず、64bit整数を上位32bit（<code>$hi</code>）と下位32bit（<code>$lo</code>）の2変数に分割して16進リテラルで計算する方針を選びました。その結果、以下の連鎖で8ターンを余分に消費しました（手元の一次検証ログによる）。</p>
+<ol>
+<li><strong>FNV-1a 標準定数（20桁）と仕様書初期値（19桁）の1桁差（Turn 4〜9、6ターン消費）</strong>: IETF の FNV 仕様書（<code>draft-eastlake-fnv-35</code>）における 64-bit FNV-1a の標準 <code>offset_basis</code> は20桁の <code>14,695,981,039,346,656,037</code>（16進で <code>0xCBF29CE4 84222325</code>）です<sup><a href="#user-content-fn-12" id="user-content-fnref-12" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。ところが、<code>SPEC-v1.txt</code> で指定されている初期値は末尾の <code>7</code> がない19桁の <code>1469598103934665603</code>（16進で <code>0x14650fb0739d0383</code>）でした<sup><a href="#user-content-fn-5" id="user-content-fnref-5-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。Trial 3 は10進リテラルを32bit×2の16進数へ分割する際、自分で基数変換を計算せずに事前知識の標準 FNV-1a 定数 <code>(0xcbf29ce4, 0x84222325)</code> をハードコードしてしまい、Turn 4 の初回テストで Test 11 だけを落としました。その後、Turn 5〜8 の4ターンは、32bit分割のビットシフト計算が間違っているのではないかと疑い、<code>perl -e</code> と <code>python3 -c</code> で1バイトずつ計算結果を比べるデバッグに使いました。Turn 7 で <code>python3 -c "print(hex(0xcbf29ce484222325), 1469598103934665603)"</code> を実行して初めて、標準定数と仕様書の初期値が19桁と20桁で違うことに気づき、Turn 9 で仕様書の値を16進に変換しています。</li>
+<li><strong><code>sed -i</code> によるインラインコメント挿入の構文エラー（Turn 10〜11、2ターン消費）</strong>: 定数の違いに気づいた Turn 10 で、エージェントは専用の <code>Edit</code> ツールではなく Bash の <code>sed -i</code> で16進定数を置換しました。その際、置換文字列に <code># 1469598103934665603 per SPEC</code> というインラインコメントを含めたため、元々行末にあったセミコロン <code>;</code> がコメントの後ろに押し出されてコメントアウトされ、構文エラーで全テストが落ちました。</li>
+</ol>
+<p>Trial 3 v1 のトランスクリプトで実際に書かれた初期コード（Turn 2）と、<code>sed -i</code> 置換直後の壊れた行（Turn 10）の抜粋は以下のとおりです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># Turn 2（初回実装）: 仕様の19桁初期値を計算せず、標準 FNV-1a（20桁）の16進定数を決めつけ</span></span>
+<span class="line"><span>sub minihash {</span></span>
+<span class="line"><span>    my ($data) = @_;</span></span>
+<span class="line"><span>    my ($hi, $lo) = (0xcbf29ce4, 0x84222325);</span></span>
+<span class="line"><span>    for my $b (unpack('C*', $data)) {</span></span>
+<span class="line"><span>        $lo ^= $b;</span></span>
+<span class="line"><span>        # （中略: 32bit分割乗算ロジック）</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>    return sprintf("%08x%08x", $hi, $lo);</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># Turn 10（sed -i 置換後）: 行末の「;」の手前にコメントを挿入し構文エラーを発生させた11行目</span></span>
+<span class="line"><span>    my ($hi, $lo) = (0x14650fb0, 0x739d0383)  # 1469598103934665603 per SPEC;</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この2つのミスによって Turn 4 と Turn 10 のテスト実行で実際に出力されたエラーログは以下のとおりです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>FAIL: hash accuracy: MiniHash matches reference (expected 4f49d3ce1abb6851, got: 62dc1e065a66f145</span></span>
+<span class="line"><span>FAILED: 1</span></span>
+<span class="line"><span>11:    my ($hi, $lo) = (0x14650fb0, 0x739d0383)  # 1469598103934665603 per SPEC;</span></span>
+<span class="line"><span>Execution of ../minigit aborted due to compilation errors.</span></span>
+<span class="line"><span>FAIL: add stages file and creates blob</span></span>
+<span class="line"><span>FAIL: add nonexistent file fails with message</span></span>
+<span class="line"><span>syntax error at ../minigit line 12, near "$b ("</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>Turn 11 でセミコロンの位置を修正した後は、Turn 12 で <code>PASSED: 11 / FAILED: 0</code> となり完了しています。つまり Trial 3 が余分に要した8ターンは「Perl の文法が複雑で書けなかった」からではなく、「<code>use integer;</code> を使わずに16進変換を暗算した決めつけ（6ターン）」と「<code>sed -i</code> による雑なテキスト置換（2ターン）」という2つの明確なアンチパターンによるものでした。</p>
+<h3 id="v2機能拡張が全3試行で45ターン一発通過した理由">v2（機能拡張）が全3試行で4〜5ターン・一発通過した理由</h3>
+<p>対照的に、v1 のコードを引き継いで機能を追加する v2 フェーズでは、v1 で12ターンかかった Trial 3 も含め、<strong>全3試行すべてが4〜5ターン（<code>31.1s</code> / <code>25.4s</code> / <code>25.8s</code>）、1回目のテスト実行で <code>30/30</code> パス</strong> という安定した結果になりました（手元の一次検証ログによる）。</p>
+<p>v2 がこれほど速く安定した理由として、次の2つが考えられます（対照実験はしていないため推測です）。</p>
+<ol>
+<li><strong>コアのデータ構造とハッシュ関数が確立済み</strong>: v1 で最もつまずきやすかった <code>minihash</code> や <code>.minigit/index</code> の読み書き、ツリー・コミットオブジェクトのシリアライズ形式がすでに動くコードとして目の前に存在するため、エージェントは既存のサブルーチン設計に沿ってコマンド処理を追加するだけで済みます。</li>
+<li><strong>プロンプトの不備を仕様書とテストコードから自律補完</strong>: 実は <code>benchmark.rb</code> がエージェントに渡す <code>v2_prompt</code> には、<code>"Read SPEC-v2.txt and extend the existing minigit implementation with checkout and reset commands. Verify your implementation passes all tests by running: bash test-v2.sh"</code> と書かれており、プロンプト文面上は <code>checkout</code> と <code>reset</code> の2コマンドしか言及されていません<sup><a href="#user-content-fn-8" id="user-content-fnref-8-3" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。しかし実際の <code>SPEC-v2.txt</code> と <code>test-v2.sh</code> は、<code>status</code>、<code>diff</code>、<code>checkout</code>、<code>reset</code>、<code>rm</code>、<code>show</code> の <strong>計6コマンド</strong> を要求しています<sup><a href="#user-content-fn-6" id="user-content-fnref-6-4" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7-3" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。今回の追試では、3試行とも Turn 1〜2 で <code>SPEC-v2.txt</code> と <code>test-v2.sh</code> を Read した時点でこの差分を自律的に検出し、テストを1回も落とすことなく6コマンドすべてを一括実装して通過していました。</li>
+</ol>
+<h2 id="調査結果を反映した推奨プラクティス--perl-資産の保守とハーネス設計">調査結果を反映した推奨プラクティス ── Perl 資産の保守とハーネス設計</h2>
+<p>公開ベンチマークの600回データと手元での追試ログから、既存の Perl システムを抱える現場が取るべき実務上の判断軸が明確になります。</p>
+<h3 id="1-ai-のためだけの全面リプレイスは検証コストが見合わない">1. 「AI のためだけの全面リプレイス」は検証コストが見合わない</h3>
+<p>「Perl だと AI コーディングの効率が悪いから、先に TypeScript 等へ全面リプレイスしよう」という判断には大きな落とし穴があります。</p>
+<p>2026年6月に公開された S2 Factory の事例では、テストが存在しない約10万行・133エンドポイントの Perl 製 EC システムを Claude Code で TypeScript へ書き換えています<sup><a href="#user-content-fn-13" id="user-content-fnref-13" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup>。このプロジェクトでは、独自の <code>/migrate-endpoint</code> スキルを用いた初回のコード変換自体は <strong>約1週間</strong> で完了しましたが、その後に「Perl 実装と TypeScript 実装の微細な挙動差分（計800件以上のバグ）」を洗い出して潰す仕様パリティ検証（20並列サブエージェントによる <code>/parity-audit</code> を10回連続差分ゼロになるまで計379ラウンド実施）に <strong>2ヶ月半</strong> を要し、最終的に1,419件のテストを整備して移行を完了させています<sup><a href="#user-content-fn-13" id="user-content-fnref-13-2" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup>。</p>
+<p>他言語への全面リプレイスは、コードを書く時間ではなく「元の Perl と同じ挙動をするか」の検証に膨大な工数がかかります。一方で、今回のベンチマークと追試が示すとおり、<strong>既存のコードベースに機能を追加・改修するフェーズ（v2 相当）であれば、Perl のままでも Claude Code は Python や JavaScript に迫る速さで実装を完結できます（公開ベンチの v2 は Perl <code>7.5</code> ターン・Python <code>7.1</code> ターン・JavaScript <code>7.3</code> ターンで全体4位、手元の追試では4〜5ターン）</strong><sup><a href="#user-content-fn-1" id="user-content-fnref-1-8" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4-10" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。既存システムを延命・拡張するのであれば、全面リプレイスよりも先に既存 Perl リポジトリの自動テスト（<code>test-v2.sh</code> に相当する安全網）を整えるほうが投資対効果が高いと考えます（比較データはなく、私の見立てです）。</p>
+<h3 id="2-ハーネスclaudemdskillsで-v1-のつまずきを先回りして塞ぐ">2. ハーネス（<code>CLAUDE.md</code>・Skills）で v1 のつまずきを先回りして塞ぐ</h3>
+<p>同じモデルや言語であっても、素の状態で書かせるか、言語固有の規約や落とし穴をハーネス（<code>CLAUDE.md</code> や Agent Skills）として整えてから書かせるかで試行錯誤の回数は大きく変わります。言語単体の優劣だけでなく、ハーネス込みの運用設計として捉えることが重要です。</p>
+<p>Qiita の Perl Advent Calendar 2025 でも、Claude Code が macOS の <code>sed -i</code>（バックアップ拡張子必須）や Perl ワンライナーのフラグ順序（<code>perl -ipe</code> と書いて <code>-i</code> のバックアップ拡張子に <code>pe</code> が吸われる問題。正しくは <code>perl -i -pe</code>）でつまずく事象が報告されており、<code>CLAUDE.md</code> を肥大化させずに Agent Skills（Progressive Disclosure）として必要なときだけ読み込ませるアプローチが提案されています<sup><a href="#user-content-fn-14" id="user-content-fnref-14" data-footnote-ref="" aria-describedby="footnote-label">14</a></sup>。</p>
+<p>今回の追試の Trial 3 で失った8ターン（v1 の <code>cache_read</code> は <code>514,546</code> で、Trial 1・2 の <code>132,806</code>・<code>93,791</code> より約38万〜42万トークン多い）の原因も、Perl プロジェクトの <code>CLAUDE.md</code>（または Perl 編集用スキル）に以下の4項目を記述しておけば防げる可能性が高いと考えています。ただし <code>CLAUDE.md</code> を入れて Trial 3 の条件を再実行してはいないため、効果は未検証です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># Perl Coding &#x26; Editing Rules for Claude Code</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>- **64-bit Integer Arithmetic**: Perl promotes overflowing integers to 53-bit floating-point numbers (NV) by default. When implementing 64-bit bitwise operations or modular hashes (`mod 2^64`), wrap the block in `use integer;` to enforce native 64-bit two's-complement wrap-around arithmetic instead of splitting into 32-bit pairs.</span></span>
+<span class="line"><span>- **No Unverified Hex Conversions**: Write numeric constants from specifications in their exact original base (e.g., decimal literals) or verify conversions via `perl -e 'printf "0x%x\n", ...'` before hardcoding. Do not substitute standard algorithm constants from memory.</span></span>
+<span class="line"><span>- **File Editing Discipline**: Always use the dedicated `Edit` or `Write` tool to modify `.pl` / `.pm` files. Never use `sed -i` or `perl -ipe` (which breaks on macOS and risks commenting out trailing semicolons). If a Perl one-liner is strictly necessary, pass flags as `perl -i -pe`.</span></span>
+<span class="line"><span>- **Syntax &#x26; Test Verification**: Run `perl -c &#x3C;file>` before executing the test suite to catch syntax errors in a single turn.</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この設定では、(1) 64bit整数演算での浮動小数点昇格を防ぐ <code>use integer;</code> の明示、(2) 仕様書の定数を暗算で16進変換したり事前知識の標準定数にすり替えたりすることの禁止、(3) <code>sed -i</code> や <code>perl -ipe</code> を禁止し <code>Edit</code> ツールを強制する編集規律、(4) <code>perl -c</code> による構文チェックの4点を指定しています。このうち (1) と (3) は、今回の追試トランスクリプトと先行事例<sup><a href="#user-content-fn-10" id="user-content-fnref-10-3" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup><sup><a href="#user-content-fn-11" id="user-content-fnref-11-3" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup><sup><a href="#user-content-fn-14" id="user-content-fnref-14-2" data-footnote-ref="" aria-describedby="footnote-label">14</a></sup>で実際にターン数を浪費した原因に直結するガードレールです。(2) は Trial 3 の定数の取り違え<sup><a href="#user-content-fn-12" id="user-content-fnref-12-2" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>への対策で、(4) は構文エラーを早く拾うために私が足した予防策であり、今回のターン浪費の原因そのものではありません。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-claude-code-で-perl-を書かせるとpython-や-javascript-よりコストや時間がかかりますか">Q. Claude Code で Perl を書かせると、Python や JavaScript よりコストや時間がかかりますか？</h3>
+<p><strong>A.</strong> ゼロからコードを立ち上げる新規作成（v1）では時間がかかりやすい一方、既存コードに機能を追加する拡張（v2）では Python や JavaScript とほぼ変わらない速度で完了します。公開ベンチマーク（各20試行平均）でも、Perl の新規作成（v1）は <code>84.4s±43.1s</code>（平均 <code>9.3</code> ターン）と上位言語の約2.5倍かかったのに対し、機能拡張（v2）は <code>45.7s±6.8s</code>（平均 <code>7.5</code> ターン）で JavaScript（<code>45.1s</code>）と0.6秒差の全体4位でした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-9" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4-11" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。手元での3試行の追試でも、機能拡張（v2）は全試行が4〜5ターン（<code>25.4〜31.1s</code>）でテストを一発通過しています。</p>
+<h3 id="q-なぜ-perl-の新規作成v1では-minihash-のような64bit整数演算でターン数が増えやすいのですか">Q. なぜ Perl の新規作成（v1）では <code>MiniHash</code> のような64bit整数演算でターン数が増えやすいのですか？</h3>
+<p><strong>A.</strong> Perl の標準算術演算は64bit整数がオーバーフローすると自動的に倍精度浮動小数点数（53ビット精度・10進で約16桁）へ変換され、下位ビットが丸められる仕様になっているためです<sup><a href="#user-content-fn-10" id="user-content-fnref-10-4" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。<code>use integer;</code> プラグマを使えば CPU ネイティブの64bit 2の補数整数としてラップアラウンド計算できますが<sup><a href="#user-content-fn-11" id="user-content-fnref-11-4" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>、AI エージェントがそれを避けて32bit分割計算を自前実装しようとすると、ビット演算や初期値定数の16進変換ミス（仕様書の19桁定数 <code>1469598103934665603</code> と標準 FNV-1a の20桁定数 <code>14695981039346656037</code> の取り違え）が起きやすくなります<sup><a href="#user-content-fn-5" id="user-content-fnref-5-6" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-12" id="user-content-fnref-12-3" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。</p>
+<h3 id="q-既存の-perl-システムを-ai-で保守しやすくするためにtypescript-等への全面リプレイスより先にできることは何ですか">Q. 既存の Perl システムを AI で保守しやすくするために、TypeScript 等への全面リプレイスより先にできることは何ですか？</h3>
+<p><strong>A.</strong> 全面リプレイスに着手する前に、既存の Perl リポジトリへ自動テスト（<code>prove</code> 等）を整備し、<code>CLAUDE.md</code> や Agent Skills<sup><a href="#user-content-fn-14" id="user-content-fnref-14-3" data-footnote-ref="" aria-describedby="footnote-label">14</a></sup> によるハーネス（64bit整数演算での <code>use integer;</code> 指定や、<code>sed -i</code> ではなく <code>Edit</code> ツールを使う編集規律など）を用意することです。10万行の Perl システムを Claude Code で TypeScript へ移行した事例では、コード変換自体は1週間で終わったものの、800件以上の挙動差分を潰す仕様パリティ検証に2ヶ月半（379ラウンド）を要しています<sup><a href="#user-content-fn-13" id="user-content-fnref-13-3" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup>。既存のコード構造とテストがある状態（v2 フェーズ相当）なら、Perl のままでも AI エージェントは少ないターン数で安定して機能拡張を行えます。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li><strong>公開ベンチマークの総合順位（7位・<code>$0.55</code>）だけで Perl の適性を判断しない</strong>: <code>mame/ai-coding-lang-bench</code>（600回試行）の内訳を見ると、Perl は新規作成（v1: <code>84.4s±43.1s</code>、13位）で時間を失っている一方、既存コードの機能拡張（v2: <code>45.7s±6.8s</code>、4位）では Ruby・Python・JavaScript のトップ3のすぐ後ろに付けています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-10" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4-12" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</li>
+<li><strong>半年後の追試（Opus 5.5・3試行）でも「v1 のばらつきと v2 の安定」と矛盾しない結果だった</strong>: 手元での追試でも全6実行がテストを100%通過し、v1 が <code>41.1±16.9s</code>（3〜12ターン）とばらついたのに対し、v2 は全3試行が <code>27.4±3.2s</code>（4〜5ターン）で初回テスト実行を一発通過しました（手元の一次検証ログ）。</li>
+<li><strong>今回の Trial 3 でターン数と <code>cache_read</code> トークンが跳ね上がった原因はピンポイントな罠だった</strong>: Trial 3 の v1 が12ターン（<code>cache_read_tokens: 514,546</code>）を要したのは、Perl の浮動小数点昇格を避けた32bit分割実装での FNV-1a 定数の1桁取り違え（6ターン消費）と、<code>sed -i</code> 置換時のコメント挿入による構文エラー（2ターン消費）が原因であり、言語全体の生産性の低さではありません<sup><a href="#user-content-fn-5" id="user-content-fnref-5-7" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-10" id="user-content-fnref-10-5" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup><sup><a href="#user-content-fn-12" id="user-content-fnref-12-4" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>。</li>
+<li><strong>コスト評価はドル換算ではなくターン数・トークン内訳・所要時間を主軸にする</strong>: モデル世代や CLI のシステムプロンプト長（<code>cache_creation_tokens</code>）によってドル換算値は変動するため、試行錯誤の有無を直接反映するターン数と <code>cache_read</code> トークンでハーネス改善の効果を測るべきです<sup><a href="#user-content-fn-9" id="user-content-fnref-9-4" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</li>
+<li><strong>既存 Perl 資産は無理に全面リプレイスせず、テストとハーネスを整えて拡張フェーズ（v2）の強みを活かす</strong>: 10万行規模のリプレイスでは変換後のパリティ検証だけで数ヶ月を要するため<sup><a href="#user-content-fn-13" id="user-content-fnref-13-4" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup>、まずは既存 Perl コードに自動テストと <code>CLAUDE.md</code>・Agent Skills（<code>use integer;</code> や編集ツールの規律）を整備するほうが投資対効果に優れています<sup><a href="#user-content-fn-11" id="user-content-fnref-11-5" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup><sup><a href="#user-content-fn-14" id="user-content-fnref-14-4" data-footnote-ref="" aria-describedby="footnote-label">14</a></sup>。</li>
+</ul>
+<p>既存の Perl システムをはじめとするレガシー資産のモダナイゼーションや、Claude Code 向けのハーネス・自動テスト環境の設計支援については、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://zenn.dev/mametter/articles/3e8580ec034201">Claude Code に向いているプログラミング言語</a> — 遠藤侑介（@mametter）、2026年3月5日公開（Zenn）。13言語・15条件×20試行＝600回（Claude Opus 4.6 high effort）の実験設計は「実験」節、総合結果（Ruby <code>73.1s±4.2s</code> / <code>$0.36</code>、Python <code>74.6s±4.5s</code> / <code>$0.38</code>、JavaScript <code>81.1s±5.0s</code> / <code>$0.39</code>、Perl 7位 <code>130.2s±44.2s</code> / <code>$0.55</code> / LOC <code>315</code>、静的型検査による1.4〜2.6倍の増加）は「結果」節、フェーズ別の結果（Perl v1 <code>84.4s±43.1s</code>・<code>9.2</code>ターン、v2 <code>45.7s±6.8s</code>・<code>7.5</code>ターンで4位）は「v1/v2 詳細結果」「v1（新規作成）の所要時間」「v2（機能拡張）の所要時間」節を参照。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-1-5" data-footnote-backref="" aria-label="Back to reference 1-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-1-6" data-footnote-backref="" aria-label="Back to reference 1-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-1-7" data-footnote-backref="" aria-label="Back to reference 1-7" class="data-footnote-backref">↩<sup>7</sup></a> <a href="#user-content-fnref-1-8" data-footnote-backref="" aria-label="Back to reference 1-8" class="data-footnote-backref">↩<sup>8</sup></a> <a href="#user-content-fnref-1-9" data-footnote-backref="" aria-label="Back to reference 1-9" class="data-footnote-backref">↩<sup>9</sup></a> <a href="#user-content-fnref-1-10" data-footnote-backref="" aria-label="Back to reference 1-10" class="data-footnote-backref">↩<sup>10</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://dev.to/mame/which-programming-language-is-best-for-claude-code-508a">Which Programming Language Is Best for Claude Code?</a> — Yusuke Endoh (mame)、2026年3月5日公開（DEV Community）。英語版レポート。v2 で上位3言語（Ruby <code>40.0s</code>、Python <code>41.8s</code>、JavaScript <code>45.1s</code>）の直後に Perl（<code>45.7s</code>）・OCaml（<code>47.1s</code>）・Lua（<code>47.2s</code>）が僅差で続く分析は「v1/v2 Detailed Results」「v2 (Feature Extension) Time」節を参照。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://www.infoq.com/news/2026/04/ai-coding-language-benchmark/">Dynamic Languages Faster and Cheaper in 13-Language Claude Code Benchmark</a> — Steef-Jan Wiggers（InfoQ）、2026年4月6日公開。ベンチマーク結果に対する第三者メディア報道およびコミュニティ（Lobsters / DEV Community）でのプロトタイプ規模と長期保守性をめぐる議論の整理を参照。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://github.com/mame/ai-coding-lang-bench/blob/main/results/report.md">Claude Code Language Benchmark Report (results/report.md)</a> — Yusuke Endoh (<code>mame/ai-coding-lang-bench</code>)、2026年3月公開。計測環境（<code>Claude Version: 2.1.68 (Claude Code)</code>、Perl <code>v5.38.2</code>）は「Environment」節、各言語の平均時間・ターン数（Perl v1 <code>9.3</code>ターン、v2 <code>7.5</code>ターン、<code>Typescript</code> v2 <code>63.1s±17.8s</code>、<code>Python/mypy</code> v2 <code>72.6s±14.4s</code>、<code>Ruby/steep</code> v2 <code>81.6s±8.8s</code>）は「Results Summary」節、1試行あたり平均トークン内訳（Perl: Input <code>18</code> / Output <code>7,792</code> / Cache Create <code>27,452</code> / Cache Read <code>371,364</code> / Total <code>406,625</code> / Cost <code>$0.5521</code> 等）は「Token Summary (v1 + v2 average per trial)」節、Perl 全20試行の個別記録（v1 最速 Trial 8 の <code>42.5s</code>/6ターン・Cache Read <code>119,997</code>・<code>$0.1790</code>〜最遅 Trial 12 の <code>228.7s</code>/20ターン・Output <code>12,670</code>・Cache Read <code>606,244</code>・<code>$0.7816</code>、v2 全20試行の6〜9ターン・<code>37.0s</code>〜<code>68.8s</code>、Trial 12 v2 の8ターン・<code>42.1s</code>・Cache Read <code>171,997</code>・<code>$0.2438</code>）は「Full Results」「Full Tokens」節を参照。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-4-3" data-footnote-backref="" aria-label="Back to reference 4-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-4-4" data-footnote-backref="" aria-label="Back to reference 4-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-4-5" data-footnote-backref="" aria-label="Back to reference 4-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-4-6" data-footnote-backref="" aria-label="Back to reference 4-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-4-7" data-footnote-backref="" aria-label="Back to reference 4-7" class="data-footnote-backref">↩<sup>7</sup></a> <a href="#user-content-fnref-4-8" data-footnote-backref="" aria-label="Back to reference 4-8" class="data-footnote-backref">↩<sup>8</sup></a> <a href="#user-content-fnref-4-9" data-footnote-backref="" aria-label="Back to reference 4-9" class="data-footnote-backref">↩<sup>9</sup></a> <a href="#user-content-fnref-4-10" data-footnote-backref="" aria-label="Back to reference 4-10" class="data-footnote-backref">↩<sup>10</sup></a> <a href="#user-content-fnref-4-11" data-footnote-backref="" aria-label="Back to reference 4-11" class="data-footnote-backref">↩<sup>11</sup></a> <a href="#user-content-fnref-4-12" data-footnote-backref="" aria-label="Back to reference 4-12" class="data-footnote-backref">↩<sup>12</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://github.com/mame/ai-coding-lang-bench/blob/main/SPEC-v1.txt">MiniGit Specification Version 1.0 (SPEC-v1.txt)</a> — Yusuke Endoh (<code>mame/ai-coding-lang-bench</code>)、2026年3月公開。外部ライブラリ禁止・標準ライブラリのみ許可はファイル先頭ヘッダ部、独自ハッシュ <code>MiniHash</code> の定義（初期値 <code>h = 1469598103934665603  (64-bit unsigned integer)</code>、<code>h = h XOR b</code>、<code>h = (h * 1099511628211) mod 2^64</code>、16文字0埋め小文字16進出力）は「3. Custom Hash Algorithm (MANDATORY)」節、v1 の4コマンド仕様は「4. Command Specifications」節を参照。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-5-3" data-footnote-backref="" aria-label="Back to reference 5-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-5-4" data-footnote-backref="" aria-label="Back to reference 5-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-5-5" data-footnote-backref="" aria-label="Back to reference 5-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-5-6" data-footnote-backref="" aria-label="Back to reference 5-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-5-7" data-footnote-backref="" aria-label="Back to reference 5-7" class="data-footnote-backref">↩<sup>7</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://github.com/mame/ai-coding-lang-bench">mame/ai-coding-lang-bench (GitHub Repository)</a> — Yusuke Endoh、2026年3月公開。ベンチマークの構成、v1（4コマンド）と v2（6コマンド）の実験概要は README「Experiment」節、実行コマンド（<code>ruby benchmark.rb --lang &#x3C;lang> --trials &#x3C;N></code>）は「Usage」節を参照。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-6-3" data-footnote-backref="" aria-label="Back to reference 6-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-6-4" data-footnote-backref="" aria-label="Back to reference 6-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://github.com/mame/ai-coding-lang-bench/blob/main/SPEC-v2.txt">MiniGit Specification Version 2.0 (SPEC-v2.txt)</a> — Yusuke Endoh (<code>mame/ai-coding-lang-bench</code>)、2026年3月公開。v2 で追加される6コマンド（<code>status</code>, <code>diff</code>, <code>checkout</code>, <code>reset</code>, <code>rm</code>, <code>show</code>）の仕様は「4.4 status」および「4.6 diff」〜「4.10 show」節を参照。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-7-2" data-footnote-backref="" aria-label="Back to reference 7-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-7-3" data-footnote-backref="" aria-label="Back to reference 7-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://github.com/mame/ai-coding-lang-bench/blob/main/benchmark.rb">benchmark.rb - mame/ai-coding-lang-bench</a> — Yusuke Endoh (<code>mame/ai-coding-lang-bench</code>)、2026年3月公開。Perl の対象拡張子・バージョン取得コマンド定義は <code>LANGUAGES['perl']</code>、空行を除く LOC 集計は <code>count_loc</code> 関数、<code>claude -p</code> の実行と JSON トークン抽出は <code>run_claude</code> 関数、v1 ディレクトリのコピーと <code>v2_prompt</code>（<code>checkout and reset commands</code> のみ記載）は Phase 2 実行部を参照。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-8-2" data-footnote-backref="" aria-label="Back to reference 8-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-8-3" data-footnote-backref="" aria-label="Back to reference 8-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching">Prompt caching - Claude Platform Docs</a> — Anthropic、公式ドキュメント（2026年10月16日参照）。マルチターン会話でのプレフィックスキャッシュの仕組み（<code>tools</code> → <code>system</code> → <code>messages</code>）は「How prompt caching works」「How automatic caching works in multi-turn conversations」「Structuring your prompt」節、<code>cache_creation_input_tokens</code> / <code>cache_read_input_tokens</code> の意味は「Tracking cache performance」節、<code>Claude Opus 4.6</code> と <code>Claude Opus 5.5</code> のトークン単価（5m / 1h Cache Writes を含む）は「Pricing」節を参照。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-9-2" data-footnote-backref="" aria-label="Back to reference 9-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-9-3" data-footnote-backref="" aria-label="Back to reference 9-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-9-4" data-footnote-backref="" aria-label="Back to reference 9-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://perldoc.perl.org/perlnumber">perlnumber - semantics of numbers and numeric operations in Perl</a> — Perl 5 Porters、Perl 公式ドキュメント（Perldoc）。倍精度浮動小数点数（NV）の精度上限（<code>53 binary digits</code>、10進で約16桁）と情報落ち（<code>loss of information</code>）は「Numeric data types」節、標準算術演算子（<code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>%</code>）が整数オーバーフロー時に自動で浮動小数点数へ昇格する仕様は「Numeric operators and numeric conversions」節を参照。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-10-2" data-footnote-backref="" aria-label="Back to reference 10-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-10-3" data-footnote-backref="" aria-label="Back to reference 10-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-10-4" data-footnote-backref="" aria-label="Back to reference 10-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-10-5" data-footnote-backref="" aria-label="Back to reference 10-5" class="data-footnote-backref">↩<sup>5</sup></a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://perldoc.perl.org/integer">integer - Perl pragma to use integer arithmetic instead of floating point</a> — Perl 5 Porters、Perl 公式ドキュメント（Perldoc）。<code>use integer;</code> プラグマがレキシカルスコープ内で浮動小数点演算の代わりにネイティブ2の補数整数演算（64-bit 環境では <code>-(2**63).. (2**63-1)</code>）を強制し、オーバーフロー時に下位ビットでラップアラウンド（<code>wrap-around</code>）させる仕様は「DESCRIPTION」節を参照。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-11-2" data-footnote-backref="" aria-label="Back to reference 11-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-11-3" data-footnote-backref="" aria-label="Back to reference 11-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-11-4" data-footnote-backref="" aria-label="Back to reference 11-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-11-5" data-footnote-backref="" aria-label="Back to reference 11-5" class="data-footnote-backref">↩<sup>5</sup></a></p>
+</li>
+<li id="user-content-fn-12">
+<p><a href="https://datatracker.ietf.org/doc/html/draft-eastlake-fnv-35">The FNV Non-Cryptographic Hash Algorithm (draft-eastlake-fnv-35)</a> — Glenn Fowler, Landon Curt Noll, Kiem-Phong Vo, Donald Eastlake, Tony Hansen（IETF Internet-Draft）。FNV-1a アルゴリズムの基本式は「Section 2. FNV-1a Algorithm」、標準 64-bit <code>FNV_Prime</code>（<code>1,099,511,628,211</code> = <code>0x00000100 000001B3</code>）および20桁の標準 64-bit <code>offset_basis</code>（<code>14,695,981,039,346,656,037</code> = <code>0xCBF29CE4 84222325</code>）の定義は「Section 5. FNV Constants」を参照。 <a href="#user-content-fnref-12" data-footnote-backref="" aria-label="Back to reference 12" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-12-2" data-footnote-backref="" aria-label="Back to reference 12-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-12-3" data-footnote-backref="" aria-label="Back to reference 12-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-12-4" data-footnote-backref="" aria-label="Back to reference 12-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-13">
+<p><a href="https://note.com/s2factory/n/nc9241602788d">テストがない10万行のPerlシステムを、Claude CodeでTypeScriptへ書き換えた話</a> — S2 Factory、2026年6月2日公開（note）。約10万行・133エンドポイントの Perl 製 EC システムを <code>/migrate-endpoint</code> で約1週間で初回変換した一方、20並列サブエージェントによる <code>/parity-audit</code> を計379ラウンド・2ヶ月半回して800件以上の挙動差分バグを修正し1,419件のテストを整備した記録を参照。 <a href="#user-content-fnref-13" data-footnote-backref="" aria-label="Back to reference 13" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-13-2" data-footnote-backref="" aria-label="Back to reference 13-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-13-3" data-footnote-backref="" aria-label="Back to reference 13-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-13-4" data-footnote-backref="" aria-label="Back to reference 13-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-14">
+<p><a href="https://qiita.com/karupanerura/items/a962198303a83d0257cf">Claude Codeにperlを上手に使わせる</a> — karupanerura、2025年12月1日公開（Qiita / Perl Advent Calendar 2025）。Claude Code が macOS の <code>sed -i</code> や <code>perl -ipe</code>（正しくは <code>perl -i -pe</code>）でつまずく具体例と、<code>CLAUDE.md</code> を肥大化させずに Agent Skills（Progressive Disclosure）で補う提案を参照。 <a href="#user-content-fnref-14" data-footnote-backref="" aria-label="Back to reference 14" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-14-2" data-footnote-backref="" aria-label="Back to reference 14-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-14-3" data-footnote-backref="" aria-label="Back to reference 14-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-14-4" data-footnote-backref="" aria-label="Back to reference 14-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

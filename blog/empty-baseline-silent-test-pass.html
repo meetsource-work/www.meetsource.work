@@ -1,0 +1,191 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>基準値の算出に失敗しても検査は成功し続ける ── BSD 専用 date -v が空文字になり、鮮度チェックの射程がゼロになった | Meetsource</title><meta name="description" content="動的に算出する基準値が空文字になると、Bash の文字列比較では全件が条件を満たして検査の射程がゼロになります。BSD 専用の date -v が GNU coreutils の date で実行されて空文字になり、キャッシュ鮮度判定が永久に素通りした実インシデントをもとに、辞書順比較の仕様や結果行の心理的死角を解剖。「原因の予防」だけでなく「結果の検収」を置く防御策を論じます。"><link rel="canonical" href="https://www.meetsource.work/blog/empty-baseline-silent-test-pass"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="基準値の算出に失敗しても検査は成功し続ける ── BSD 専用 date -v が空文字になり、鮮度チェックの射程がゼロになった | Meetsource"><meta property="og:description" content="動的に算出する基準値が空文字になると、Bash の文字列比較では全件が条件を満たして検査の射程がゼロになります。BSD 専用の date -v が GNU coreutils の date で実行されて空文字になり、キャッシュ鮮度判定が永久に素通りした実インシデントをもとに、辞書順比較の仕様や結果行の心理的死角を解剖。「原因の予防」だけでなく「結果の検収」を置く防御策を論じます。"><meta property="og:url" content="https://www.meetsource.work/blog/empty-baseline-silent-test-pass"><meta property="og:image" content="https://www.meetsource.work/blog/empty-baseline-silent-test-pass-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-03T14:55:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="基準値の算出に失敗しても検査は成功し続ける ── BSD 専用 date -v が空文字になり、鮮度チェックの射程がゼロになった | Meetsource"><meta name="twitter:description" content="動的に算出する基準値が空文字になると、Bash の文字列比較では全件が条件を満たして検査の射程がゼロになります。BSD 専用の date -v が GNU coreutils の date で実行されて空文字になり、キャッシュ鮮度判定が永久に素通りした実インシデントをもとに、辞書順比較の仕様や結果行の心理的死角を解剖。「原因の予防」だけでなく「結果の検収」を置く防御策を論じます。"><meta name="twitter:image" content="https://www.meetsource.work/blog/empty-baseline-silent-test-pass-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"基準値の算出に失敗しても検査は成功し続ける ── BSD 専用 date -v が空文字になり、鮮度チェックの射程がゼロになった","description":"動的に算出する基準値が空文字になると、Bash の文字列比較では全件が条件を満たして検査の射程がゼロになります。BSD 専用の date -v が GNU coreutils の date で実行されて空文字になり、キャッシュ鮮度判定が永久に素通りした実インシデントをもとに、辞書順比較の仕様や結果行の心理的死角を解剖。「原因の予防」だけでなく「結果の検収」を置く防御策を論じます。","datePublished":"2026-10-03T14:55:00.000Z","image":"https://www.meetsource.work/blog/empty-baseline-silent-test-pass-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/empty-baseline-silent-test-pass"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"set -u（nounset）を指定しておけば、空文字による比較の素通りは防げないのですか？","acceptedAnswer":{"@type":"Answer","text":"防げません。set -u は「未定義（unset）の変数」を展開しようとしたときにエラーを発生させるオプションです。コマンド置換が失敗して標準出力が空になった場合でも、変数には「空文字列」という有効な値が代入（bound）されるため、set -u のチェックを完全にすり抜けます。空文字の混入を防ぐには、変数展開後に [ -n \"$var\" ] による明示的な長さ判定を行う必要があります。"}},{"@type":"Question","name":"シェルスクリプトで動的にしきい値を計算する際、最も安全な実装パターンは何ですか？","acceptedAnswer":{"@type":"Answer","text":"基準値を算出するコマンド置換の直後、かつ比較処理に入る直前に、必ず [ -n \"$var\" ] || exit 1（数値比較であれば [[ \"$var\" =~ ^[0-9]+$ ]] || exit 1）によるアサーションを配置することです。環境依存のフォールバックを書く場合でも、それを過信せず、「万一算出が失敗して変数が空・無効値になった瞬間に処理を安全に停止させるガード」を省略してはなりません。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-03T14:55:00.000Z" data-astro-cid-7jjqptxk> 2026.10.03 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#testing</span><span class="tag" data-astro-cid-7jjqptxk>#shell-script</span><span class="tag" data-astro-cid-7jjqptxk>#bash</span><span class="tag" data-astro-cid-7jjqptxk>#quality-assurance</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>基準値の算出に失敗しても検査は成功し続ける ── BSD 専用 date -v が空文字になり、鮮度チェックの射程がゼロになった</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/empty-baseline-silent-test-pass-hero.webp" alt="基準値の算出に失敗しても検査は成功し続ける ── BSD 専用 date -v が空文字になり、鮮度チェックの射程がゼロになった" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>CI や自動テストの実行結果がすべて「緑（PASS）」に染まっているとき、開発者はシステムが安全に守られていると信じがちです。しかし、テストが成功しているという事実は、必ずしも「対象が正しく検証された」ことを意味しません。</p>
+<p>特にシェルスクリプトや CI パイプラインにおいて、検査の前提となる <strong>基準値（しきい値や cutoff 日時）の動的な算出</strong> に失敗し、変数が空文字列のまま後続の比較式に渡された場合、検査コード自体は正常終了のステータスを保ちながら、検査対象を一件も捕捉しない「射程ゼロ」の状態に陥ることがあります。</p>
+<p>いわば <strong>空虚なテスト合格（vacuous pass）</strong> の状態です。検査ロジックの前提条件や評価基準が消失したことで、どのような異常データが入力されても無条件に「合格」と判定されてしまい、テストの防波堤としての役割が完全に消滅している状態です。<a href="/blog/ai-agent-url-verification-traps">過去に URL 検証における様々な落とし穴を検証した記事</a> でも触れたように、自動化された検査基盤では「エラーが発生して止まる」ことよりも「エラーが隠蔽されて緑のまま素通りする」ことの方がはるかに検知が難しく、深刻なサイレント障害を招きます。</p>
+<p>本記事では、当リポジトリの URL 検証台帳スクリプトにおいて、macOS 向けに書かれた <code>date -v</code> コマンドが GNU coreutils の date で実行されて空文字になり、キャッシュの鮮度チェックが無言で全件通過し続けた実インシデントを取り上げます。Bash における空文字の辞書順比較仕様と、stderr にエラーが出力されていても見落としてしまう心理的死角を解剖し、「環境差異への個別対応（原因の予防）」に留まらず、「比較直前での非空アサーション（結果の検収）」を配置すべき設計原則について論じます。</p>
+<h2 id="url-検証台帳の-30-日鮮度判定が素通りし続けた実事故">URL 検証台帳の 30 日鮮度判定が素通りし続けた実事故</h2>
+<p>当リポジトリの運用基盤には、外部文献や調査資料として引用する Web サイトの死活状態やステータスコードを定期的に検証し、ローカルの台帳に記録する検証スクリプトが存在します。毎回すべての URL に対してネットワークアクセスを行うと検証コストが増大するため、「過去 30 日以内に検証成功（200 OK または 403）が確認できている URL は、台帳のキャッシュ結果を再利用してスキップする」という鮮度判定ルールが組み込まれていました。</p>
+<p>このスクリプトは当初 macOS（BSD 系環境）上で開発され、30 日前の境界日時（cutoff）を算出するために BSD 固有の <code>date -v</code> コマンドが使われていました。しかし、Homebrew 経由で GNU coreutils が導入され、PATH の優先順位によって <code>date</code> コマンドの実体が <code>/opt/homebrew/opt/coreutils/libexec/gnubin/date</code>（GNU date）に向いていた開発環境で実行された際、鮮度判定が静かに破壊されました。</p>
+<p>実際の検証ログでは、実行日（2026-09-21）から見て 32 日前（2026-08-20）に記録された URL が、30 日の鮮度期限を超過しているにもかかわらず、再検証されずに台帳の古い結果をそのまま再利用し続けていたのです。</p>
+<p>以下は、このサイレントな素通りを引き起こした修正前の鮮度判定コードの抜粋です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># URL 検証スクリプト（修正前抜粋）</span></span>
+<span class="line"><span style="color:#4C4F69">cutoff</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">date</span><span style="color:#40A02B"> -v-"</span><span style="color:#4C4F69">${FRESH_DAYS}</span><span style="color:#40A02B">"d</span><span style="color:#40A02B"> +%Y-%m-%d</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">now</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">date</span><span style="color:#40A02B"> -Iseconds</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">while</span><span style="color:#4C4F69"> IFS</span><span style="color:#179299">=</span><span style="color:#D20F39;font-style:italic"> read</span><span style="color:#40A02B"> -r</span><span style="color:#40A02B"> url</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span></span>
+<span class="line"><span style="color:#7C7F93">  [</span><span style="color:#179299"> -n</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$url</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> ]</span><span style="color:#179299"> ||</span><span style="color:#8839EF"> continue</span></span>
+<span class="line"><span style="color:#4C4F69">  prev</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">lookup</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$url</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">  prev_at</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">cut</span><span style="color:#40A02B"> -f1</span><span style="color:#179299"> &#x3C;&#x3C;&#x3C;</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">$prev</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">  prev_status</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">cut</span><span style="color:#40A02B"> -f2</span><span style="color:#179299"> &#x3C;&#x3C;&#x3C;</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">$prev</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">  prev_verdict</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">cut</span><span style="color:#40A02B"> -f3</span><span style="color:#179299"> &#x3C;&#x3C;&#x3C;</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">$prev</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">  if</span><span style="color:#7C7F93"> [</span><span style="color:#179299"> -n</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$prev</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> ]</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#7C7F93"> {</span><span style="color:#7C7F93"> [</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$prev_status</span><span style="color:#40A02B">"</span><span style="color:#179299"> =</span><span style="color:#FE640B"> 200</span><span style="color:#7C7F93"> ]</span><span style="color:#179299"> ||</span><span style="color:#7C7F93"> [</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$prev_status</span><span style="color:#40A02B">"</span><span style="color:#179299"> =</span><span style="color:#FE640B"> 403</span><span style="color:#7C7F93"> ];</span><span style="color:#7C7F93"> }</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#7C7F93">     &#x26;&#x26;</span><span style="color:#7C7F93"> [[</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">${prev_at</span><span style="color:#179299">:</span><span style="color:#4C4F69">0</span><span style="color:#179299">:</span><span style="color:#4C4F69">10}</span><span style="color:#40A02B">"</span><span style="color:#179299"> ></span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$cutoff</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> ]];</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">    printf</span><span style="color:#40A02B"> '%s\t%s\t台帳: %s の結果を再利用\n'</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$prev_status</span><span style="color:#40A02B">"</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$url</span><span style="color:#40A02B">"</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">${prev_at</span><span style="color:#179299">:</span><span style="color:#4C4F69">0</span><span style="color:#179299">:</span><span style="color:#4C4F69">10}</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#8839EF">    continue</span></span>
+<span class="line"><span style="color:#8839EF">  fi</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">  # ... 実際の URL 再取得処理 ...</span></span>
+<span class="line"><span style="color:#8839EF">done</span></span>
+<span class="line"></span></code></pre>
+<p>このスクリプトを実行した際、当リポジトリの一次検証ログには以下のような記録が残されていました。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>date: invalid option -- 'v'</span></span>
+<span class="line"><span>Try 'date --help' for more information.</span></span>
+<span class="line"><span>200	https://arxiv.org/abs/2306.05685	台帳: 2026-08-20 の結果を再利用</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>FreeBSD や macOS の <code>date</code> コマンドであれば、<code>-v-30d</code> を指定することで基準日から 30 日前の日付文字列（例: <code>2026-08-22</code>）が正常に出力されます<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。しかし、POSIX 標準規格において <code>date</code> コマンドで規定されているオプションは <code>-u</code>（UTC 指定）のみであり<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>、相対日付の計算構文は各 OS の独自拡張に依存しています。</p>
+<p>GNU date において <code>-v</code> は未定義の無効オプションであるため、コマンドは stderr にエラーメッセージを出力し、終了ステータス 1 で失敗しました。その結果、コマンド置換 <code>$(date -v...)</code> の標準出力は空となり、変数 <code>cutoff</code> には空文字列 <code>""</code> が代入されたまま後続のループ処理へと突入したのです。</p>
+<h2 id="なぜ空文字の基準値で検査が素通りするのか辞書順比較と結果行の死角">なぜ空文字の基準値で検査が素通りするのか：辞書順比較と結果行の死角</h2>
+<p>基準値である <code>cutoff</code> が空文字列になったとき、直後の比較式 <code>[[ "${prev_at:0:10}" > "$cutoff" ]]</code> は、なぜエラーにもならず真（合格）と判定され続けてしまったのでしょうか。そこには、シェルスクリプトの言語仕様と人間の認知特性という二重の死角が存在していました。</p>
+<h3 id="辞書順比較における空文字の最小値性">辞書順比較における空文字の最小値性</h3>
+<p>POSIX（Issue 7）の <code>test</code>（<code>[</code>）ユーティリティでは、文字列比較演算子として <code>=</code>（一致）と <code>!=</code>（不一致）のみが規定されています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。これに対し、Bash などの拡張シェルで提供されている <code>[[ ... ]]</code> 構文では、<code>></code> や <code>&#x3C;</code> による文字列の辞書順比較（ロケールの照合順序に基づく比較）がサポートされています<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>空文字列 <code>""</code> はあらゆる文字列の接頭辞なので、辞書順ではどの非空文字列よりも前に並びます。</p>
+<p>したがって、評価式が <code>[[ "2026-08-20" > "" ]]</code> と展開された場合、左辺の日付文字列は右辺の空文字よりも必ず辞書順で後ろに並ぶため、<strong>どのような過去の日付であっても無条件に真（終了ステータス 0）</strong> と評価されます。</p>
+<p>本来この比較式は「記録日時が 30 日前より新しいものだけを通す」というフィルタとして設計されたはずでした。しかし、基準値が空になった瞬間、そのフィルタは「空文字より大きい全件を通す」という、何の意味も持たない素通りゲートへと反転してしまったのです。</p>
+<p>この挙動は、以下の最小コードで容易に再現できます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 空文字との辞書順比較の最小実証</span></span>
+<span class="line"><span style="color:#4C4F69">cutoff</span><span style="color:#179299">=</span><span style="color:#40A02B">""</span></span>
+<span class="line"><span style="color:#4C4F69">prev_at</span><span style="color:#179299">=</span><span style="color:#40A02B">"2026-08-20"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">if</span><span style="color:#7C7F93"> [[</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$prev_at</span><span style="color:#40A02B">"</span><span style="color:#179299"> ></span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$cutoff</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> ]];</span><span style="color:#8839EF"> then</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  echo</span><span style="color:#40A02B"> "TRUE: 基準値が空文字の場合、過去の日付でも常に真と評価される"</span></span>
+<span class="line"><span style="color:#8839EF">else</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  echo</span><span style="color:#40A02B"> "FALSE"</span></span>
+<span class="line"><span style="color:#8839EF">fi</span></span>
+<span class="line"></span></code></pre>
+<p><code>prev_at</code> に 1 年前の日付が入っていようと 10 年前の日付が入っていようと、評価結果は常に TRUE となります。検査の射程は完全にゼロになっていました。</p>
+<h3 id="set--u-をすり抜ける変数展開の性質">set -u をすり抜ける変数展開の性質</h3>
+<p>シェルスクリプトの品質を高めるプラクティスとして、未定義変数の展開を検知する <code>set -u</code>（nounset）を指定することが推奨されます。しかし、今回の事故では <code>set -u</code> は何の防波堤にもなりませんでした。</p>
+<p><code>-u</code> が検知するのは、あくまで「未定義（unset）の変数」が展開された場合です。コマンド置換が失敗して標準出力が空になった結果、代入された <code>cutoff=""</code> は、シェルにとっては「空文字列という有効な値が代入された（bound な）変数」として認識されます。したがって、<code>set -u</code> は一切の警告も停止も行わず、正常な変数展開として素通りさせました。</p>
+<h3 id="自社事故の直接要因とコマンド置換の落とし穴">自社事故の直接要因とコマンド置換の落とし穴</h3>
+<p>今回の実事故においてスクリプトが停止しなかった直接の要因は、スクリプトの冒頭が <code>set -uo pipefail</code> となっており、エラー時にスクリプトを停止させる <code>-e</code>（errexit）が付与されていなかった点にあります。そのため、<code>cutoff=$(date -v...)</code> の代入が終了ステータス 1 を返しても、スクリプトは停止せずにそのまま実行を継続しました。</p>
+<p>なお、仮に <code>set -e</code> を指定していたとしても、シェルスクリプトには別の落とし穴が潜んでいます。関数の内部などで <code>local cutoff=$(date -v...)</code> や <code>export cutoff=$(date -v...)</code> のように宣言と代入を同一行で行った場合、行全体の終了ステータスは <code>local</code> や <code>export</code> コマンド自体の戻り値（常に 0）で上書きされ、コマンド置換の失敗がマスクされてしまうという仕様が存在します<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。また、<code>set -e</code> の挙動自体が極めて複雑で直感に反する場合があることも、シェルスクリプトの代表的な落とし穴として挙げられています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<h3 id="結果行が正常に見えるときの心理的死角">結果行が正常に見えるときの心理的死角</h3>
+<p>技術的な仕様以上に深刻だったのが、人間の観察における死角です。</p>
+<p>前述のログを振り返ると、画面の stderr には確かに <code>date: invalid option -- 'v'</code> というエラーが出力されていました。しかし、その直後の行には <code>200 https://arxiv.org/... 台帳: 2026-08-20 の結果を再利用</code> と、あたかも正常に台帳が機能しているかのような結果行が整然と出力されていました。</p>
+<p>目視できる出力が一見して期待通りの形式を保っていたため、同じスクリプトを使った複数のセッションで、先頭のエラーメッセージは読み流されたまま、誰も異常に気づきませんでした。</p>
+<h2 id="前提の消失で射程がゼロになる同型の失敗パターン">「前提の消失で射程がゼロになる」同型の失敗パターン</h2>
+<p>「基準値や前提条件が実行時に消失したことで、エラーで止まらずに検査の射程だけがゼロになる」という構造的欠陥は、単一のシェルスクリプトの日付比較に限った話ではありません。<a href="/blog/quality-gate-coverage-matrix">検査カバレッジの死角を扱った記事</a> で論じたように、ソフトウェアテストや自動化パイプラインの至るところで繰り返し発生する同型の失敗パターンです。</p>
+<p>当リポジトリの運用実務で発生した他の 2 つの同型事例を振り返ると、その共通構造が浮き彫りになります。</p>
+<h3 id="事例aテストモックの注入先消失による素通り">事例A：テストモックの注入先消失による素通り</h3>
+<p>社内パイプラインの記録作成スクリプトにおいて、失敗系のテストケースとして PATH の先頭にモック用の偽コマンド（<code>exit 1</code> を返すダミースクリプト）を配置し、ツールが異常終了した際のロールバック処理（残置ファイルゼロ、採番重複なし）を検証していました。</p>
+<p>しかし、本体スクリプトの内部リファクタリングによって該当ツールへの依存が廃止された際、テストコード側のモック注入構成が見直されませんでした。その結果、失敗の注入自体が発火しなくなり、本体処理が正常に実行されて完了するようになりました。</p>
+<p>正常に完了した処理は当然ながら「残置ファイルゼロ」などの条件を満たすため、検証手順は「失敗系テストの検証項目をすべて満たした」と判定してしまいます。テストの前提条件（モックの注入先）が消滅したことで、約 1 ヶ月もの間、失敗系テストが実質的に何も検証しないまま成功し続けていたのです。</p>
+<h3 id="事例b条件行の欠損によるループの沈黙終了">事例B：条件行の欠損によるループの沈黙終了</h3>
+<p>未処理レコードを抽出して一覧化するスクリプトにおいて、各ファイル内の特定フィールド（再判断条件行）を <code>grep</code> で走査するループ処理が存在していました。このスクリプトには <code>set -e</code> と <code>pipefail</code> が指定されていました。</p>
+<p>ある日、条件行そのものが存在しない特殊な未処理レコードが投入された際、<code>grep</code> が一致なしとして終了ステータス 1 を返しました。その瞬間、<code>pipefail</code> と <code>set -e</code> の組み合わせによってループ全体がその場で沈黙終了しました。</p>
+<p>対象レコード全 51 件のうち、実際には 29 件までしか処理されていませんでした。しかし、出力された 29 件のフォーマット自体は完全に正常だったため、出力を確認した側は、行数を元の件数と突き合わせないまま「出力自体は正常」と判断して作業を進めてしまいました。</p>
+<h3 id="2-つの失敗に共通する教訓">2 つの失敗に共通する教訓</h3>
+<p>事例A は本件と同じく「終了ステータス 0 で成功の見た目を保ちながら射程が消えた」事故であり、事例B は「終了ステータス 1 で異常停止していたにもかかわらず結果行の体裁に騙された」事故です。</p>
+<p>両者に共通しているのは、<strong>「出力された結果の体裁が整然としていると、読む側は前提が崩れていることや検査の射程が消失していることに気付けない」</strong> という点です。検査や自動処理が正常に動いているかどうかを「見た目の綺麗さ」で判断してはならず、結果の正当性を機械的に保証するアサーションが不可欠であることを示しています。</p>
+<h2 id="処方箋原因空間の予防と結果空間の検収">処方箋：原因空間の「予防」と結果空間の「検収」</h2>
+<p>このようなサイレント障害を防ぐために、開発者はどのような対策を講じるべきでしょうか。</p>
+<p>まず思い浮かぶのは、「macOS の BSD date と Linux の GNU date の両方で動くように、コマンドの構文を分岐させる」というアプローチです。</p>
+<h3 id="原因空間の予防とその限界">原因空間の予防とその限界</h3>
+<p>実際に、事故直後に検討された対症療法は次のようなフォールバック構文でした。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 原因空間の予防（構文のフォールバック）</span></span>
+<span class="line"><span style="color:#4C4F69">cutoff</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">date</span><span style="color:#40A02B"> -d</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">${FRESH_DAYS}</span><span style="color:#40A02B"> days ago"</span><span style="color:#40A02B"> +%Y-%m-%d</span><span style="color:#179299"> 2></span><span style="color:#40A02B">/dev/null</span><span style="color:#179299"> ||</span><span style="color:#1E66F5;font-style:italic"> date</span><span style="color:#40A02B"> -v-"</span><span style="color:#4C4F69">${FRESH_DAYS}</span><span style="color:#40A02B">"d</span><span style="color:#40A02B"> +%Y-%m-%d</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span></code></pre>
+<p>GNU date であれば <code>-d</code> が成功し、BSD date であれば <code>||</code> の後ろの <code>-v</code> が実行されるため、一見すると両環境に対応できたように見えます。</p>
+<p>しかし、これは「GNU と BSD の構文差」という <strong>原因の空間（無限）</strong> に対する予防策に過ぎません。前述の通り、POSIX 規格の <code>date</code> コマンドには <code>-d</code> も <code>-v</code> も規定されていません<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>例えば、軽量なコンテナ環境（Alpine Linux など）で標準的に使われる BusyBox の <code>date</code> コマンドは GNU とも BSD とも別の実装で、<code>-d</code> が受け付ける書式が GNU date と同じとは限りません。もしスクリプトが将来そうした環境で実行され、このフォールバック構文の両方の分岐が失敗すれば、<code>cutoff</code> は再び空文字になってサイレント障害が再発します。</p>
+<p>原因空間には、未知の OS、BusyBox、PATH の欠落、ツールの未インストール、引数の typo など、無限のバリエーションが存在します。原因を一つひとつ潰していく予防的アプローチは、どれだけ積み重ねても「想定外の第 3 の環境」で容易に破綻します。</p>
+<h3 id="結果空間の検収による根治">結果空間の検収による根治</h3>
+<p>これに対し、検査ロジックが正常に機能するために本質的に必要な性質は、<strong>結果の空間</strong> に着目すると、少数の性質に絞って定義できます。</p>
+<p>求める性質はただ一つ、<strong>「後続の比較式に渡される基準値（cutoff）が、空文字列でないこと」</strong> です。</p>
+<p>したがって、根本的な防波堤となるのは、比較式の直前に配置する明示的な非空アサーションです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># URL 検証スクリプト（修正後抜粋）</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># GNU date（coreutils を PATH 前段に置いた環境）と BSD date の両方で動かす。</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># 失敗して空のまま進むと、比較が常に真になり台帳が永久に再利用される（無言で鮮度判定が消える）</span></span>
+<span class="line"><span style="color:#4C4F69">cutoff</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">date</span><span style="color:#40A02B"> -d</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">${FRESH_DAYS}</span><span style="color:#40A02B"> days ago"</span><span style="color:#40A02B"> +%Y-%m-%d</span><span style="color:#179299"> 2></span><span style="color:#40A02B">/dev/null</span><span style="color:#179299"> ||</span><span style="color:#1E66F5;font-style:italic"> date</span><span style="color:#40A02B"> -v-"</span><span style="color:#4C4F69">${FRESH_DAYS}</span><span style="color:#40A02B">"d</span><span style="color:#40A02B"> +%Y-%m-%d</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#7C7F93">[</span><span style="color:#179299"> -n</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$cutoff</span><span style="color:#40A02B">"</span><span style="color:#7C7F93"> ]</span><span style="color:#179299"> ||</span><span style="color:#7C7F93"> {</span><span style="color:#D20F39;font-style:italic"> echo</span><span style="color:#40A02B"> "cutoff の算出に失敗しました（date が -d も -v も受け付けません）"</span><span style="color:#179299"> >&#x26;2</span><span style="color:#7C7F93">;</span><span style="color:#D20F39;font-style:italic"> exit</span><span style="color:#FE640B"> 1</span><span style="color:#7C7F93">;</span><span style="color:#7C7F93"> }</span></span>
+<span class="line"></span></code></pre>
+<p>この 1 行のアサーションを挟むことで、<code>cutoff</code> が空になった原因が GNU/BSD の差異であろうと、BusyBox の非互換であろうと、PATH の設定ミスであろうと、<strong>「基準値が空のまま後続の比較式に進む経路」は確実に遮断</strong> できます。ただし、このアサーションが見ているのは空かどうかだけです。空ではないが日付の形をしていない値までは止められないため、書式まで確かめたい場合は正規表現での照合を足します。</p>
+<p>GNU date 環境下であれば <code>-d</code> が成功して正しい基準日（例: <code>2026-08-22</code>）が得られ、32 日前の古いレコードは正しく期限切れと判定されて再検証されます。そして未知の環境で算出に失敗した場合には、スクリプトが即座に非ゼロ終了して異常を知らせるため、空の基準値による偽合格は起きなくなります。</p>
+<h3 id="予防と検収の比較">予防と検収の比較</h3>
+<p>検査スクリプトの堅牢化において、環境差異への構文対応（予防）と、算出結果のバリデーション（検収）は役割が根本的に異なります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>観点</th><th>原因空間の予防（構文両対応）</th><th>結果空間の検収（基準値アサーション）</th></tr></thead><tbody><tr><td><strong>アプローチ</strong></td><td><code>date -d</code> と <code>date -v</code> のフォールバック分岐</td><td><code>[ -n "$cutoff" ] || exit 1</code> の非空ガード</td></tr><tr><td><strong>守備範囲</strong></td><td>自分が想定した既知の OS / コマンド差分のみ</td><td>未知の環境・未インストール・typo 等、算出結果が空になる失敗</td></tr><tr><td><strong>限界</strong></td><td>Alpine/BusyBox 等の第 3 の環境で再び空になる</td><td>失敗時にスクリプトが停止するため、予防と併用が望ましい</td></tr><tr><td><strong>設計思想</strong></td><td>原因の空間（無限）を潰そうとするアプローチ</td><td>結果の空間（空でないこと）を閉じるアプローチ</td></tr></tbody></table>
+<p>したがって、構文両対応による予防と、直後の非空アサーションによる検収を組み合わせた二重防御が、検査の射程を保つための処方箋になります。</p>
+<h2 id="そもそも-bash-で書かなければ済むのか">そもそも Bash で書かなければ済むのか</h2>
+<p>ここまでの議論は、基準値を Bash で算出することを前提にしています。実のところ筆者は、Bash のバージョン差や GNU/BSD の差といった細かいシェルの問題でハマりやすくなったため、3 行以上のスクリプトは Python で書くよう指示しています。日付の計算を Python の標準ライブラリに任せれば、<code>date -v</code> と <code>date -d</code> の差という原因はそもそも消えます。</p>
+<p>ただし、言語を移して消えるのは原因の一つにすぎません。辞書順で比べる限り、空文字列がどの非空文字列よりも前に並ぶという性質は言語を問いません。Python でも基準値を設定ファイルや環境変数から読み、読み取りに失敗して空文字列が入れば、同じ形で検査の射程はゼロになります。言語を変えても、比較の前に基準値が空でないことを確かめる一行は必要なままです。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-set--unounsetを指定しておけば空文字による比較の素通りは防げないのですか">Q. set -u（nounset）を指定しておけば、空文字による比較の素通りは防げないのですか？</h3>
+<p><strong>A.</strong> 防げません。<code>set -u</code> は「未定義（unset）の変数」を展開しようとしたときにエラーを発生させるオプションです。コマンド置換が失敗して標準出力が空になった場合でも、変数には「空文字列」という有効な値が代入（bound）されるため、<code>set -u</code> のチェックを完全にすり抜けます。空文字の混入を防ぐには、変数展開後に <code>[ -n "$var" ]</code> による明示的な長さ判定を行う必要があります。</p>
+<h3 id="q-シェルスクリプトで動的にしきい値を計算する際最も安全な実装パターンは何ですか">Q. シェルスクリプトで動的にしきい値を計算する際、最も安全な実装パターンは何ですか？</h3>
+<p><strong>A.</strong> 基準値を算出するコマンド置換の直後、かつ比較処理に入る直前に、必ず <code>[ -n "$var" ] || exit 1</code>（数値比較であれば <code>[[ "$var" =~ ^[0-9]+$ ]] || exit 1</code>）によるアサーションを配置することです。環境依存のフォールバックを書く場合でも、それを過信せず、「万一算出が失敗して変数が空・無効値になった瞬間に処理を安全に停止させるガード」を省略してはなりません。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>ここまでの知見は、シェルスクリプトの日付計算にとどまらず、あらゆるテストコードや自動化パイプラインの設計に通じる普遍的な原則です。現場のコードを点検する際は、以下の 4 つの命題を意識してください。</p>
+<ol>
+<li><strong>動的に算出する基準値は、空文字になった際の比較挙動を疑う</strong>: しきい値、許容範囲、cutoff 日時が空文字や null になったとき、評価式が意図せず「全通し（無条件合格）」側に倒れないかを必ず検証する。</li>
+<li><strong>Bash の <code>[[ > ]]</code> は空文字を最小値として扱う</strong>: 文字列の辞書順比較において空文字 <code>""</code> はあらゆる非空文字列より小さいため、任意の日付 <code>> ""</code> は常に真となり、鮮度チェックなどの境界検査が無効化される。</li>
+<li><strong><code>set -u</code> も結果行の正常な見た目も異常を教えてくれない</strong>: 空文字は未定義変数ではないため <code>set -u</code> をすり抜け、stderr にエラーが出ていても結果行のフォーマットが整然としていれば人間も AI も見落とす。</li>
+<li><strong>予防（原因空間）と検収（結果空間）の二重防御を徹底する</strong>: 環境差へのフォールバック（予防）だけに頼らず、比較直前に <code>[ -n "$cutoff" ] || exit 1</code> を置くことで、未知の環境で基準値が空になっても検査が黙って素通りする経路を塞ぐ。</li>
+</ol>
+<p>テストが緑のまま通過していることに満足せず、その検査が「本当に検証すべき射程を捕捉しているか」を疑う姿勢こそが、システムの堅牢性を支える基盤となります。</p>
+<p>開発プロセスの標準化、CI/CD パイプラインの品質ゲート設計、自動化スクリプトの堅牢化に関するご相談は、<a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://man.freebsd.org/cgi/man.cgi?query=date&#x26;sektion=1">FreeBSD General Commands Manual: date(1)</a> The FreeBSD Project, 2026年。DESCRIPTION 節、<code>-v</code> オプション構文（<code>-v [+|-]val[y|m|w|d|H|M|S]</code> による相対日時調整）。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://pubs.opengroup.org/onlinepubs/9699919799/utilities/date.html">The Open Group Base Specifications Issue 7: date</a> IEEE and The Open Group, 2018年版。OPTIONS 節（サポートが義務付けられているオプションは <code>-u</code> のみであり、相対日付計算 <code>-d</code> や <code>-v</code> は POSIX 規格外の独自拡張であること）。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://pubs.opengroup.org/onlinepubs/9699919799/utilities/test.html">The Open Group Base Specifications Issue 7: test</a> IEEE and The Open Group, 2018年版。OPERANDS 節（文字列比較演算子として規定されているのは <code>=</code> と <code>!=</code> のみであり、<code>-n string</code> による非ゼロ長判定の仕様）。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p>[BashFAQ/031 - What is the difference between test, [ and [<a href="https://mywiki.wooledge.org/BashFAQ/031">?</a> Greg’s Wiki (Wooledge), 2026年。比較表の “string comparison >” 行および解説（<code>[[</code> 構文における <code>></code> 演算子の辞書順文字列比較仕様）。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://www.shellcheck.net/wiki/SC2155">ShellCheck Wiki: SC2155</a> ShellCheck Project (Vidar Holen), 2026年。“Problematic code in the case of export/local” 節（<code>export</code> や <code>local</code> を伴うコマンド置換代入において終了コードがマスクされる問題の解説）。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://mywiki.wooledge.org/BashPitfalls">BashPitfalls</a> Greg’s Wiki (Wooledge), 2026年。Pitfall #60（<code>set -euo pipefail</code> における errexit の挙動と、エラーハンドリング過信の注意点）。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

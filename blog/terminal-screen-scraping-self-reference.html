@@ -1,0 +1,169 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>画面に「esc to interrupt」があれば応答中、は本文に負ける ── 判定語が完了報告に載って3600秒待った | Meetsource</title><meta name="description" content="対話型AIエージェントの端末画面をスクレイピングして状態監視する設計の落とし穴を解説。完了報告本文の自己言及による3600秒STOPや非同期待機の誤読を防ぐ探索スライス設計と、通知フックへの移行指針を提示します。"><link rel="canonical" href="https://www.meetsource.work/blog/terminal-screen-scraping-self-reference"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="画面に「esc to interrupt」があれば応答中、は本文に負ける ── 判定語が完了報告に載って3600秒待った | Meetsource"><meta property="og:description" content="対話型AIエージェントの端末画面をスクレイピングして状態監視する設計の落とし穴を解説。完了報告本文の自己言及による3600秒STOPや非同期待機の誤読を防ぐ探索スライス設計と、通知フックへの移行指針を提示します。"><meta property="og:url" content="https://www.meetsource.work/blog/terminal-screen-scraping-self-reference"><meta property="og:image" content="https://www.meetsource.work/blog/terminal-screen-scraping-self-reference-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-01T03:51:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="画面に「esc to interrupt」があれば応答中、は本文に負ける ── 判定語が完了報告に載って3600秒待った | Meetsource"><meta name="twitter:description" content="対話型AIエージェントの端末画面をスクレイピングして状態監視する設計の落とし穴を解説。完了報告本文の自己言及による3600秒STOPや非同期待機の誤読を防ぐ探索スライス設計と、通知フックへの移行指針を提示します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/terminal-screen-scraping-self-reference-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"画面に「esc to interrupt」があれば応答中、は本文に負ける ── 判定語が完了報告に載って3600秒待った","description":"対話型AIエージェントの端末画面をスクレイピングして状態監視する設計の落とし穴を解説。完了報告本文の自己言及による3600秒STOPや非同期待機の誤読を防ぐ探索スライス設計と、通知フックへの移行指針を提示します。","datePublished":"2026-11-01T03:51:00.000Z","image":"https://www.meetsource.work/blog/terminal-screen-scraping-self-reference-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/terminal-screen-scraping-self-reference"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"tmux capture-pane でプロンプト記号（❯ や $）が見えていれば、作業完了・入力待ちと判定して問題ありませんか？","acceptedAnswer":{"@type":"Answer","text":"結論から言えば不十分です。エージェントがバックグラウンドでテストや外部プロセス（Monitor ツールや background Bash）を実行している最中、ターンを閉じてプロンプト欄が空く挙動が実測されています。プロンプト記号の有無だけでなく、ステータス行にバックグラウンドジョブの待機表示（N monitors や N shell(s) など）が残っていないかまで確認しなければ、作業中のエージェントを「停止した」と誤認して不要な催促や強制終了を投げてしまいます。"}},{"@type":"Question","name":"単純な文字列スクレイピングによるエージェント監視の自己言及誤爆は、正規表現を工夫すれば完全に防げますか？","acceptedAnswer":{"@type":"Answer","text":"画面全体を走査している限り完全には防げません。エージェントがどのようなテキスト（プロンプト解説、エラーメッセージ、判定ルールの引用など）を出力するかは非決定論的であり、監視キーワードが本文に含まれる確率をゼロにはできないためです。防ぐためには、探索範囲を入力欄の直前にある見出し行からステータス行までに限定する「画面スライス」を適用して誤爆範囲を狭めるか、CLI の公式フック機能（Notification や Stop イベント）を用いた構造化通知へ切り替える必要があります。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-01T03:51:00.000Z" data-astro-cid-7jjqptxk> 2026.11.01 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#ai</span><span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#tmux</span><span class="tag" data-astro-cid-7jjqptxk>#オーケストレーション</span><span class="tag" data-astro-cid-7jjqptxk>#automation</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>画面に「esc to interrupt」があれば応答中、は本文に負ける ── 判定語が完了報告に載って3600秒待った</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/terminal-screen-scraping-self-reference-hero.webp" alt="画面に「esc to interrupt」があれば応答中、は本文に負ける ── 判定語が完了報告に載って3600秒待った" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>AIエージェントの端末画面スクレイピングによる状態判定とは、tmux や PTY（疑似端末）経由で対話型 CLI エージェントの画面バッファを走査し、特定のプロンプト記号やスピナー文字列の有無から応答中（Busy）か入力待ち（Idle）かを外部から推定する監視手法です。</p>
+<p>Claude Code や Codex CLI などの対話型コーディングエージェントを tmux 上で並列稼働させ、自作スクリプトでオーケストレーションを組もうとするとき、多くの開発者が最初に思いつくのは画面キャプチャ（<code>tmux capture-pane</code>）による状態判定でしょう<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。エージェント本体に手を加えることなく、非侵入で手軽に外部から監視できるため、プロトタイピングにはうってつけの手段に見えます。</p>
+<p>しかし、画面全体を単純な文字列走査で監視する設計は、思わぬ罠を抱えています。エージェント自身が完了報告の本文中で判定ルールを解説した瞬間に、監視ロジックが自爆してしまうのです。入力待ちになっているにもかかわらず、画面内の判定語に引っかかって「応答中」と誤認し、3600 秒のタイムアウト停止を引き起こしました。</p>
+<p>この失敗を経て、私たちは探索範囲を入力欄周辺の「見出し行スライス」に絞り込み、さらにステータス行から非同期待ちを識別する設計へと改修しました。しかし根本的には、画面スクレイピングという対症療法から、エージェントのフックや通知イベントを用いた構造的シグナルへの移行が必要です。本記事では、実際に遭遇した障害ログとコード差分をもとに、画面監視の落とし穴と堅牢化の境界線を解き明かします。</p>
+<h2 id="完了報告の本文に判定語が載って3600秒待った日">完了報告の本文に判定語が載って3600秒待った日</h2>
+<p>私たちが開発・運用している自作エージェントオーケストレータでは、並列に起動したワーカーエージェントの状態監視において、画面内に <code>esc to interrupt</code> という文字列が存在するかどうかで「応答中」か「入力待ち」かを判定していました。Claude Code や Codex CLI などの対話型エージェントは、推論中やコマンド実行中に画面下部やスピナー行へ割り込み用キー案内を表示するため、この語の有無を見るのは自然な発想に思えました。</p>
+<p>ところが、ある日の並列実行タスクにおいて、ワーカーが正常に作業を終えて完了報告を出力し、入力待ちプロンプト（<code>❯</code>）に戻ったにもかかわらず、監視側が「応答中」と判定し続けました。オーケストレータ側が設定していた監視タイムアウト（3600 秒）に達するまで待機し、再試行時にも同様に本文の判定語を拾った結果、3600 秒のタイムアウトによる強制停止（STOP）が 2 回連続で発生したのです。</p>
+<h3 id="画面全行走査による自己言及インジェクションのメカニズム">画面全行走査による「自己言及インジェクション」のメカニズム</h3>
+<p>原因を突き止めるため、障害発生時の画面バッファを採取して解析しました。入力欄の上端位置は <code>input_box_top=21</code> であり、プロンプト行の上には実行中スピナー（<code>Levitating…</code> 等）は一切存在していませんでした。</p>
+<p>それにもかかわらず判定が「応答中」に倒れていた理由は、ワーカーエージェントが出力した完了報告の <strong>本文そのもの</strong> にありました。ワーカーが丁寧にも、自分が実行した判定ルールの説明として次のような行を出力していたのです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>- esc to interrupt: 画面にこの語を含む行があれば応答中</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>監視側は画面全体の全行を対象に <code>esc to interrupt</code> を検索していたため、エージェント自身が出力した解説テキストを「画面に割り込み案内が出ている＝応答中である」と誤読してしまいました。エージェントが判定ルールに言及したテキストを出力した瞬間に監視窓が汚染される、いわば「自己言及インジェクション」とも呼ぶべき事態が発生していたのです。</p>
+<h3 id="古典的-expect-におけるコマンドエコー問題との構造的類似性">古典的 expect におけるコマンドエコー問題との構造的類似性</h3>
+<p>この現象は、端末自動化における古典的なツールである Pexpect や Expect において、出力ストリームを順次走査する <code>expect()</code> が<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>、送信したコマンド文字列の疑似端末（PTY）ローカルエコーによって送り返され、意図せず自分自身の入力にマッチしてしまう問題と構造が酷似しています<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>Pexpect では疑似端末のデフォルトエコーが有効になっているため、子プロセスからの出力だけでなく自分が送ったコマンド文字列もバッファに入り込みます<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。これを防ぐには <code>setecho(False)</code> や <code>waitnoecho()</code> を用いてエコーバックを明示的に制御する必要があります。</p>
+<p>今回の画面スクレイピングでも同様に、「外部から観察しているつもりの画面バッファの中に、被監視対象自身の言葉として判定語が混入する」という観測窓の汚染が起きていました。</p>
+<p>以下は、この障害を引き起こした旧版の判定コード（<code>skills/dispatch/scripts/dispatch.py</code> の <code>screen_idle</code> 関数）の抜粋です。判定の起点となる入力欄上端 <code>top</code> は、<code>box_top</code> 関数によって Claude Code 等の TUI 入力ボックスを囲む罫線（<code>╭</code> や <code>─</code>）の行位置を検出して特定しています。旧版では、この入力欄位置とは無関係に、画面の全行に対して単純な走査を行っていました。</p>
+<p>引用元: skills/dispatch/scripts/dispatch.py（コミット 6fca12b の親コミット）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#4C4F69">    top </span><span style="color:#179299">=</span><span style="color:#1E66F5"> box_top</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">rows</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#4C4F69"> top </span><span style="color:#8839EF">is</span><span style="color:#8839EF"> None</span><span style="color:#7C7F93">:</span></span>
+<span class="line"><span style="color:#8839EF">        return</span><span style="color:#8839EF"> False</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#FE640B;font-style:italic"> any</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"esc to interrupt"</span><span style="color:#8839EF"> in</span><span style="color:#4C4F69"> r </span><span style="color:#8839EF">for</span><span style="color:#4C4F69"> r </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> rows</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#8839EF">        return</span><span style="color:#8839EF"> False</span></span>
+<span class="line"><span style="color:#4C4F69">    above </span><span style="color:#179299">=</span><span style="color:#7C7F93"> [</span><span style="color:#4C4F69">r</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">strip</span><span style="color:#7C7F93">()</span><span style="color:#8839EF"> for</span><span style="color:#4C4F69"> r </span><span style="color:#8839EF">in</span><span style="color:#E64553;font-style:italic"> rows</span><span style="color:#7C7F93">[</span><span style="color:#FE640B;font-style:italic">max</span><span style="color:#7C7F93">(</span><span style="color:#FE640B;font-style:italic">0</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69;font-style:italic"> top </span><span style="color:#179299">-</span><span style="color:#FE640B;font-style:italic"> 6</span><span style="color:#7C7F93">):</span><span style="color:#E64553;font-style:italic">top</span><span style="color:#7C7F93">]</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> r</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">strip</span><span style="color:#7C7F93">()][</span><span style="color:#179299">-</span><span style="color:#FE640B">3</span><span style="color:#7C7F93">:]</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#8839EF"> not</span><span style="color:#FE640B;font-style:italic"> any</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">SPINNER_ROW_RE</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">match</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">r</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> for</span><span style="color:#4C4F69"> r </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> above</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span></code></pre>
+<p>画面全体の走査は典型的なインジェクションの脆弱性を抱えており、エージェントがどのような語を出力するか予測できない以上、直ちに改善が必要でした。</p>
+<h2 id="探索スライス設計直上直下から見出し行への進化">探索スライス設計：直上・直下から「見出し行」への進化</h2>
+<p>単純な文字列マッチングが危険である以上、探索範囲を絞り込む必要があります。最初に試みたのは、入力欄（プロンプト）の「直上数行および直下」だけに探索範囲を限定する対症療法でした。</p>
+<h3 id="初版修正の落とし穴字下げ行と空行によるスピナー取りこぼし">初版修正の落とし穴：字下げ行と空行によるスピナー取りこぼし</h3>
+<p>初版の修正では、入力欄の上端 <code>top</code> から直上 3 行（空行を除く直上 6 行中最後の 3 行）と、入力欄より下のステータス行だけを探索対象としました。会話本文は入力欄よりはるか上方に流れるため、これだけで完了報告本文の誤爆は回避できるように見えました。</p>
+<p>しかし、コードレビューにおいて重大な見落としが指摘されました。TUI（テキストユーザーインターフェース）の画面構造において、推論スピナーと入力欄の間に TODO リストの字下げ行（<code>⎿ ☐ a</code>）や空行が複数挟まるケースが存在したのです。</p>
+<p>行数を固定で 3 行などに区切ってしまうと、字下げ行が連続した際に入力欄直上のスピナー行が探索ウィンドウから押し出され、応答中であるにもかかわらず「入力待ち」と誤判定（スピナー取りこぼし）を起こしてしまいます。</p>
+<h3 id="見出し行スライスアルゴリズム">見出し行スライスアルゴリズム</h3>
+<p>そこで第 2 版の修正として採用したのが、「見出し行スライス」アルゴリズムです。</p>
+<p>入力欄の位置 <code>top</code> から上方向へ向かって空行と字下げ行をスキップしていき、最初に当たる「字下げのない行（見出し行）」を探索起点 <code>head</code> とします。そして、その <code>head</code> からステータス行を含む画面下端までのスライスに対してのみ、判定語が存在するかを走査するように変更しました。</p>
+<p>引用元: skills/dispatch/scripts/dispatch.py（コミット d40fd85）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#4C4F69">    head </span><span style="color:#179299">=</span><span style="color:#FE640B;font-style:italic"> next</span><span style="color:#7C7F93">((</span><span style="color:#4C4F69">i </span><span style="color:#8839EF">for</span><span style="color:#4C4F69"> i </span><span style="color:#8839EF">in</span><span style="color:#FE640B;font-style:italic"> range</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">top </span><span style="color:#179299">-</span><span style="color:#FE640B"> 1</span><span style="color:#7C7F93">,</span><span style="color:#179299"> -</span><span style="color:#FE640B">1</span><span style="color:#7C7F93">,</span><span style="color:#179299"> -</span><span style="color:#FE640B">1</span><span style="color:#7C7F93">)</span><span style="color:#8839EF"> if</span><span style="color:#E64553;font-style:italic"> rows</span><span style="color:#7C7F93">[</span><span style="color:#E64553;font-style:italic">i</span><span style="color:#7C7F93">].</span><span style="color:#1E66F5">strip</span><span style="color:#7C7F93">()</span><span style="color:#8839EF"> and</span><span style="color:#8839EF"> not</span><span style="color:#E64553;font-style:italic"> rows</span><span style="color:#7C7F93">[</span><span style="color:#E64553;font-style:italic">i</span><span style="color:#7C7F93">][</span><span style="color:#FE640B">0</span><span style="color:#7C7F93">].</span><span style="color:#1E66F5">isspace</span><span style="color:#7C7F93">()),</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    if</span><span style="color:#FE640B;font-style:italic"> any</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"esc to interrupt"</span><span style="color:#8839EF"> in</span><span style="color:#4C4F69"> r </span><span style="color:#8839EF">for</span><span style="color:#4C4F69"> r </span><span style="color:#8839EF">in</span><span style="color:#E64553;font-style:italic"> rows</span><span style="color:#7C7F93">[</span><span style="color:#E64553;font-style:italic">head</span><span style="color:#7C7F93">:]):</span></span>
+<span class="line"><span style="color:#8839EF">        return</span><span style="color:#8839EF"> False</span></span>
+<span class="line"></span></code></pre>
+<p>この改修により、以下の 4 つのテストケースがすべて正常にパスするようになりました。</p>
+<ol>
+<li><code>test_esc_to_interrupt_in_body_far_above_input_is_idle</code>: 本文上方に判定語があっても入力待ちと正しく判定。</li>
+<li><code>test_esc_to_interrupt_below_input_is_busy</code>: 入力欄下のステータス行に判定語があれば応答中と判定。</li>
+<li><code>test_esc_to_interrupt_just_above_input_is_busy</code>: 入力欄直上に判定語があれば応答中と判定。</li>
+<li><code>test_esc_to_interrupt_spinner_above_many_indented_rows_is_busy</code>: スピナーと入力欄の間に複数の TODO 字下げ行が挟まっていても確実に応答中と判定。</li>
+</ol>
+<h3 id="スライス設計の限界と局所化の意義">スライス設計の限界と局所化の意義</h3>
+<p>ただし、このスライス設計も万能ではありません。もしエージェントが最後に出力した見出し行自体に判定語が含まれていた場合や、Codex CLI のように罫線による明確な入力欄区切りを持たないエージェントでは、依然として誤判定のリスクが残ります。</p>
+<p>このスライス設計の本質は、誤爆を 100% 根絶することではなく、「画面全体という広大な地雷原を、入力欄直近の見出しブロックという極小の局所領域に封じ込めた」点にあります。</p>
+<h2 id="待ち方の違いによる誤読monitor-待機を停止と読まないためのステータス行監視">待ち方の違いによる誤読：Monitor 待機を「停止」と読まないためのステータス行監視</h2>
+<p>自己言及誤爆を解決した後に直面したもう一つの罠が、「エージェントの待ち方の違いによる誤読」です。</p>
+<h3 id="非同期待ちによるプロンプト空き">非同期待ちによる「プロンプト空き」</h3>
+<p>Claude Code などのエージェントは、テスト実行や長時間コマンドを待機する際、Monitor ツールやバックグラウンド Bash ジョブを起動します。このとき、エージェントは外部ツールの完了通知を待つために自身のターンを閉じます。</p>
+<p>すると、画面上では実行中スピナーが消え、プロンプト入力欄が空いた状態になります。</p>
+<p>外部の監視スクリプトから見ると、これは「エージェントが指示待ちになった」ように見えてしまいます。自作オーケストレータの司令塔は、「ワーカーが報告を出さずに入力待ちになった」と誤読し、2 回の催促メッセージを送信した末に <code>STOP: worker が止まった</code> として強制停止を発生させてしまいました。実際の画面では、ワーカーは止まっていたのではなく、バックグラウンドでテストの完了を待機していただけでした。</p>
+<h3 id="ステータス行の正規表現監視">ステータス行の正規表現監視</h3>
+<p>この問題を解決するため、入力欄の下部 4 行（<code>STATUS_ROWS = 4</code>）に表示されるステータス情報を監視対象に加えました。</p>
+<p>実測ログにおいて、非同期待ち中のステータス行には <code>3 monitors still running</code> や <code>⏵⏵ auto mode on · 1 shell</code> といった表示が出現することが判明していました。そこで、以下の正規表現を用いて、入力欄が空いていてもバックグラウンドジョブが稼働中であれば「応答中」と同等に扱うようにロジックを改修しました。</p>
+<p>引用元: skills/dispatch/scripts/dispatch.py（コミット f850628）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#4C4F69">BACKGROUND_RE </span><span style="color:#179299">=</span><span style="color:#4C4F69"> re</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">compile</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">r</span><span style="color:#EA76CB">"</span><span style="color:#7C7F93">(</span><span style="color:#179299">?&#x3C;!</span><span style="color:#7C7F93">[</span><span style="color:#40A02B">0-9A-Za-z</span><span style="color:#7C7F93">])[</span><span style="color:#40A02B">1-9</span><span style="color:#7C7F93">][</span><span style="color:#40A02B">0-9</span><span style="color:#7C7F93">]</span><span style="color:#179299">*</span><span style="color:#7C7F93"> (?:</span><span style="color:#40A02B">monitors</span><span style="color:#179299">?|</span><span style="color:#40A02B">shells</span><span style="color:#179299">?</span><span style="color:#7C7F93">)(</span><span style="color:#179299">?!</span><span style="color:#7C7F93">[</span><span style="color:#40A02B">0-9A-Za-z</span><span style="color:#7C7F93">])</span><span style="color:#EA76CB">"</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#4C4F69">STATUS_ROWS </span><span style="color:#179299">=</span><span style="color:#FE640B"> 4</span></span>
+<span class="line"></span></code></pre>
+<p>なお、こうしたステータス行の文言表示は CLI のマイナーアップデートによって変更されるリスクがあります。実務で運用する際は、正規表現の検知ルールを定期的にテストで検証できるように保守性を確保しておく必要があります。</p>
+<h2 id="画面スクレイピングの限界と-3-つの監視アプローチ比較">画面スクレイピングの限界と 3 つの監視アプローチ比較</h2>
+<p>ここまで見てきたように、画面スクレイピングによる状態監視は、自己言及誤爆や非同期待ちの誤読など、多くの泥臭いエッジケースに対処し続ける必要があります。</p>
+<p>さらに、エージェントごとに入力欄の表現が異なる点も運用の頭痛の種です。Claude Code は <code>❯</code>、Codex CLI は罫線のない <code>›</code>、Antigravity は罫線に挟まれた <code>></code> など、記号も画面レイアウトも異なります。こうした CLI の差異を外部スクレイピングだけで吸収し続けるのは極めて不安定です。</p>
+<p>状態監視の方式は、実装の手軽さと信頼性のトレードオフによって以下の 3 つのアプローチに整理できます。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>監視アプローチ</th><th>状態検知の仕組み</th><th>主なメリット</th><th>固有のリスク・限界</th><th>主なユースケース</th></tr></thead><tbody><tr><td><strong>画面全体スクレイピング</strong></td><td><code>capture-pane</code> 等で画面全行から判定語を文字列検索<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></td><td>外部プロセスから非侵入で手軽に導入可能</td><td>本文中の判定語を拾う自己言及誤爆、待機誤読</td><td>簡易スクリプト、プロトタイプ検証</td></tr><tr><td><strong>探索スライス局所化</strong></td><td>入力欄直前の見出し行〜ステータス行のみを抽出判定</td><td>エージェント未改造のまま自己言及誤爆を大幅抑止</td><td>CLI ごとの TUI 差分（罫線・記号）対応が泥臭い</td><td>既存 CLI の外部オーケストレーション</td></tr><tr><td><strong>フック・通知イベント連携</strong></td><td><code>Notification</code> / <code>Stop</code> 等の CLI 組み込みフック<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup></td><td>文字列解釈が不要で自己言及リスクを回避</td><td>非同期待ち（Monitor 等）の区別に別途工夫が必要</td><td>本番向けマルチエージェント基盤</td></tr></tbody></table>
+<p>状態監視の設計において、通知やフックが利用できる環境であれば、イベント連携を第一選択とすべきです。文字列解釈に依存しない構造化シグナルこそが最も安全だからです。</p>
+<p>ただし注意が必要なのは、フック機能（Claude Code の <code>Stop</code> フック等）であっても、Monitor 待機のようにエージェントがターンを閉じた瞬間にイベントが発火する点です<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。非同期待ちなのか完全な完了なのかを識別するには、フックの通知内容やステータス行の確認を組み合わせるなど、依然として複合的な判断が求められます。</p>
+<h2 id="前提が変われば結論はどう変わるかフックの進化とオーケストレーション基盤">前提が変われば結論はどう変わるか：フックの進化とオーケストレーション基盤</h2>
+<p>tmux のイベント対応力や外部自動化の制約次第では、過渡期として画面スクレイピングに頼らざるを得ない場面もあります。</p>
+<p>しかし、近年ではエージェントと外部基盤との協調手法が急速に進化しています。たとえば <code>bellmux</code> は、tmux の画面を直接スクレイピングするのではなく、Claude Code のフック（<code>Notification</code> や <code>Stop</code>）を活用して入力待ちペインの ID をキューに積むアプローチをとっています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。また、tmux 自身の <code>display-message</code> と <code>capture-pane</code> を組み合わせて対象ペインの情報をスマートに取り出す手法も実践されています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>さらに、モデルコンテキストプロトコル（MCP）を介して疑似端末（PTY）の制御を提供する <code>PiloTY</code> のような試みも登場しています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。仮想端末エミュレータである <code>pyte</code> を用いてメモリ上で VT100 エスケープシーケンスをパースするような画面スクレイピング手法も存在しますが<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>、根本的にはエージェント基盤が構造化シグナルを直接提供する方向へと進化しています。</p>
+<p>現状の AI CLI はフックポイントがまだ限られており、セッション終了前の自動振り返り処理をフックで実行できないなど、自動化を進めようとすると後からセッションログを浚う手段に頼らざるを得ないのが実情です。</p>
+<p>しかし、ワークツリーと仮想端末を統合管理する専用のオーケストレーション基盤（筆者らの環境では Orca を採用）があれば、自作の操縦スキルであっても安定して並列運用を成立させることができます。外部からの素朴な画面スクレイピングから脱却し、エージェント基盤との協調へと舵を切ることが、信頼性の高いマルチエージェント運用の鍵となります。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-tmux-capture-pane-でプロンプト記号-や-が見えていれば作業完了入力待ちと判定して問題ありませんか">Q: tmux capture-pane でプロンプト記号（❯ や $）が見えていれば、作業完了・入力待ちと判定して問題ありませんか？</h3>
+<p>結論から言えば不十分です。エージェントがバックグラウンドでテストや外部プロセス（Monitor ツールや background Bash）を実行している最中、ターンを閉じてプロンプト欄が空く挙動が実測されています。プロンプト記号の有無だけでなく、ステータス行にバックグラウンドジョブの待機表示（<code>N monitors</code> や <code>N shell(s)</code> など）が残っていないかまで確認しなければ、作業中のエージェントを「停止した」と誤認して不要な催促や強制終了を投げてしまいます。</p>
+<h3 id="q-単純な文字列スクレイピングによるエージェント監視の自己言及誤爆は正規表現を工夫すれば完全に防げますか">Q: 単純な文字列スクレイピングによるエージェント監視の自己言及誤爆は、正規表現を工夫すれば完全に防げますか？</h3>
+<p>画面全体を走査している限り完全には防げません。エージェントがどのようなテキスト（プロンプト解説、エラーメッセージ、判定ルールの引用など）を出力するかは非決定論的であり、監視キーワードが本文に含まれる確率をゼロにはできないためです。防ぐためには、探索範囲を入力欄の直前にある見出し行からステータス行までに限定する「画面スライス」を適用して誤爆範囲を狭めるか、CLI の公式フック機能（<code>Notification</code> や <code>Stop</code> イベント）を用いた構造化通知へ切り替える必要があります。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>本記事で解説したエージェント端末監視の要点は以下の通りです。</p>
+<ul>
+<li><strong>画面全体の単純走査は自己言及インジェクションの脆弱性を招く</strong>: エージェント自身が判定ルールの解説を出力した瞬間に観測窓が汚染され、3600 秒のタイムアウトを引き起こします。</li>
+<li><strong>固定行数のスライスはスピナー取りこぼしを起こす</strong>: TUI の字下げ行や空行によってスピナーがウィンドウ外へ押し出されるため、入力欄直前の「見出し行」を起点としたスライスが必要です。</li>
+<li><strong>プロンプトの空きだけで完了と判定しない</strong>: Monitor やバックグラウンドジョブ待機による「意図的なターン終了」をステータス行から検出し、不要な催促や STOP を防止します。</li>
+<li><strong>長期的には構造化シグナルへ移行する</strong>: 画面スクレイピングは過渡期の対症療法と位置づけ、CLI フック、MCP、端末統合基盤を活用した堅牢なアーキテクチャを目指すべきです。</li>
+</ul>
+<p>開発現場でのマルチエージェント並列運用、AI Operations のプロセス設計、および堅牢な監視パイプラインの構築について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://man7.org/linux/man-pages/man1/tmux.1.html">tmux(1) - Linux manual page</a> Nicholas Marriott、2026年11月1日閲覧。<code>capture-pane</code> の <code>-p</code>（stdout出力）、<code>-S</code> / <code>-E</code>（バッファ範囲指定）オプション仕様。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://pexpect.readthedocs.io/en/stable/overview.html">API Overview — Pexpect 4.8 documentation</a> Noah Spurrier et al.、2026年11月1日閲覧。<code>expect</code> メソッドの順次バッファ走査およびタイムアウト例外仕様。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://pexpect.readthedocs.io/en/stable/api/pexpect.html">Core pexpect components — Pexpect 4.8 documentation</a> Noah Spurrier et al.、2026年11月1日閲覧。疑似端末（PTY）におけるエコーバック仕様と <code>setecho</code> / <code>waitnoecho</code> によるエコー制御。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://docs.anthropic.com/en/docs/claude-code/hooks">Hooks reference - Claude Code Docs</a> Anthropic、2026年11月1日閲覧。<code>Notification</code> および <code>Stop</code> イベントの仕様、<code>last_assistant_message</code> によるメッセージ参照。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://zenn.dev/daiius/articles/bellmux-universal-attention-queue">tmux で Claude Code / Codex CLI の入力待ちペインにジャンプする話</a> Daiius、Zenn、2026年6月8日。<code>bellmux</code> による Claude Code hooks（Notification/Stop）連携と tmux ペインのキューイング管理。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://blog.printemps.tokyo/blog/claude-code-tmux-pane-locator">Claude Code に別 tmux ペインを覗かせる小ネタ - display-message と capture-pane で「あっち見て」を一行で頼む</a> プランタン、printemps blog、2026年5月26日。<code>tmux display-message</code> と <code>capture-pane</code> を組み合わせた別ペイン内容取得の実務テクニック。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://github.com/yiwenlu66/PiloTY">yiwenlu66/PiloTY: PiloTY: AI pilot for PTY operations via MCP</a> yiwenlu66、GitHub、2026年11月1日閲覧。エージェント向け MCP 経由の PTY 操作基盤と対話型プロンプト制御アプローチ。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://github.com/selectel/pyte">selectel/pyte: Simple VTXXX-compatible linux terminal emulator</a> Selectel、GitHub、2026年11月1日閲覧。インメモリ VT100 エミュレータによる端末画面スクレイピング仕様。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

@@ -1,0 +1,350 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>BOM（U+FEFF）とテストデータの CRLF 保護 ── .gitattributes の -text 指定と行番号付き公開前機械検査 | Meetsource</title><meta name="description" content="Git でテストデータの CRLF が LF へ変わる現象は .gitattributes の -text と git add --renormalize で防ぎ、既存の検査を素通りする生の BOM（U+FEFF）混入は行番号付きの公開前機械検査で止めます。実際に経験した CSV の CRLF 消失、記事本文 681 行目と検査スクリプト自身への生 U+FEFF 混入の実測をもとに、-text と binary の違いや編集時の再混入対策を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/raw-bom-markdown-gitattributes-crlf"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="BOM のバグを説明する記事に、本物の BOM が混じっていた ── テストデータの CRLF 保護と不可視文字の公開前機械検査"><meta property="og:description" content="BOM と CRLF を再現する作業中に、テスト用 CSV の CRLF が Git に消され、解説記事 681 行目には生の U+FEFF が混入しました。既存チェック 4 種を素通りした不可視文字の挙動と、追加した検査スクリプト自身への再混入から見えた対策をまとめます。"><meta property="og:url" content="https://www.meetsource.work/blog/raw-bom-markdown-gitattributes-crlf"><meta property="og:image" content="https://www.meetsource.work/blog/raw-bom-markdown-gitattributes-crlf-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-16T03:51:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="BOM のバグを説明する記事に、本物の BOM が混じっていた ── テストデータの CRLF 保護と不可視文字の公開前機械検査"><meta name="twitter:description" content="BOM と CRLF を再現する作業中に、テスト用 CSV の CRLF が Git に消され、解説記事 681 行目には生の U+FEFF が混入しました。既存チェック 4 種を素通りした不可視文字の挙動と、追加した検査スクリプト自身への再混入から見えた対策をまとめます。"><meta name="twitter:image" content="https://www.meetsource.work/blog/raw-bom-markdown-gitattributes-crlf-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"BOM（U+FEFF）とテストデータの CRLF 保護 ── .gitattributes の -text 指定と行番号付き公開前機械検査","description":"Git でテストデータの CRLF が LF へ変わる現象は .gitattributes の -text と git add --renormalize で防ぎ、既存の検査を素通りする生の BOM（U+FEFF）混入は行番号付きの公開前機械検査で止めます。実際に経験した CSV の CRLF 消失、記事本文 681 行目と検査スクリプト自身への生 U+FEFF 混入の実測をもとに、-text と binary の違いや編集時の再混入対策を解説します。","datePublished":"2026-11-16T03:51:00.000Z","image":"https://www.meetsource.work/blog/raw-bom-markdown-gitattributes-crlf-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/raw-bom-markdown-gitattributes-crlf"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Git で CRLF を含むテストデータが自動的に LF へ変換されるのを防ぐには、.gitattributes に何を書けばよいですか？","acceptedAnswer":{"@type":"Answer","text":"対象テストコード群のルートディレクトリまたはリポジトリの .gitattributes に *.csv -text のように -text 属性を指定します。-text はチェックイン・チェックアウト双方での改行変換を無効化しつつ、テキスト差分（diff）と 3-way マージの機能は維持するため、CRLF と LF が混在するテストデータの検証とレビューを両立できます。"}},{"@type":"Question","name":".gitattributes を追加しただけでは、既にコミットされたテストデータの CRLF が戻らないのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":".gitattributes の変更はすでにインデックスやリポジトリへ格納済みのファイル内容を自動では再処理しないため、追加後に git add --renormalize . を実行してインデックスへ再適用する必要があります。私の検証でも、.gitattributes の設定後に --renormalize を走らせることで、LF へ変換されていた 4 つの CSV ファイルが元の CRLF 4 箇所（146 バイト / 143 バイト）へ復元されました。"}},{"@type":"Question","name":"UTF-8 の BOM（U+FEFF）がコードや Markdown の途中に混入すると何が起き、どう検出すれば防げますか？","acceptedAnswer":{"@type":"Answer","text":"Go 1.27.3 のような字句解析・言語処理系では先頭以外の U+FEFF で illegal byte order mark エラーになりますが、Markdown パーサーやファイル先頭のみを見る汎用 Linter（Biome 仕様は先頭以外を検査対象外と明記）は本文途中の 1 文字をエラーにせず素通りさせるため、ファイル全体を対象に行番号を出力して停止する機械検査を CI や公開前チェックに組み込む必要があります。本稿で示したように、検査スクリプト自身の中でも chr(0xFEFF) で文字を組み立て、検査ツール自身も走査対象に含めることで再混入リスクにも備えられます。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-16T03:51:00.000Z" data-astro-cid-7jjqptxk> 2026.11.16 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#git</span><span class="tag" data-astro-cid-7jjqptxk>#testing</span><span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span><span class="tag" data-astro-cid-7jjqptxk>#troubleshooting</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>BOM（U+FEFF）とテストデータの CRLF 保護 ── .gitattributes の -text 指定と行番号付き公開前機械検査</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/raw-bom-markdown-gitattributes-crlf-hero.webp" alt="BOM（U+FEFF）とテストデータの CRLF 保護 ── .gitattributes の -text 指定と行番号付き公開前機械検査" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>UTF-8 の BOM（Byte Order Mark）や改行コードの CRLF が原因で起きる不具合を再現するテストデータと解説記事を、私が個人で運営している技術ブログ用リポジトリ（非公開、以下「リポジトリA」）において AI コーディングエージェントおよび執筆サブエージェントに作成させていたとき、二重の不可視文字トラブルに直面しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。再現用の CSV テストデータに入れたはずの CRLF が <code>git add</code> 時に環境設定 <code>core.autocrlf=input</code>（チェックイン時に CRLF を LF へ変換し、チェックアウト時は出力変換しない設定）によって LF へ書き換わり<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>、一方で解説記事の Markdown 本文には、エスケープ表記を書くはずのインラインコードに本物の生 <code>U+FEFF</code> が 1 文字混入していたのです<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>UTF-8 の BOM（Byte Order Mark、<code>U+FEFF</code>、UTF-8 バイト列 <code>0xEF 0xBB 0xBF</code>）や改行コードの CRLF（<code>\r\n</code>）とは、文字コードの識別や行末の制御のためにファイルへ埋め込まれ、テキスト上の視認が難しく通常のエディタ表示では見落とされやすい不可視のバイト列です<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>当初のコミットメッセージには「生の BOM が混じり、ビルドも全レビューも通過した」と記録されていました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。しかし後に私が一次計測ログとコミット履歴の時刻を突き合わせて検算したところ、生 <code>U+FEFF</code> は独立査読やサイトビルドより前の自己チェック（通し読み直後の <code>grep</code>）で偶然見つかって除去されており、混入状態のまま本番ビルドと独立査読を通過したわけではありませんでした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-5" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>それでも、混入中の本文が既存の文章・コードブロック検査 4 種をエラーなしで通過し、当時の公開前検査スクリプトにも <code>U+FEFF</code> の検出項目が無かった事実は変わりません<sup><a href="#user-content-fn-1" id="user-content-fnref-1-6" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。目に見えないバイト列に対して偶然の自己チェックに頼り続ける危うさを断つため、リポジトリA では <strong>再現用のテストデータを <code>.gitattributes</code> の <code>-text</code> で改行正規化から保護し、記事やスクリプト側への混入は編集ツール呼び出し経由の再混入リスクも織り込んで行番号付きの公開前機械検査で止める二段の仕組み</strong> を導入しました。本稿ではその実測データと設計判断を詳しく整理します。</p>
+<h2 id="なぜテストデータは-gitattributes-で守り本文は行番号付き検査で止めるのか">なぜテストデータは .gitattributes で守り、本文は行番号付き検査で止めるのか</h2>
+<p>同じ不可視のバイト列であっても、受け取る処理系が「どこで止めるか」「どこを素通りさせるか」はレイヤーによって正反対になります。リポジトリA での作業過程を整理すると、まず処理系ごとの振る舞いの違いを把握する必要がありました。</p>
+<h3 id="処理レイヤーごとに異なる不可視バイト列の通過と停止">処理レイヤーごとに異なる「不可視バイト列」の通過と停止</h3>
+<p>私がリポジトリA で実測した範囲では、Go ツールチェーンはファイル途中の生 <code>U+FEFF</code> を即座にエラーで止める一方、Git の設定や Markdown 処理系、記事公開前検査スクリプトの初期版は、意図しない変換や素通りを起こしていました。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>処理レイヤー</th><th>対象となる不可視バイト列</th><th>起きた挙動（実測）</th><th>理由・仕様上の位置づけ</th></tr></thead><tbody><tr><td><strong>Go 1.27.3 ツールチェーン（字句解析 <code>go/scanner</code>）</strong></td><td>文字列リテラル内の生 <code>U+FEFF</code></td><td>3 ファイル・計 3 回ともテスト実行前の解析・セットアップ段階（<code>go vet</code> / <code>go test</code>）で停止（<code>illegal byte order mark</code>）<sup><a href="#user-content-fn-1" id="user-content-fnref-1-7" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></td><td>Go 言語仕様および標準字句解析器 <code>go/scanner</code> が先頭以外の BOM を拒否するため<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup></td></tr><tr><td><strong>Git インデックス（<code>core.autocrlf=input</code>）</strong></td><td>テスト用 CSV の CRLF と先頭 BOM</td><td>警告 4 件を出して 4 ファイルの CRLF を LF へ変換（先頭 BOM は残存）<sup><a href="#user-content-fn-1" id="user-content-fnref-1-8" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></td><td><code>text</code> 属性未指定時は <code>core.autocrlf=input</code> がチェックイン時に CRLF を LF へ正規化するため<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup></td></tr><tr><td><strong>Markdown 本文＋既存機械チェック 4 種</strong></td><td>インラインコード内の生 <code>U+FEFF</code></td><td>681 行目に 1 文字混入したまま 4 種すべてをエラーなしで通過<sup><a href="#user-content-fn-1" id="user-content-fnref-1-9" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></td><td>CommonMark 仕様では任意のコードポイントが有効で、<code>U+FEFF</code> は空白にも構文エラーにもならず、Unicode FAQ でもマークアップ側で禁じない限り文字列内容として残るため<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup><sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup></td></tr><tr><td><strong>公開前検査スクリプト（初期版）</strong></td><td>記事本文およびツール自身の生 <code>U+FEFF</code></td><td>当時は <code>U+FEFF</code> 検査が未実装（判定 2 項目のみ、検査 0 件）。追加後も記事ディレクトリ外は未検査<sup><a href="#user-content-fn-1" id="user-content-fnref-1-10" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></td><td>対象ディレクトリと判定項目が公開記事の特定項目に限定されていたため<sup><a href="#user-content-fn-1" id="user-content-fnref-1-11" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></td></tr></tbody></table>
+<p>つまり、字句解析やビルド前の段階で守られている Go コードの外側 ── テストデータと Markdown ドキュメント ── には、それぞれ別の設計で不可視バイト列を扱う境界を引かなければなりませんでした。</p>
+<h4 id="go-ツールチェーンが先頭以外の生-ufeff-を止める仕組み">Go ツールチェーンが先頭以外の生 U+FEFF を止める仕組み</h4>
+<p>AI エージェントが検証用コードおよび再現テストを作成した際、<code>main_test.go</code>（12 行目）、<code>reproduce_test.go</code>（63 行目）、<code>equivalence_test.go</code>（14 行目）の 3 ファイルで文字列リテラルに生 <code>U+FEFF</code> を含めたところ、Go 1.27.3（<code>darwin/arm64</code>）の <code>go test</code> セットアップ段階および <code>go vet</code> / <code>gofmt</code> 解析段階はいずれも <code>illegal byte order mark</code> で処理を停止しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-12" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>以下の出力は、テスト用ソースの文字列リテラルに生 <code>U+FEFF</code> が含まれた状態で <code>go test</code> を実行した際の出力（リポジトリA の検証記録より）です<sup><a href="#user-content-fn-1" id="user-content-fnref-1-13" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>go version go1.27.3 darwin/arm64</span></span>
+<span class="line"><span># bomcheck</span></span>
+<span class="line"><span>main_test.go:12:9: illegal byte order mark</span></span>
+<span class="line"><span>FAIL	bomcheck [setup failed]</span></span>
+<span class="line"><span>FAIL</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>Go 言語仕様ではソース先頭の UTF-8 BOM のみ実装制限として無視を許し、それ以外の位置の BOM は禁止できると定められており<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>、標準字句解析器 <code>go/scanner</code> の実装（53 行目で <code>bom = 0xFEFF</code> と定義）でも、88〜90 行目でオフセット 0 より後ろ（<code>s.offset > 0</code>）の <code>bom</code> に対して <code>illegal byte order mark</code> エラーを返す仕組みになっています<sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。<code>\xef\xbb\xbf</code> や <code>\uFEFF</code> に直した後は、単体検証（<code>main_test.go</code>: <code>0.446s</code>）、等価性テスト（<code>equivalence_test.go</code>: <code>0.262s</code>）、修正後版の再現テスト（<code>reproduce_test.go</code>: <code>0.309s</code>）がいずれも <code>PASS</code> し、修正前版の <code>reproduce_test.go</code> のみバグ再現テストとして期待どおり失敗（<code>0.263s</code>）することを確認できました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-14" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>したがって、Go ソースコード内に BOM を扱う文字列リテラルを書くときは、生のバイト列を埋め込まず、次のようなエスケープ表記で安全に記述します。外部ライブラリは不要で Go 標準ライブラリのみで動作します。</p>
+<p>ファイル: bom_escape_test.go</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>package bomcheck</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>import (</span></span>
+<span class="line"><span>	"strings"</span></span>
+<span class="line"><span>	"testing"</span></span>
+<span class="line"><span>)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>func TestTrimSpaceDoesNotStripBOM(t *testing.T) {</span></span>
+<span class="line"><span>	const bom = "\uFEFF"</span></span>
+<span class="line"><span>	input := bom + "氏名"</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>	got := strings.TrimSpace(input)</span></span>
+<span class="line"><span>	if got == "氏名" {</span></span>
+<span class="line"><span>		t.Fatalf("TrimSpace should not strip U+FEFF, got %q", got)</span></span>
+<span class="line"><span>	}</span></span>
+<span class="line"><span>	if !strings.HasPrefix(got, bom) {</span></span>
+<span class="line"><span>		t.Fatalf("expected prefix U+FEFF to remain, got %q", got)</span></span>
+<span class="line"><span>	}</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>モジュールを初期化して実行するコマンドは次のとおりです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">go</span><span style="color:#40A02B"> mod</span><span style="color:#40A02B"> init</span><span style="color:#40A02B"> bomcheck</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#1E66F5;font-style:italic"> go</span><span style="color:#40A02B"> test</span><span style="color:#40A02B"> -v</span><span style="color:#40A02B"> .</span></span>
+<span class="line"></span></code></pre>
+<p>このコードでは <code>const bom = "\uFEFF"</code> として ASCII 文字のみでコードポイントを表現しているため、字句解析器に弾かれません。また、<code>strings.TrimSpace</code> が空白文字ではなくフォーマット文字である <code>U+FEFF</code> を取り除かない点も、コンパイルエラーではなくテストの論理検証として実行できます。</p>
+<h4 id="markdown-本文が生-ufeff-を素通りさせる理由">Markdown 本文が生 U+FEFF を素通りさせる理由</h4>
+<p>一方、記事執筆サブエージェントが初回ファイル書き出しを行った時点で、展開後 681 行目の <code>`"\uFEFF"`</code> を解説する文脈のインラインコードに、生 <code>U+FEFF</code> が 1 文字入り込みました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-15" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>CommonMark Spec 0.31.2 §2.1 では、あらゆる Unicode コードポイントの並びが有効な文書とされ、Unicode 空白文字も一般カテゴリ <code>Zs</code> またはタブ・改行系（<code>U+0009</code>、<code>U+000A</code>、<code>U+000C</code>、<code>U+000D</code>）に限定されるため、<code>U+FEFF</code> は構文エラーにも空白区切りにもなりません<sup><a href="#user-content-fn-8" id="user-content-fnref-8-2" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。Unicode Consortium の FAQ でも、マークアップやプロトコル側で制限を置かない限り、ストリーム途中の <code>U+FEFF</code> はそのまま文字列内容の一部として扱われると整理されています（通常発生すべきではなく、後継としては <code>U+2060</code> が推奨されています）<sup><a href="#user-content-fn-3" id="user-content-fnref-3-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。実際にリポジトリA では、681 行目に生 <code>U+FEFF</code> を抱えた本文が、コードブロック一致検査（<code>code-blocks-match.py</code>）、文体検査（<code>style.py</code>）、重複表現スキャン（<code>repetition-scan.pl</code>）、英字語彙抽出（<code>latin-in-japanese.pl</code>）の既存機械チェック 4 種をエラーなしで通過しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-16" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="1段目-テストデータの-crlf-を-gitattributescsv--textで守る">1段目: テストデータの CRLF を .gitattributes（*.csv -text）で守る</h3>
+<p>再現テスト用の CSV ファイルをエディタ経由ではなくバイト列のまま生成するため、AI エージェントは Python スクリプト（<code>gen_testdata.py</code>）の <code>Path.write_bytes</code> を使い、修正前・修正後の比較用ディレクトリ 2 系統に各 3 種・計 6 ファイルを作成しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-17" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。内訳は <code>excel-saved.csv</code>（BOM <code>ef bb bf</code> あり、CRLF 4 箇所、146 バイト）、<code>exported.csv</code>（BOM なし、CRLF 4 箇所、143 バイト）、<code>support-masked.csv</code>（BOM なし、LF 4 箇所、139 バイト）です<sup><a href="#user-content-fn-1" id="user-content-fnref-1-18" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>以下は、エディタや文字列正規化の影響を受けずに BOM と CRLF を持つ再現 CSV を生成したスクリプトです。</p>
+<p>ファイル: gen_testdata.py
+引用元: リポジトリA（非公開）の gen_testdata.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#9CA0B0;font-style:italic">#!/usr/bin/env python3</span></span>
+<span class="line"><span style="color:#40A02B">"""testdata を、エディタを通さずバイト列で書き出す。before と after に同じものを置く。"""</span></span>
+<span class="line"><span style="color:#8839EF">from</span><span style="color:#4C4F69"> pathlib </span><span style="color:#8839EF">import</span><span style="color:#4C4F69"> Path</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">root </span><span style="color:#179299">=</span><span style="color:#1E66F5"> Path</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">__file__</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">resolve</span><span style="color:#7C7F93">().</span><span style="color:#4C4F69">parent</span></span>
+<span class="line"><span style="color:#4C4F69">BOM </span><span style="color:#179299">=</span><span style="color:#40A02B;font-style:italic"> b</span><span style="color:#40A02B">"</span><span style="color:#EA76CB">\xef\xbb\xbf</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#4C4F69">body </span><span style="color:#179299">=</span><span style="color:#7C7F93"> [</span><span style="color:#40A02B">"氏名,金額,メール"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "見本 一郎,3000,ichiro@example.org"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "見本 二葉,5000,futaba@example.org"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "見本 三郎,10000,saburo@example.org"</span><span style="color:#7C7F93">]</span></span>
+<span class="line"><span style="color:#8839EF">def</span><span style="color:#1E66F5;font-style:italic"> make</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">nl</span><span style="color:#7C7F93">,</span><span style="color:#E64553;font-style:italic"> bom</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#7C7F93"> (</span><span style="color:#4C4F69">BOM </span><span style="color:#8839EF">if</span><span style="color:#4C4F69"> bom </span><span style="color:#8839EF">else</span><span style="color:#40A02B;font-style:italic"> b</span><span style="color:#40A02B">""</span><span style="color:#7C7F93">)</span><span style="color:#179299"> +</span><span style="color:#7C7F93"> (</span><span style="color:#4C4F69">nl</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">join</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">body</span><span style="color:#7C7F93">)</span><span style="color:#179299"> +</span><span style="color:#4C4F69"> nl</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">encode</span><span style="color:#7C7F93">()</span></span>
+<span class="line"><span style="color:#4C4F69">files </span><span style="color:#179299">=</span><span style="color:#7C7F93"> {</span><span style="color:#40A02B">"excel-saved.csv"</span><span style="color:#7C7F93">:</span><span style="color:#1E66F5"> make</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"</span><span style="color:#EA76CB">\r\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span><span style="color:#8839EF"> True</span><span style="color:#7C7F93">),</span><span style="color:#40A02B"> "exported.csv"</span><span style="color:#7C7F93">:</span><span style="color:#1E66F5"> make</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"</span><span style="color:#EA76CB">\r\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span><span style="color:#8839EF"> False</span><span style="color:#7C7F93">),</span><span style="color:#40A02B"> "support-masked.csv"</span><span style="color:#7C7F93">:</span><span style="color:#1E66F5"> make</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">"</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">"</span><span style="color:#7C7F93">,</span><span style="color:#8839EF"> False</span><span style="color:#7C7F93">)}</span></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#4C4F69"> d </span><span style="color:#8839EF">in</span><span style="color:#7C7F93"> (</span><span style="color:#40A02B">"before"</span><span style="color:#7C7F93">,</span><span style="color:#40A02B"> "after"</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> name</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> data </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> files</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">items</span><span style="color:#7C7F93">():</span></span>
+<span class="line"><span style="color:#7C7F93">        (</span><span style="color:#4C4F69">root </span><span style="color:#179299">/</span><span style="color:#4C4F69"> d </span><span style="color:#179299">/</span><span style="color:#40A02B"> "donorimport/testdata"</span><span style="color:#179299"> /</span><span style="color:#4C4F69"> name</span><span style="color:#7C7F93">).</span><span style="color:#1E66F5">write_bytes</span><span style="color:#7C7F93">(</span><span style="color:#4C4F69">data</span><span style="color:#7C7F93">)</span></span>
+<span class="line"></span></code></pre>
+<p><code>Path.write_bytes</code> で <code>\r\n</code> と先頭バイト <code>b"\xef\xbb\xbf"</code> を直接書き出しているため、生成直後のファイル自体は意図したバイト列になっていました。ところが、この環境の Git 設定 <code>core.autocrlf</code> が <code>input</code>（チェックアウト時は変換せず、チェックイン時に正規化する設定）だったため<sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>、<code>git add</code> 実行時に <code>CRLF will be replaced by LF the next time Git touches it</code> という警告が 4 件出力されました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-19" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。実際にコミットされたツリーを確認すると、CRLF を持つ 4 ファイルはすべて <code>crlf=0, lf_only=4</code>（142 バイト / 139 バイト）へ変換されていました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-20" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。一方、<code>excel-saved.csv</code> の先頭 BOM（<code>ef bb bf</code>）自体は Git の改行変換では消えずに残っていました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-21" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p><code>core.autocrlf</code> は開発者個人の環境設定に依存します。リポジトリに <code>.gitattributes</code> をコミットすれば各環境の <code>core.autocrlf</code> 設定より属性指定が優先され、環境を問わず同じ改行コードを維持できます<sup><a href="#user-content-fn-4" id="user-content-fnref-4-2" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7-2" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。さらに、このテストデータには CRLF のファイル（<code>excel-saved.csv</code>、<code>exported.csv</code>）と元から LF のファイル（<code>support-masked.csv</code>）が混在するため、<code>text eol=crlf</code> のように一律 CRLF へ揃える属性ではなく、チェックイン・チェックアウト双方の改行変換を行わない <code>-text</code>（<code>*.csv -text</code>）をテストコード群のルートディレクトリ（対象テストデータディレクトリの親階層）に配置しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-22" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7-3" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>テストコード群のルートディレクトリに配置した実際の属性設定は次のとおりです。</p>
+<p>ファイル: .gitattributes
+引用元: リポジトリA（非公開）のテストデータ保護用 .gitattributes</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span># 再現条件（BOM・CRLF）をバイトのまま保つ</span></span>
+<span class="line"><span>*.csv -text</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この設定により、ディレクトリ配下のすべての <code>.csv</code> ファイルに対して Git の改行コード変換が無効化されます。</p>
+<p>ただし、<code>.gitattributes</code> を追加しただけでは、すでにインデックスやコミットに誤った LF で格納されたファイルの改行は自動では戻りません<sup><a href="#user-content-fn-4" id="user-content-fnref-4-3" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。<code>.gitattributes</code> を追加・更新した後に既存の追跡ファイルへ反映してインデックスの状態を確かめるには、次のコマンドを実行します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">git</span><span style="color:#40A02B"> add</span><span style="color:#40A02B"> .gitattributes</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#1E66F5;font-style:italic"> git</span><span style="color:#40A02B"> add</span><span style="color:#40A02B"> --renormalize</span><span style="color:#40A02B"> .</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#1E66F5;font-style:italic"> git</span><span style="color:#40A02B"> status</span></span>
+<span class="line"></span></code></pre>
+<p><code>git add --renormalize</code> を実行すると、すべての追跡済みファイルに clean 処理が強制的に再適用されます<sup><a href="#user-content-fn-9" id="user-content-fnref-9-2" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。リポジトリA ではこの操作により、LF へ変換されていた対象 4 ファイルが元の <code>crlf=4, lf_only=0</code>（146 バイト / 143 バイト）へ復元され、<code>support-masked.csv</code> は <code>lf_only=4</code>（139 バイト）のまま保たれました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-23" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。なお、今回は <code>.gitattributes</code> の追加と <code>git add --renormalize</code> を連続して同時に適用して復元を確認した範囲での記録であり、新規作成時に最初から <code>.gitattributes</code> だけを置いて <code>git add</code> した場合の単独挙動は切り分けて測定していません<sup><a href="#user-content-fn-1" id="user-content-fnref-1-24" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="2段目-偶然の自己チェックを脱し行番号と修正ガイドを返す公開前検査を足す">2段目: 偶然の自己チェックを脱し、行番号と修正ガイドを返す公開前検査を足す</h3>
+<p>解説記事の本文 681 行目に紛れ込んだ生 <code>U+FEFF</code> は、執筆後の自己チェックで通し読み画面上に <code>""</code> のように見えた箇所をエージェントが <code>grep -n $'\xef\xbb\xbf'</code> で叩いて発見し、<code>`"\uFEFF"`</code> へ直しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-25" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。これが独立査読（約 20 秒後〜）およびサイトビルド＋公開前チェック（約 41 分後）の <strong>前</strong> に起きていたため、本番ビルドまで生 <code>U+FEFF</code> が残ったわけではありませんでした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-26" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。しかし、もし自己チェックの通し読みで目に留まらなければ、既存のチェック 4 種をすでに素通りしており、当時の <code>publish-ready.py</code> にも止める項目が存在しませんでした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-27" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>UTF-8 の BOM が混入しているかどうかといった機械的に定まる条件は、人間の目視や対話的なレビューでは見落としやすく、一方でプログラムで走査すれば確実かつ安価に全行を見つけられます。適材適所として、プログラムによる機械検査に委ねるべき領域です。さらに、その場限りの <code>grep</code> や即席スクリプトで毎回同じ確認をやり直すのではなく、2 回以上同じ用途の検査を書くなら共通のツールへ組み込んで再利用する運用にすることで、過去の失敗を仕組みの学習として定着させられます。</p>
+<p>CommonMark 上で構文エラーにならない崩れを専用の決定論的 Python スクリプトで止める設計は <a href="/blog/markdown-codespan-linter-commonmark-crossing">Markdown のコードスパン崩れを Linter で検出した過去記事</a> と同じアプローチであり、入力の破損を数値やステータスでなく実内容の機械検査で止める点は <a href="/blog/fetch-success-mojibake-blind-spot">文字化けテキストの取得ゲート通過を検証した過去記事</a> とも通底します。</p>
+<p>そこで、公開前の最終チェックから呼ばれる <code>publish-ready.py</code> に <code>U+FEFF</code> 検査を組み込みました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-28" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。「ただ存在を数えるだけ」ではなく、<strong>どのファイルの何行目に混入しているか</strong> と <strong>「見えない文字。<code>`\uFEFF`</code> と書く」という修正方針</strong> を標準エラー出力へ出して <code>exit 1</code> で止める形にしています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-29" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>以下は、<code>publish-ready.py</code> に追加した行番号・修正ガイド付き <code>U+FEFF</code> 検査の抜粋です（同スクリプトには他に連載記事のヘッダ画像の有無や HTML コメント内の退避 Mermaid を調べる判定項目も含まれており、記事全体の最終チェックとして動きます）。</p>
+<p>ファイル: publish-ready.py（該当検査部の抜粋）
+引用元: リポジトリA（非公開）の publish-ready.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#8839EF">    for</span><span style="color:#4C4F69"> c </span><span style="color:#8839EF">in</span><span style="color:#4C4F69"> re</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">finditer</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">'</span><span style="color:#EA76CB">\ufeff</span><span style="color:#40A02B">'</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> text</span><span style="color:#7C7F93">):</span></span>
+<span class="line"><span style="color:#4C4F69">        line </span><span style="color:#179299">=</span><span style="color:#4C4F69"> text</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">count</span><span style="color:#7C7F93">(</span><span style="color:#40A02B">'</span><span style="color:#EA76CB">\n</span><span style="color:#40A02B">'</span><span style="color:#7C7F93">,</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">,</span><span style="color:#4C4F69"> c</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">start</span><span style="color:#7C7F93">())</span><span style="color:#179299"> +</span><span style="color:#FE640B"> 1</span></span>
+<span class="line"><span style="color:#4C4F69">        found</span><span style="color:#7C7F93">.</span><span style="color:#1E66F5">append</span><span style="color:#7C7F93">(</span><span style="color:#40A02B;font-style:italic">f</span><span style="color:#40A02B">'</span><span style="color:#EA76CB">{</span><span style="color:#4C4F69">line</span><span style="color:#EA76CB">}</span><span style="color:#40A02B">行目: U+FEFF（BOM）が混じっている（見えない文字。`</span><span style="color:#EA76CB">\\</span><span style="color:#40A02B">uFEFF` と書く）'</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#8839EF">    return</span><span style="color:#4C4F69"> found</span></span>
+<span class="line"></span></code></pre>
+<p>リポジトリA の既存公開記事全体に対して実行して 0 件（<code>exit 0</code>）を確かめたうえで、4 行目に生 BOM を仕込んだ検証用ダミーファイルに対して実行したところ、次の出力を返して <code>exit 1</code> で停止しました（リポジトリA の検証記録より。なおリポジトリA の既存公開記事全体で <code>exit 0</code> となることは 2026年11月16日時点でも再確認済みです）<sup><a href="#user-content-fn-1" id="user-content-fnref-1-30" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>/tmp/bomt/x.md: 4行目: U+FEFF（BOM）が混じっている（見えない文字。`\uFEFF` と書く）</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>正常終了時は標準エラー出力を出さず <code>exit 0</code> を返し、生 <code>U+FEFF</code> を検出したときだけ標準エラー出力へ行番号と直し方を出して <code>exit 1</code> で止まります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-31" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>読者がご自身の CI や公開前チェックへそのまま持ち帰れるよう、Python 3 標準ライブラリのみ（外部ライブラリ不要）で動作し、指定ディレクトリ配下の Markdown だけでなく <strong>検査スクリプト自身</strong> も走査対象に含める自己完結型のスクリプトを次に示します。</p>
+<p>ファイル: check_bom.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>#!/usr/bin/env python3</span></span>
+<span class="line"><span>"""Markdown やスクリプト本体に含まれる生の U+FEFF（BOM）を行番号付きで検出する。"""</span></span>
+<span class="line"><span>import pathlib</span></span>
+<span class="line"><span>import sys</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>BOM = chr(0xFEFF)</span></span>
+<span class="line"><span>ESCAPE_HINT = chr(92) + "uFEFF"</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def find_bom_lines(path: pathlib.Path) -> list[str]:</span></span>
+<span class="line"><span>    text = path.read_text(encoding="utf-8")</span></span>
+<span class="line"><span>    errors = []</span></span>
+<span class="line"><span>    for lineno, line in enumerate(text.splitlines(), start=1):</span></span>
+<span class="line"><span>        if BOM in line:</span></span>
+<span class="line"><span>            errors.append(</span></span>
+<span class="line"><span>                f"{path}: {lineno}行目: U+FEFF（BOM）が混じっている（見えない文字。`{ESCAPE_HINT}` と書く）"</span></span>
+<span class="line"><span>            )</span></span>
+<span class="line"><span>    return errors</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def collect_targets(args: list[str]) -> list[pathlib.Path]:</span></span>
+<span class="line"><span>    if not args:</span></span>
+<span class="line"><span>        targets = sorted(pathlib.Path(".").rglob("*.md"))</span></span>
+<span class="line"><span>        self_path = pathlib.Path(__file__).resolve()</span></span>
+<span class="line"><span>        if self_path not in {p.resolve() for p in targets}:</span></span>
+<span class="line"><span>            targets.append(pathlib.Path(__file__))</span></span>
+<span class="line"><span>        return targets</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    targets: list[pathlib.Path] = []</span></span>
+<span class="line"><span>    for raw in args:</span></span>
+<span class="line"><span>        p = pathlib.Path(raw)</span></span>
+<span class="line"><span>        if p.is_dir():</span></span>
+<span class="line"><span>            targets.extend(sorted(p.rglob("*.md")))</span></span>
+<span class="line"><span>        elif p.is_file():</span></span>
+<span class="line"><span>            targets.append(p)</span></span>
+<span class="line"><span>        else:</span></span>
+<span class="line"><span>            print(f"{p}: 指定されたパスが見つかりません", file=sys.stderr)</span></span>
+<span class="line"><span>    return targets</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def main(args: list[str]) -> int:</span></span>
+<span class="line"><span>    targets = collect_targets(args)</span></span>
+<span class="line"><span>    status = 0</span></span>
+<span class="line"><span>    for path in targets:</span></span>
+<span class="line"><span>        for msg in find_bom_lines(path):</span></span>
+<span class="line"><span>            print(msg, file=sys.stderr)</span></span>
+<span class="line"><span>            status = 1</span></span>
+<span class="line"><span>    return status</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>if __name__ == "__main__":</span></span>
+<span class="line"><span>    sys.exit(main(sys.argv[1:]))</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>対象ディレクトリと検査スクリプト自身を指定して実行するには、次のコマンドを実行します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">python3</span><span style="color:#40A02B"> check_bom.py</span><span style="color:#40A02B"> docs/</span><span style="color:#40A02B"> check_bom.py</span></span>
+<span class="line"></span></code></pre>
+<p>コード内では <code>\ufeff</code> や <code>\uFEFF</code> という <code>\uXXXX</code> 形式の文字列リテラルを直接書かず、<code>BOM = chr(0xFEFF)</code> と <code>ESCAPE_HINT = chr(92) + "uFEFF"</code> によって文字を組み立てています。さらに、引数未指定時にも <code>pathlib.Path(__file__)</code> を対象へ加えることで、後述する「検査ツール自身への再混入」に対しても自身を点検できるようにしています。</p>
+<h2 id="検査ツールの死角とgitattributes既存-linter-とのトレードオフ">検査ツールの死角と、.gitattributes・既存 Linter とのトレードオフ</h2>
+<p>仕組みを入れて一件落着に見えた直後、今度はその検査スクリプト自体に生の <code>U+FEFF</code> が混入する事象が起きました。ここでは一次記録から見えた編集時の死角と、設定・ツール選定上のトレードオフを整理します。</p>
+<h3 id="検査を追加した直後に起きたツール自身への再混入と被覆の穴">検査を追加した直後に起きた「ツール自身への再混入」と被覆の穴</h3>
+<p><code>publish-ready.py</code> に <code>U+FEFF</code> 検査を追加した直後、コードレビューで「行番号計算（<code>text.count('\n', 0, c.start()) + 1</code>）が既存の別チェックと重複している」との指摘を受け、AI エージェントがリファクタリングを行いました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-32" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。その際、ファイル編集ツールの呼び出し引数に新しいチェック定義として <code>re.compile('\ufeff')</code> を渡したところ、<strong><code>publish-ready.py</code> 自身の 24 行目に生の <code>U+FEFF</code>（<code>0xEF 0xBB 0xBF</code>）が 1 文字書き込まれました</strong><sup><a href="#user-content-fn-1" id="user-content-fnref-1-33" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。直後に失敗した別編集のエラーメッセージにも、同ツールが <code>\uXXXX</code> エスケープと実文字の相互入れ替えを試みた旨の注記が残っていました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-34" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>しかも、<code>publish-ready.py</code> は既定で公開用記事ディレクトリ配下の Markdown のみを検査対象としており、検査スクリプト自身の <code>.py</code> ファイルは対象外でした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-35" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。記事本文の検査ばかりを厚くして周辺のツールや設定ファイルに目が届かない構造は、<a href="/blog/quality-gate-coverage-matrix">検査対象の「末端偏重」が招く死角を分析した過去記事</a> と同じ穴です。</p>
+<p>セッション再開後の <code>grep</code> で 24 行目の生 <code>U+FEFF</code> に気づいたエージェントは、Python の <code>chr(0xFEFF)</code> と <code>chr(92) + 'ufeff'</code> を用いた置換で ASCII の <code>\ufeff</code> 表記へ戻し、ダミーファイルで既存チェックと BOM チェックの同時検出（<code>exit 1</code>）を確認しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-36" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。この経験から得られる設計教訓は 2 つあります。</p>
+<ol>
+<li>検査コード内で <code>U+FEFF</code> を扱う際は、編集ツール呼び出しの経路で <code>\uXXXX</code> が生文字へ変わる余地を断つため、<code>chr(0xFEFF)</code> のようにコードポイント数値から組み立てる（先の <code>check_bom.py</code> でこの形を採った理由です）。</li>
+<li>検査対象を記事本文ディレクトリに閉じず、検査スクリプト自身やテストコードも走査対象に含める。</li>
+</ol>
+<p>なお一次記録上、編集ツール呼び出し時の JSON 引数デコードと編集ツール内部の <code>\uXXXX</code> 置換仕様のどちらが直接生バイトを生んだかまでは、両者が同じ編集操作で重なっているため切り分けられていません<sup><a href="#user-content-fn-1" id="user-content-fnref-1-37" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。また、セッション再開直後にエージェントが最初にツール自身の生 BOM を疑って <code>grep</code> した内部判断の動機までは記録から特定できません（直前の編集失敗エラーが契機となった可能性はありますが断定はできません）<sup><a href="#user-content-fn-1" id="user-content-fnref-1-38" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="gitattributes-の--text-と-binary-の違い--なぜテストデータには--text-を選ぶか">.gitattributes の -text と binary の違い ── なぜテストデータには -text を選ぶか</h3>
+<p>テストデータの改行を固定する属性指定には <code>-text</code> と <code>binary</code> がありますが、差分レビューやマージの可読性を保てるかどうかで明確な違いがあります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>属性指定</th><th>改行コード変換</th><th><code>git diff</code> のテキスト表示</th><th>3-way マージ</th><th>適したファイル</th></tr></thead><tbody><tr><td><strong><code>*.csv -text</code></strong></td><td>無効化（チェックイン・チェックアウトとも変換しない）<sup><a href="#user-content-fn-7" id="user-content-fnref-7-4" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup></td><td>有効（テキスト差分を表示）</td><td>有効</td><td>中身の行差分を PR で確認したいテスト用 CSV・テキスト fixture</td></tr><tr><td><strong><code>*.csv binary</code></strong></td><td>無効化（組み込みマクロ <code>[attr]binary -diff -merge -text</code> 相当）<sup><a href="#user-content-fn-7" id="user-content-fnref-7-5" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup></td><td>無効化（<code>Binary files differ</code> 表示）</td><td>無効化</td><td>画像・アーカイブ等の非テキストバイナリ、または巨大な自動生成データ</td></tr></tbody></table>
+<p>CSV のテストデータは改行バイトが壊れてほしくない一方で、列やダミー行の変更内容はテキストの差分として確認したいため、改行変換だけを止める <code>-text</code> の方が目的に合います。また、<code>.gitattributes</code> はリポジトリのルートだけでなくサブディレクトリ内にも置け、深い階層の設定が優先されます<sup><a href="#user-content-fn-7" id="user-content-fnref-7-6" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。リポジトリ全体の他ファイルへ影響を出さないよう、対象テストコード群のルートディレクトリ（テストデータの親階層）に閉じて置く方が安全です。なお、今回の実測では <code>*.csv binary</code> を実際に当てた際の差分挙動までは試しておらず、上記の比較は Git 公式仕様に基づく整理です。</p>
+<h3 id="先頭-bom-型-lintergithub-警告と行番号付き独自検査の違い">先頭 BOM 型 Linter・GitHub 警告と、行番号付き独自検査の違い</h3>
+<p>既存の主要 Linter や GitHub の警告機能は導入が容易な反面、記事やコードの「途中」に混入した生 <code>U+FEFF</code> をローカルや CI で即座にブロックする用途には空白が残ります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>手段</th><th>検査対象の位置</th><th>実行タイミング</th><th>自動ブロック</th><th>主な用途と死角</th></tr></thead><tbody><tr><td><strong>汎用 Linter の BOM ルール（Biome <code>useConsistentUnicodeBom</code> / ESLint・Bun <code>unicode-bom</code>）</strong></td><td>ファイル <strong>先頭</strong> での <code>U+FEFF</code> の有無を検査（Biome 仕様は先頭以外の文字を検査対象外と明記<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>、ESLint・Bun もファイル先頭が対象<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup><sup><a href="#user-content-fn-12" id="user-content-fnref-12" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>）</td><td>ローカル・CI</td><td>可</td><td>ファイル先頭 BOM の統一には有効だが、インラインコードや文書途中の 1 文字は素通りする</td></tr><tr><td><strong>GitHub Web UI の隠し Unicode 警告</strong></td><td>ファイル内容に含まれる隠し Unicode テキスト<sup><a href="#user-content-fn-13" id="user-content-fnref-13" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup></td><td><code>github.com</code> での画面表示時</td><td>不可（警告表示のみ）</td><td>PR やファイル閲覧時の目視喚起には役立つが、ローカル作業や CI ビルドを自動停止はしない</td></tr><tr><td><strong>行番号付き公開前機械検査（自前スクリプト等）</strong></td><td>ファイル全体（1 行目〜末尾まで全文字）</td><td>公開前テスト・CI</td><td>可（<code>exit 1</code>）</td><td>文中・コード中の 1 文字を行番号付きで止められるが、検査スクリプト自身の再混入や対象ディレクトリ外は走査範囲の設計が別途要る</td></tr></tbody></table>
+<p>つまり、先頭 BOM 用 Linter を入れていても文中の生 <code>U+FEFF</code> 混入は止まらず、GitHub の画面警告だけではローカル変更や CI を止められないため、文書と周辺スクリプトには全文字走査の機械検査を重ねる価値があります。</p>
+<p>「エディタの不可視文字ハイライト設定で足りるのでは」という反論も考えられます。確かに人間が Visual Studio Code 等で常にファイルを直接開いて編集するなら、視覚的ハイライトが効きます<sup><a href="#user-content-fn-13" id="user-content-fnref-13-2" data-footnote-ref="" aria-describedby="footnote-label">13</a></sup>。しかし、AI コーディングエージェントがファイル生成ツールや編集ツールを通じて大量の Markdown・テスト・スクリプトを直接書き換える運用では、エディタの描画画面を経由せずにコミット・レビュー工程へ進むことが多くなります。実際、リポジトリA でも導入前の確認では既存公開記事全体の生 <code>U+FEFF</code> が 0 件であり<sup><a href="#user-content-fn-1" id="user-content-fnref-1-39" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>、別リポジトリである当ブログの <a href="/blog/ai-text-trace-typography-habit">公開記事55本の外形痕跡をスキャンした過去記事</a> でも 2026年8月21日時点で不可視文字 0 件を確かめていましたが、そのように既刊が清浄な環境であっても、個別の執筆・編集工程では混入が起こり得ます。人間の目視前提の補助設定と、機械的に <code>exit 1</code> で止めるゲートは競合ではなく役割が異なります。</p>
+<h2 id="前提が変われば結論はどう変わるか">前提が変われば結論はどう変わるか</h2>
+<p>今回の設計は、実ファイルのテストデータと現行のエージェント編集ツールを前提にしています。前提が次のように変われば、採るべき手段も変わります。</p>
+<ol>
+<li><strong>テストデータを外部ファイルとして持たない設計が採れる場合</strong>: 再現テストの入力を外部の <code>.csv</code> ファイルではなく、テストコード内のバイト配列リテラル（Go の <code>[]byte{0xEF, 0xBB, 0xBF}</code> や Python のバイト列生成）だけで完結させられるなら、Git の改行正規化による破損リスク自体が無くなり、<code>.gitattributes</code> の維持は不要になります。ただし「表計算ソフト等で作った実ファイルそのものを回帰テストの証拠として残す」要件がある場合は、<code>.gitattributes</code> による保護が引き続き必要になります。</li>
+<li><strong>エディタ・編集ツール・プラットフォーム側で不可視文字の遮断が標準化された場合</strong>: AI コーディングエージェントの編集ツールが <code>\uXXXX</code> の暗黙展開を起こさない実装へ変わる、あるいは汎用 Markdown Linter や CI プラットフォームがファイル途中の <code>U+FEFF</code> やゼロ幅文字をデフォルトでエラーとしてブロックする環境が整えば、自前で Python スクリプトを書く必要性は薄れます。それでも「意図的に残すテストデータは正規化対象から外す」「検査対象の一覧から検査ツール自身や設定ファイルを落とさない」という境界設計の原則は変わりません。</li>
+</ol>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-git-で-crlf-を含むテストデータが自動的に-lf-へ変換されるのを防ぐにはgitattributes-に何を書けばよいですか">Q. Git で CRLF を含むテストデータが自動的に LF へ変換されるのを防ぐには、.gitattributes に何を書けばよいですか？</h3>
+<p><strong>A.</strong> 対象テストコード群のルートディレクトリまたはリポジトリの <code>.gitattributes</code> に <code>*.csv -text</code> のように <code>-text</code> 属性を指定します。<code>-text</code> はチェックイン・チェックアウト双方での改行変換を無効化しつつ、テキスト差分（<code>diff</code>）と 3-way マージの機能は維持するため、CRLF と LF が混在するテストデータの検証とレビューを両立できます<sup><a href="#user-content-fn-7" id="user-content-fnref-7-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<h3 id="q-gitattributes-を追加しただけでは既にコミットされたテストデータの-crlf-が戻らないのはなぜですか">Q. .gitattributes を追加しただけでは、既にコミットされたテストデータの CRLF が戻らないのはなぜですか？</h3>
+<p><strong>A.</strong> <code>.gitattributes</code> の変更はすでにインデックスやリポジトリへ格納済みのファイル内容を自動では再処理しないため、追加後に <code>git add --renormalize .</code> を実行してインデックスへ再適用する必要があります<sup><a href="#user-content-fn-4" id="user-content-fnref-4-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup><sup><a href="#user-content-fn-9" id="user-content-fnref-9-3" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。私の検証でも、<code>.gitattributes</code> の設定後に <code>--renormalize</code> を走らせることで、LF へ変換されていた 4 つの CSV ファイルが元の CRLF 4 箇所（146 バイト / 143 バイト）へ復元されました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-40" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="q-utf-8-の-bomufeffがコードや-markdown-の途中に混入すると何が起きどう検出すれば防げますか">Q. UTF-8 の BOM（U+FEFF）がコードや Markdown の途中に混入すると何が起き、どう検出すれば防げますか？</h3>
+<p><strong>A.</strong> Go 1.27.3 のような字句解析・言語処理系では先頭以外の <code>U+FEFF</code> で <code>illegal byte order mark</code> エラーになりますが<sup><a href="#user-content-fn-5" id="user-content-fnref-5-3" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-6" id="user-content-fnref-6-3" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>、Markdown パーサーやファイル先頭のみを見る汎用 Linter（Biome 仕様は先頭以外を検査対象外と明記）は本文途中の 1 文字をエラーにせず素通りさせるため<sup><a href="#user-content-fn-8" id="user-content-fnref-8-3" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup><sup><a href="#user-content-fn-10" id="user-content-fnref-10-2" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>、ファイル全体を対象に行番号を出力して停止する機械検査を CI や公開前チェックに組み込む必要があります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-41" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。本稿で示したように、検査スクリプト自身の中でも <code>chr(0xFEFF)</code> で文字を組み立て、検査ツール自身も走査対象に含めることで再混入リスクにも備えられます。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li><code>core.autocrlf=input</code> の環境ではテスト用 CSV の CRLF がコミット時に LF へ変換されるため、対象テストコード群のルートディレクトリの <code>.gitattributes</code>（<code>*.csv -text</code>）と <code>git add --renormalize</code> を組み合わせて、テキスト差分を維持したまま再現条件を保護する。</li>
+<li>Go 1.27.3 の字句解析（<code>go/scanner</code>）が 3 ファイルすべてで先頭以外の生 <code>U+FEFF</code> を <code>illegal byte order mark</code> として停止したのに対し、CommonMark 仕様と先頭 BOM 型の汎用 Linter は本文途中の <code>U+FEFF</code> を止めないため、ファイル全体を対象に行番号と修正方針を返して <code>exit 1</code> で止める公開前検査を組み込む。</li>
+<li>ファイル編集ツールの呼び出しを経由して検査スクリプト自身の 24 行目にも生 <code>U+FEFF</code> が再混入した実例が示すように、検査スクリプト内では検出対象文字を <code>chr(0xFEFF)</code> で組み立て、案内メッセージの表記にも <code>chr(92) + 'uFEFF'</code> 等を用いてリテラルの <code>\uXXXX</code> 記述を避け、公開記事だけでなく検査スクリプト自身も走査範囲に含める。</li>
+<li>当初の「ビルドも全レビューも通過した」という記録が時系列検算で誤認（自己チェックの偶然に救われたもの）と判明したとおり、既存チェックの通過や目視確認を不可視文字不在の証拠とみなさず、2 回以上行う確認は再利用可能な決定論的テストへ閉じる。</li>
+</ul>
+<p>AI コーディングエージェントを組み込んだ開発・執筆パイプラインの品質ゲート設計、テストデータの再現性保護、再発防止の自動化設計についてのご相談は、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご連絡ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p>リポジトリA（非公開）の検証・ツール改修に関する一次計測ログ（2026年11月7日作業記録、2026年11月16日検算済み）。Go 1.27.3 での <code>go test</code> / <code>go vet</code> / <code>gofmt</code> 停止 3 ファイル（<code>main_test.go</code> 12 行目、<code>reproduce_test.go</code> 63 行目、<code>equivalence_test.go</code> 14 行目）と置換後の実行結果（修正前版のバグ再現失敗 <code>0.263s</code> を含む）、CSV テストデータ 6 ファイルのバイト数・CRLF 消失（警告 4 件）と <code>.gitattributes</code>＋<code>--renormalize</code> 復元結果、記事本文 681 行目への生 <code>U+FEFF</code> 混入と既存 4 検査通過・自己チェック除去、独立査読・サイトビルドとの時系列検算訂正、公開前機械検査の追加と編集ツール呼び出し経由での 24 行目への再混入・<code>chr(0xFEFF)</code> 等による修復、および 2026年11月16日時点の既存公開記事 0 件確認の根拠。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-1-5" data-footnote-backref="" aria-label="Back to reference 1-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-1-6" data-footnote-backref="" aria-label="Back to reference 1-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-1-7" data-footnote-backref="" aria-label="Back to reference 1-7" class="data-footnote-backref">↩<sup>7</sup></a> <a href="#user-content-fnref-1-8" data-footnote-backref="" aria-label="Back to reference 1-8" class="data-footnote-backref">↩<sup>8</sup></a> <a href="#user-content-fnref-1-9" data-footnote-backref="" aria-label="Back to reference 1-9" class="data-footnote-backref">↩<sup>9</sup></a> <a href="#user-content-fnref-1-10" data-footnote-backref="" aria-label="Back to reference 1-10" class="data-footnote-backref">↩<sup>10</sup></a> <a href="#user-content-fnref-1-11" data-footnote-backref="" aria-label="Back to reference 1-11" class="data-footnote-backref">↩<sup>11</sup></a> <a href="#user-content-fnref-1-12" data-footnote-backref="" aria-label="Back to reference 1-12" class="data-footnote-backref">↩<sup>12</sup></a> <a href="#user-content-fnref-1-13" data-footnote-backref="" aria-label="Back to reference 1-13" class="data-footnote-backref">↩<sup>13</sup></a> <a href="#user-content-fnref-1-14" data-footnote-backref="" aria-label="Back to reference 1-14" class="data-footnote-backref">↩<sup>14</sup></a> <a href="#user-content-fnref-1-15" data-footnote-backref="" aria-label="Back to reference 1-15" class="data-footnote-backref">↩<sup>15</sup></a> <a href="#user-content-fnref-1-16" data-footnote-backref="" aria-label="Back to reference 1-16" class="data-footnote-backref">↩<sup>16</sup></a> <a href="#user-content-fnref-1-17" data-footnote-backref="" aria-label="Back to reference 1-17" class="data-footnote-backref">↩<sup>17</sup></a> <a href="#user-content-fnref-1-18" data-footnote-backref="" aria-label="Back to reference 1-18" class="data-footnote-backref">↩<sup>18</sup></a> <a href="#user-content-fnref-1-19" data-footnote-backref="" aria-label="Back to reference 1-19" class="data-footnote-backref">↩<sup>19</sup></a> <a href="#user-content-fnref-1-20" data-footnote-backref="" aria-label="Back to reference 1-20" class="data-footnote-backref">↩<sup>20</sup></a> <a href="#user-content-fnref-1-21" data-footnote-backref="" aria-label="Back to reference 1-21" class="data-footnote-backref">↩<sup>21</sup></a> <a href="#user-content-fnref-1-22" data-footnote-backref="" aria-label="Back to reference 1-22" class="data-footnote-backref">↩<sup>22</sup></a> <a href="#user-content-fnref-1-23" data-footnote-backref="" aria-label="Back to reference 1-23" class="data-footnote-backref">↩<sup>23</sup></a> <a href="#user-content-fnref-1-24" data-footnote-backref="" aria-label="Back to reference 1-24" class="data-footnote-backref">↩<sup>24</sup></a> <a href="#user-content-fnref-1-25" data-footnote-backref="" aria-label="Back to reference 1-25" class="data-footnote-backref">↩<sup>25</sup></a> <a href="#user-content-fnref-1-26" data-footnote-backref="" aria-label="Back to reference 1-26" class="data-footnote-backref">↩<sup>26</sup></a> <a href="#user-content-fnref-1-27" data-footnote-backref="" aria-label="Back to reference 1-27" class="data-footnote-backref">↩<sup>27</sup></a> <a href="#user-content-fnref-1-28" data-footnote-backref="" aria-label="Back to reference 1-28" class="data-footnote-backref">↩<sup>28</sup></a> <a href="#user-content-fnref-1-29" data-footnote-backref="" aria-label="Back to reference 1-29" class="data-footnote-backref">↩<sup>29</sup></a> <a href="#user-content-fnref-1-30" data-footnote-backref="" aria-label="Back to reference 1-30" class="data-footnote-backref">↩<sup>30</sup></a> <a href="#user-content-fnref-1-31" data-footnote-backref="" aria-label="Back to reference 1-31" class="data-footnote-backref">↩<sup>31</sup></a> <a href="#user-content-fnref-1-32" data-footnote-backref="" aria-label="Back to reference 1-32" class="data-footnote-backref">↩<sup>32</sup></a> <a href="#user-content-fnref-1-33" data-footnote-backref="" aria-label="Back to reference 1-33" class="data-footnote-backref">↩<sup>33</sup></a> <a href="#user-content-fnref-1-34" data-footnote-backref="" aria-label="Back to reference 1-34" class="data-footnote-backref">↩<sup>34</sup></a> <a href="#user-content-fnref-1-35" data-footnote-backref="" aria-label="Back to reference 1-35" class="data-footnote-backref">↩<sup>35</sup></a> <a href="#user-content-fnref-1-36" data-footnote-backref="" aria-label="Back to reference 1-36" class="data-footnote-backref">↩<sup>36</sup></a> <a href="#user-content-fnref-1-37" data-footnote-backref="" aria-label="Back to reference 1-37" class="data-footnote-backref">↩<sup>37</sup></a> <a href="#user-content-fnref-1-38" data-footnote-backref="" aria-label="Back to reference 1-38" class="data-footnote-backref">↩<sup>38</sup></a> <a href="#user-content-fnref-1-39" data-footnote-backref="" aria-label="Back to reference 1-39" class="data-footnote-backref">↩<sup>39</sup></a> <a href="#user-content-fnref-1-40" data-footnote-backref="" aria-label="Back to reference 1-40" class="data-footnote-backref">↩<sup>40</sup></a> <a href="#user-content-fnref-1-41" data-footnote-backref="" aria-label="Back to reference 1-41" class="data-footnote-backref">↩<sup>41</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://git-scm.com/docs/git-config#Documentation/git-config.txt-coreautocrlf">git-config Documentation</a> Git プロジェクト公式ドキュメント（最終更新表記 Git 2.56.1）。<code>core.autocrlf</code> を <code>input</code> に設定した場合にチェックアウト時の出力変換を行わずチェックイン時の正規化のみを行う仕様は Variables 節 <code>core.autocrlf</code> 項。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://www.unicode.org/faq/utf_bom.html">FAQ - UTF-8, UTF-16, UTF-32 &#x26; BOM</a> Unicode Consortium。BOM の定義（<code>U+FEFF</code>）と UTF-8 における <code>EF BB BF</code> のバイト列表記は <code>Byte Order Mark (BOM) FAQ</code> 節の <code>Q: What is a BOM?</code> および <code>Q: Is a BOM used only in 16-bit Unicode text?</code>、ストリーム先頭以外の <code>U+FEFF</code> の扱い（通常発生すべきでなく、マークアップやプロトコルで制限しない限り ZWNBSP として内容に残る点・<code>U+2060</code> 推奨）は <code>Q: What should I do with U+FEFF in the middle of a file?</code>。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-3-3" data-footnote-backref="" aria-label="Back to reference 3-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://docs.github.com/en/get-started/git-basics/configuring-git-to-handle-line-endings">Configuring Git to handle line endings</a> GitHub Docs。改行コードが不可視文字（“invisible character”）である点は <code>About line endings</code> 節、<code>.gitattributes</code> が各環境の <code>core.autocrlf</code> を上書きする仕様は <code>Per-repository settings</code> 節、既存ファイルへ設定を反映する <code>git add --renormalize .</code> 手順は <code>Refreshing a repository after changing line endings</code> 節（注記: 同文書は <code>binary</code> を <code>-text -diff</code> の別名と簡略表記しているが、厳密には Git 公式 <code>gitattributes</code> のとおり <code>-merge</code> も含む）。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-4-2" data-footnote-backref="" aria-label="Back to reference 4-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-4-3" data-footnote-backref="" aria-label="Back to reference 4-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-4-4" data-footnote-backref="" aria-label="Back to reference 4-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://go.dev/ref/spec#Source_code_representation">The Go Programming Language Specification</a> The Go Authors（公開表記 2026年5月26日）。ソース先頭の UTF-8 BOM のみ実装制限として無視を許し、それ以外の位置での BOM を禁止できる仕様は <code>Source code representation</code> 節。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-5-3" data-footnote-backref="" aria-label="Back to reference 5-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://go.dev/src/go/scanner/scanner.go">Go source: src/go/scanner/scanner.go</a> The Go Authors（ファイル冒頭 Copyright 2009）。<code>bom = 0xFEFF</code> の定義は 53 行目、<code>s.offset > 0</code> の位置で <code>r == bom</code> を検出した際に <code>illegal byte order mark</code> エラーを報告する字句解析実装は 88〜90 行目。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-6-3" data-footnote-backref="" aria-label="Back to reference 6-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://git-scm.com/docs/gitattributes#_checking_out_and_checking_in">gitattributes Documentation</a> Git プロジェクト公式ドキュメント（最終更新表記 Git 2.56.0）。<code>text</code> 属性未指定時に <code>core.autocrlf</code> を参照する仕様は <code>Checking-out and checking-in</code> → <code>text</code> → <code>Unspecified</code>、<code>-text</code> によるチェックイン・チェックアウト双方の改行変換無効化は <code>Checking-out and checking-in</code> → <code>text</code> → <code>Unset</code>、<code>diff</code> 属性の影響は <code>Generating diff text</code> → <code>diff</code>、3-way マージの無効化は <code>Performing a three-way merge</code> → <code>merge</code> → <code>Unset</code>、<code>binary</code> の <code>[attr]binary -diff -merge -text</code> 定義は <code>DEFINING MACRO ATTRIBUTES</code> 節、サブディレクトリ配置の優先規則は <code>EXAMPLES</code> 節。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-7-2" data-footnote-backref="" aria-label="Back to reference 7-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-7-3" data-footnote-backref="" aria-label="Back to reference 7-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-7-4" data-footnote-backref="" aria-label="Back to reference 7-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-7-5" data-footnote-backref="" aria-label="Back to reference 7-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-7-6" data-footnote-backref="" aria-label="Back to reference 7-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-7-7" data-footnote-backref="" aria-label="Back to reference 7-7" class="data-footnote-backref">↩<sup>7</sup></a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://spec.commonmark.org/0.31.2/#characters-and-lines">CommonMark Spec (Version 0.31.2)</a> John MacFarlane 著、CommonMark Spec Version 0.31.2。任意の Unicode コードポイント列が有効な CommonMark 文書となる点、および Unicode 空白文字が <code>Zs</code> 一般カテゴリと <code>U+0009</code>/<code>U+000A</code>/<code>U+000C</code>/<code>U+000D</code> に限られ <code>U+FEFF</code> を含まない点は <code>§2.1 Characters and lines</code>。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-8-2" data-footnote-backref="" aria-label="Back to reference 8-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-8-3" data-footnote-backref="" aria-label="Back to reference 8-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://git-scm.com/docs/git-add#Documentation/git-add.txt---renormalize">git-add Documentation</a> Git プロジェクト公式ドキュメント（最終更新表記 Git 2.56.0）。<code>--renormalize</code> が全追跡ファイルへ clean 処理を再適用してインデックスへ強制再追加し <code>text</code> 属性変更後の改行不整合を直す仕様（<code>-u</code> を暗黙に含む点）は <code>OPTIONS</code> 節 <code>--renormalize</code> 項。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-9-2" data-footnote-backref="" aria-label="Back to reference 9-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-9-3" data-footnote-backref="" aria-label="Back to reference 9-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://biomejs.dev/linter/rules/use-consistent-unicode-bom/markdown/">useConsistentUnicodeBom (Markdown) | Biome</a> Biome 公式ドキュメント（<code>v2.6.3</code> 以降対応）。Markdown でファイル先頭の <code>U+FEFF</code> のみを検査し、先頭以外の場所にある <code>U+FEFF</code> は検査対象外である旨は <code>Summary</code> および <code>Description</code> 節。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-10-2" data-footnote-backref="" aria-label="Back to reference 10-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://eslint.org/docs/latest/rules/unicode-bom">unicode-bom - ESLint - Pluggable JavaScript Linter</a> ESLint 公式ドキュメント。ファイル先頭が <code>U+FEFF</code> で始まるかを検査対象とする仕様は <code>Rule Details</code> および <code>Options</code> 節。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-12">
+<p><a href="https://bun.com/docs/lint/rules/eslint/unicode-bom">unicode-bom | Bun Docs</a> Bun 公式ドキュメント。ファイル最先頭（<code>at the very start of a file</code>）にある <code>U+FEFF</code> の有無を検査対象とする仕様は冒頭解説。 <a href="#user-content-fnref-12" data-footnote-backref="" aria-label="Back to reference 12" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-13">
+<p><a href="https://github.blog/changelog/2025-05-01-github-now-provides-a-warning-about-hidden-unicode-text/">GitHub now provides a warning about hidden Unicode text</a> Allison 著、The GitHub Blog（GitHub Changelog）、2025年5月1日。<code>github.com</code> 画面上で隠し Unicode テキストを含むファイルに警告を表示し、AI 等による誤解釈リスクへの対処として Visual Studio Code 等での確認を案内している点は本文全体（注: 同発表は Web UI の表示警告に関する変更履歴であり、ローカル編集や CI の自動遮断機能については記載していない）。 <a href="#user-content-fnref-13" data-footnote-backref="" aria-label="Back to reference 13" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-13-2" data-footnote-backref="" aria-label="Back to reference 13-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

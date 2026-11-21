@@ -1,0 +1,172 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>「取得成功」判定が文字化けを見逃す ── URL取得ゲートの死角と決定論的フォールバック | Meetsource</title><meta name="description" content="HTTP 200 かつ十分な文字数（wordCount）があっても、文字化けしたテキストは検知ゲートを素通りします。@IT記事（CP932）取得での失敗インシデントをもとに、文字数チェックの限界と、iconv と素のタグ除去へ垂直に降りる決定論的フォールバック設計を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/fetch-success-mojibake-blind-spot"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="「取得成功」判定が文字化けを見逃す ── URL取得ゲートの死角"><meta property="og:description" content="HTTP 200 と wordCount ゲートを平然とすり抜けた文字化けテキスト。エージェントが同一レイヤーで4往復浪費した失敗から導いた、垂直な降り先規律。"><meta property="og:url" content="https://www.meetsource.work/blog/fetch-success-mojibake-blind-spot"><meta property="og:image" content="https://www.meetsource.work/blog/fetch-success-mojibake-blind-spot-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-07T23:35:46.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="「取得成功」判定が文字化けを見逃す ── URL取得ゲートの死角"><meta name="twitter:description" content="HTTP 200 と wordCount ゲートを平然とすり抜けた文字化けテキスト。エージェントが同一レイヤーで4往復浪費した失敗から導いた、垂直な降り先規律。"><meta name="twitter:image" content="https://www.meetsource.work/blog/fetch-success-mojibake-blind-spot-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"「取得成功」判定が文字化けを見逃す ── URL取得ゲートの死角と決定論的フォールバック","description":"HTTP 200 かつ十分な文字数（wordCount）があっても、文字化けしたテキストは検知ゲートを素通りします。@IT記事（CP932）取得での失敗インシデントをもとに、文字数チェックの限界と、iconv と素のタグ除去へ垂直に降りる決定論的フォールバック設計を解説します。","datePublished":"2026-10-07T23:35:46.000Z","image":"https://www.meetsource.work/blog/fetch-success-mojibake-blind-spot-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/fetch-success-mojibake-blind-spot"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"なぜ wordCount チェックを設けていても文字化けした HTML が検知をすり抜けるのですか？","acceptedAnswer":{"@type":"Answer","text":"文字化けによって生成された置換文字（U+FFFD）や Latin-1 記号列も、単語カウント処理において空白以外の有効な文字コード（コードポイント 32 超）として認識され、単語数として加算されるためです。空コンテンツを検知する文字数チェックは、文字の意味的破損（文字化け）を判定できないため、十分な文字数を持つ文字化けデータは正常値としてゲートを素通りします。"}},{"@type":"Question","name":"Web スクレイピングで Shift_JIS / CP932 ページの文字化けを防ぐ確実なフォールバック設計は何ですか？","acceptedAnswer":{"@type":"Answer","text":"スマートな Markdown 抽出ツールの引数調整を繰り返すのではなく、文字コード変換ツールで UTF-8 へ変換した上で、正規表現による素のタグ除去を行う決定論的なフォールバックを用意することです。その際、標準の Shift_JIS（JIS X 0208）ではなく、機種依存文字を含むスーパーセットである CP932（Windows-31J）を指定して変換することで、不正バイトによる変換エラーを防ぐことができます。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-07T23:35:46.000Z" data-astro-cid-7jjqptxk> 2026.10.08 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#web-scraping</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span><span class="tag" data-astro-cid-7jjqptxk>#encoding</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>「取得成功」判定が文字化けを見逃す ── URL取得ゲートの死角と決定論的フォールバック</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/fetch-success-mojibake-blind-spot-hero.webp" alt="「取得成功」判定が文字化けを見逃す ── URL取得ゲートの死角と決定論的フォールバック" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>URL 取得ゲートとは、Web スクレイピングや AI エージェントの外部情報収集において、取得したコンテンツが後続の処理に耐えうる品質を満たしているかを検証・遮断する検収機構です。</p>
+<p>かつて私たちのチームでは、HTTP ステータスコードが <code>200 OK</code> であり、抽出された本文の単語数（<code>wordCount</code>）が一定以上（空判定閾値を超える量）あれば、「取得は成功した」と判定してパイプラインを後続へ進めていました。ネットワークエラーや空ページの混入は防げていたため、この二重チェックでゲートとしては十分機能していると考えていたのです。</p>
+<p>しかし、国内の老舗技術メディア（@IT、文字コード: CP932）を取得した際、この前提は脆くも崩れ去りました。Markdown 抽出ツールとして利用していた <code>defuddle</code> がページの文字コードを誤判定し、完全に文字化けしたテキストが生成されたにもかかわらず、<code>wordCount</code> ゲートを平然と素通りして後続のキャッシュに保存されてしまったのです。サーバーからのレスポンスは <code>HTTP 200</code> であり、Content-Type ヘッダーは <code>text/html</code> のみで charset パラメータが付与されていませんでした<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>通信エラーや空コンテンツといった「取得できなかった」系の 4 症状（抽出量不足による未保存・403・402・全滅）をいくら厳密に塞いでいても、「取得自体は成功したが中身が致命的に壊れている（文字化け）」という内容面の破損状態は、ステータスコードと文字数チェックの死角を突いてすり抜けます。このインシデントを通じて私たちが学んだのは、原因の空間をいくら予測して予防を重ねても漏れは防げず、結果の空間で破損を検収し、壊れたら決定論的なフォールバック（降り先）へ垂直に降下させる規律の重要性でした。</p>
+<h2 id="なぜ文字数チェックの隣に文字化けの降り先を置いたのか実務での選択理由">なぜ文字数チェックの隣に「文字化けの降り先」を置いたのか：実務での選択理由</h2>
+<p>事の発端は、社内のブックマーク取り込みパイプライン（全 48 本中 1 本）で起きた障害でした。@IT の記事（元ページ文字コード: CP932 / Windows-31J）を取得した際、<code>defuddle parse</code> が charset を誤判定し、完全に読めない文字化けテキストを出力しました。</p>
+<p>現場で最も時間を浪費させたのは、文字化けそのものよりも「失敗したときの降り先がルールに定義されていなかったこと」でした。明確なフォールバックが定められていなかったため、自律型エージェントは「defuddle への入力形式を工夫すれば解決するのではないか」と考え、同一レイヤーの中で以下のように横へ試行錯誤を繰り返しました。</p>
+<ol>
+<li>元バイト列（CP932 + meta shift_jis）をそのまま defuddle に渡す → 文字化け</li>
+<li><code>iconv</code> で UTF-8 化し、HTML 内の meta タグを <code>charset=UTF-8</code> に書き換えて渡す → Latin-1 として解釈された別の文字化け</li>
+<li><code>iconv</code> で UTF-8 化し、HTML 内の meta charset タグを削除して渡す → 同上（Latin-1 として解釈された別の文字化け）</li>
+</ol>
+<p>試行 2・3 は、defuddle に渡す前に自分で UTF-8 へ変換しておくという、正攻法に見える前処理そのものです。それでも 3 通りのアプローチはすべて失敗に終わり、わずか 1 本の記事の取得のために 4 往復・約 10 分のやり取りを無駄に消費することになりました。</p>
+<p><code>defuddle</code> の文字コード処理には、ソースコードから読み取れる範囲で次の性質があります。</p>
+<p>Web 標準において、<code>shift_jis</code> はマイクロソフト拡張文字を含む Windows-31J（CP932）相当のスーパーセットにマッピングされています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。また、Web 標準の <code>TextDecoder</code> はデフォルト（<code>fatal: false</code>）で動作するため、不正なバイトシーケンスに遭遇しても例外を投げず、置換文字（Unicode Replacement Character: <code>U+FFFD</code>）を出力して処理を正常終了します<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。さらに <code>defuddle</code> の CLI 実装は標準入力やローカルファイル入力を UTF-8 として読み<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>、URL を直接取得する経路では先頭 1024 バイトから meta の charset を探し、見つからなければバイト列をスキャンして <code>0x80〜0x9F</code> のバイトがあれば <code>windows-1252</code> と判定します<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<p>ただし、これらの性質だけでは 3 通りの結果をすべては説明できません。CLI が UTF-8 として読むのなら、UTF-8 に変換して渡した試行 2・3 は正しく読めてよいはずだからです。原因の空間をいくら掘っても、その場で次の一手は決まりませんでした。一方、文字数チェックがこの破損を見逃した理由は、コードからはっきり読み取れます。</p>
+<p>それが <code>defuddle</code> の <code>src/utils.ts</code> にある単語カウント関数 <code>countWords</code> の実装です<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>コードの目的は、<code>defuddle</code> の単語カウント処理において、置換文字や化けた記号列がなぜ単語としてカウントされるのかを構造から確認することです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#8839EF">export</span><span style="color:#8839EF"> function</span><span style="color:#1E66F5;font-style:italic"> countWords</span><span style="color:#7C7F93">(</span><span style="color:#E64553;font-style:italic">text</span><span style="color:#179299">:</span><span style="color:#8839EF"> string</span><span style="color:#7C7F93">)</span><span style="color:#179299">:</span><span style="color:#8839EF"> number</span><span style="color:#7C7F93"> {</span></span>
+<span class="line"><span style="color:#8839EF">	if</span><span style="color:#4C4F69"> (</span><span style="color:#179299">!</span><span style="color:#4C4F69">text) </span><span style="color:#8839EF">return</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">	let</span><span style="color:#4C4F69"> cjkCount </span><span style="color:#179299">=</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">	let</span><span style="color:#4C4F69"> wordCount </span><span style="color:#179299">=</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#8839EF">	let</span><span style="color:#4C4F69"> inWord </span><span style="color:#179299">=</span><span style="color:#FE640B"> false</span><span style="color:#7C7F93">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">	for</span><span style="color:#4C4F69"> (</span><span style="color:#8839EF">let</span><span style="color:#4C4F69"> i </span><span style="color:#179299">=</span><span style="color:#FE640B"> 0</span><span style="color:#7C7F93">;</span><span style="color:#4C4F69"> i </span><span style="color:#179299">&#x3C;</span><span style="color:#4C4F69"> text</span><span style="color:#179299">.</span><span style="color:#4C4F69">length</span><span style="color:#7C7F93">;</span><span style="color:#4C4F69"> i</span><span style="color:#179299">++</span><span style="color:#4C4F69">) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#8839EF">		const</span><span style="color:#4C4F69"> code </span><span style="color:#179299">=</span><span style="color:#4C4F69"> text</span><span style="color:#179299">.</span><span style="color:#1E66F5;font-style:italic">charCodeAt</span><span style="color:#4C4F69">(i)</span><span style="color:#7C7F93">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">		// Check for CJK character ranges (BMP only — Extension B+ are</span></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic">		// surrogate pairs and would need codePointAt, rare in practice)</span></span>
+<span class="line"><span style="color:#8839EF">		if</span><span style="color:#4C4F69"> (</span></span>
+<span class="line"><span style="color:#4C4F69">			(code </span><span style="color:#179299">>=</span><span style="color:#FE640B"> 0x3040</span><span style="color:#179299"> &#x26;&#x26;</span><span style="color:#4C4F69"> code </span><span style="color:#179299">&#x3C;=</span><span style="color:#FE640B"> 0x309f</span><span style="color:#4C4F69">) </span><span style="color:#179299">||</span><span style="color:#9CA0B0;font-style:italic"> // Hiragana</span></span>
+<span class="line"><span style="color:#4C4F69">			(code </span><span style="color:#179299">>=</span><span style="color:#FE640B"> 0x30a0</span><span style="color:#179299"> &#x26;&#x26;</span><span style="color:#4C4F69"> code </span><span style="color:#179299">&#x3C;=</span><span style="color:#FE640B"> 0x30ff</span><span style="color:#4C4F69">) </span><span style="color:#179299">||</span><span style="color:#9CA0B0;font-style:italic"> // Katakana</span></span>
+<span class="line"><span style="color:#4C4F69">			(code </span><span style="color:#179299">>=</span><span style="color:#FE640B"> 0x3400</span><span style="color:#179299"> &#x26;&#x26;</span><span style="color:#4C4F69"> code </span><span style="color:#179299">&#x3C;=</span><span style="color:#FE640B"> 0x4dbf</span><span style="color:#4C4F69">) </span><span style="color:#179299">||</span><span style="color:#9CA0B0;font-style:italic"> // CJK Extension A</span></span>
+<span class="line"><span style="color:#4C4F69">			(code </span><span style="color:#179299">>=</span><span style="color:#FE640B"> 0x4e00</span><span style="color:#179299"> &#x26;&#x26;</span><span style="color:#4C4F69"> code </span><span style="color:#179299">&#x3C;=</span><span style="color:#FE640B"> 0x9fff</span><span style="color:#4C4F69">) </span><span style="color:#179299">||</span><span style="color:#9CA0B0;font-style:italic"> // CJK Unified Ideographs</span></span>
+<span class="line"><span style="color:#4C4F69">			(code </span><span style="color:#179299">>=</span><span style="color:#FE640B"> 0xf900</span><span style="color:#179299"> &#x26;&#x26;</span><span style="color:#4C4F69"> code </span><span style="color:#179299">&#x3C;=</span><span style="color:#FE640B"> 0xfaff</span><span style="color:#4C4F69">) </span><span style="color:#179299">||</span><span style="color:#9CA0B0;font-style:italic"> // CJK Compatibility Ideographs</span></span>
+<span class="line"><span style="color:#4C4F69">			(code </span><span style="color:#179299">>=</span><span style="color:#FE640B"> 0xac00</span><span style="color:#179299"> &#x26;&#x26;</span><span style="color:#4C4F69"> code </span><span style="color:#179299">&#x3C;=</span><span style="color:#FE640B"> 0xd7af</span><span style="color:#4C4F69">)    </span><span style="color:#9CA0B0;font-style:italic">// Korean Hangul</span></span>
+<span class="line"><span style="color:#4C4F69">		) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#4C4F69">			cjkCount</span><span style="color:#179299">++</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">			inWord </span><span style="color:#179299">=</span><span style="color:#FE640B"> false</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">		}</span><span style="color:#8839EF"> else</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> (code </span><span style="color:#179299">&#x3C;=</span><span style="color:#FE640B"> 32</span><span style="color:#4C4F69">) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#4C4F69">			inWord </span><span style="color:#179299">=</span><span style="color:#FE640B"> false</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">		}</span><span style="color:#8839EF"> else</span><span style="color:#8839EF"> if</span><span style="color:#4C4F69"> (</span><span style="color:#179299">!</span><span style="color:#4C4F69">inWord) </span><span style="color:#7C7F93">{</span></span>
+<span class="line"><span style="color:#4C4F69">			wordCount</span><span style="color:#179299">++</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#4C4F69">			inWord </span><span style="color:#179299">=</span><span style="color:#FE640B"> true</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">		}</span></span>
+<span class="line"><span style="color:#7C7F93">	}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">	return</span><span style="color:#4C4F69"> cjkCount </span><span style="color:#179299">+</span><span style="color:#4C4F69"> wordCount</span><span style="color:#7C7F93">;</span></span>
+<span class="line"><span style="color:#7C7F93">}</span></span>
+<span class="line"></span></code></pre>
+<p>この処理では、ひらがな・カタカナ・CJK 漢字・ハングルの範囲の文字を 1 文字ずつ数え、コードポイント 32（空白）以下の空白・制御文字で単語の区切りを判定しています。それ以外の文字、つまり文字化けによって生成された置換文字（<code>U+FFFD</code>、コードポイント 65533 > 32）や Latin-1 の記号列は、欧文の単語として数えられます。その結果、人間から見れば完全に崩壊した文字列であっても、<code>wordCount</code> は加算され続けます。</p>
+<p>私たちの一次計測ログでも、文字化けした本文に対して <code>wordCount</code> は空ではない正常な値を返し、未保存判定のゲートを素通りしたことが記録されています。</p>
+<p>「降りる先が書かれていない症状に当たると、エージェントは降りずに同じ層で横に試す」。この行動特性を踏まえ、私たちは社内スキルの運用改定記録において、失敗検知テーブルに「本文が文字化けしている」という症状を追加しました。そしてその降り先として、次のように明記しました。</p>
+<blockquote><p><code>curl | iconv -f CP932 -t UTF-8</code> してから素のタグ除去で抜く。defuddle に食わせ直さない（meta を書き換えても消しても直らないと実測済み）。</p></blockquote>
+<p>さらに、検出できないゲートの隣にはその限界を明記する規律に従い、テーブル直下に「<code>wordCount</code> は文字化けしていても正常値を返すので、このゲートは素通りする。取れた本文は目で見る」という注記を併記しました。なお、この実測結果は Content-Type に charset が無く meta で shift_jis を指定している Web ページにおける挙動であり、あらゆる非 UTF-8 ページで常に同一の失敗が起きると過剰一般化するものではありません。しかし、同様の配信構成を持つ国内サイトにおいて、同じ落とし穴が口を開けていることは確かです。</p>
+<h2 id="予防原因の空間と検収結果の空間の境界トレードオフと適用限界">予防（原因の空間）と検収（結果の空間）の境界：トレードオフと適用限界</h2>
+<p>この経験から得られた重要な教訓は、「予防」と「検収」の境界設計です。</p>
+<p>文字コード誤判定の原因は、いわば無限の空間（原因の空間）に広がっています。WHATWG HTML Standard の encoding sniffing algorithm が規定しているように、HTML の文字コード判定は BOM の確認、HTTP レスポンスヘッダーの Content-Type、先頭 1024 バイトの meta 要素 prescan、各種自動判別ヒューリスティクスと多層にわたります<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<p>さらに歴史的な経緯も複雑さを増しています。RFC 7231<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup> において、HTTP レベルでのデフォルト文字セット（かつての ISO-8859-1 定義）は廃止され、メディアタイプ側の仕様に委ねられることになりました。しかし、広く使われている Python の <code>requests</code> ライブラリ（<code>requests/utils.py</code>）などの実環境クライアントでは、歴史的互換性を維持するために charset 未指定時に依然として <code>ISO-8859-1</code> を返す実装が残っています<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>。</p>
+<p>また、バイト列スキャンによる統計的自動判別を組み込んだとしても、HTML タグなどの ASCII 文字列に日本語のバイト列が混ざる環境では判定の信頼度が低下します。Shift_JIS の第 1 バイト（<code>0x81〜0x9F</code>）は Windows-1252 などの Latin 系文字の制御・拡張領域と重複しており、短いスニペットや偏った記号列では誤判定をゼロにできません。原因側の予防をどれだけ積み上げても、想定外の入力パターンは必ずゲートをすり抜けます。</p>
+<p>だからこそ、品質保証の主戦場は「結果の空間」に置かなければなりません。</p>
+<p>検収とは、原因が何であれ「結果として出力されたテキストが破損しているか」という有限の性質に対して行う検査です。Web 標準の <code>TextDecoder</code> はデフォルト（<code>fatal: false</code>）でエラーを出さずに <code>U+FFFD</code> を出力するため<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>、ランタイム例外による受動的な検知は期待できません。したがって、パイプライン側で明示的に置換文字（<code>\uFFFD</code>）の混入比率や、日本語記事であるにもかかわらずひらがな・カタカナが極端に欠落しているといった状態を能動的に検収する必要があります。UTF-8 のバイト列を Latin-1 として読んだ文字化けでは置換文字が現れにくいため、置換文字の比率だけでなく文字種の比率も併せて見るのが妥当だと考えています。なお、今回私たちがスキルに入れた対策は「取れた本文は目で見る」という目視の注記までで、こうした自動判定は次の一手としての提案です。</p>
+<p>そして、スマートな抽出器が誤判定を起こした場合は、同じツールの中でパラメータをいじるのではなく、原始的で壊れない「決定論的フォールバック」へ一気に降下します。</p>
+<p>コードの目的は、文字化け発生時に高度なパーサーを諦め、まず文字コード変換だけをシェルパイプラインで確定させる実践例を示すことです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># シェルスクリプトによる決定論的フォールバック（前半: CP932 から UTF-8 への変換）</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">curl</span><span style="color:#40A02B"> -sL</span><span style="color:#40A02B"> "https://atmarkit.itmedia.co.jp/ait/articles/2608/13/news049.html"</span><span style="color:#EA76CB"> \</span></span>
+<span class="line"><span style="color:#179299">  |</span><span style="color:#1E66F5;font-style:italic"> iconv</span><span style="color:#40A02B"> -f</span><span style="color:#40A02B"> CP932</span><span style="color:#40A02B"> -t</span><span style="color:#40A02B"> UTF-8</span></span>
+<span class="line"></span></code></pre>
+<p>ここで重要なのは、文字コード変換ツール（<code>iconv</code>）に渡すエンコーディングとして、標準の <code>Shift_JIS</code> ではなく <code>CP932</code> を指定することです。日本の Web コンテンツでは、丸数字（①）や単位記号などの Windows 機種依存文字が日常的に使用されています。JIS X 0208 に厳密なデコーダではこれらが不正シーケンスとして弾かれてしまいますが、Windows-31J（CP932）を指定することで確実に UTF-8 へ変換できます。</p>
+<p>その後、変換済みの HTML から素のタグ除去で <code>&#x3C;script></code> や <code>&#x3C;style></code> を含むタグを落とし、本文を抜きます。見出しの階層構造やリンクといったリッチな Markdown 書式は失われますが、少なくとも「文字化けしていない正しいテキスト」を後続へ渡すことができます。なお、この降り先は元ページが CP932 だと分かっているときのものです。別の文字コードのページなら、<code>iconv -f</code> に渡す値も変わります。</p>
+<p>取得ゲートの検査手法は、検知できる失敗モードとすり抜ける死角において明確なトレードオフを持っています。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>検査アプローチ</th><th>対象レイヤー</th><th>検知できる失敗モード</th><th>すり抜ける死角</th><th>運用のトレードオフ</th></tr></thead><tbody><tr><td><strong>HTTP ステータス検査</strong></td><td>通信層</td><td>ネットワーク切断、404 Not Found、403 Forbidden</td><td>HTTP 200 で返される中身の破損や空ページ</td><td>最も軽量だが、コンテンツの品質は一切保証できない</td></tr><tr><td><strong>文字数（wordCount）検査</strong></td><td>構造・量層</td><td>空レスポンス、SPA の JavaScript 描画失敗、未保存</td><td>文字化けした記号列・置換文字トークン</td><td>実装は容易だが、文字の「意味的崩壊」は素通りする</td></tr><tr><td><strong>内容検収＋垂直降り先</strong></td><td>内容・質層</td><td>文字コード誤判定、文字化け、置換文字の混入</td><td>素のタグ除去による Markdown 書式の喪失</td><td>文字化けしていない本文を救出できるが、リッチな構造化メタデータは劣化する</td></tr></tbody></table>
+<p>単一の検査に依存するのではなく、各ゲートの死角を認識した上で重ねて配置し、破損時には決定論的な降り先へ逃がす多層防御の設計が求められます。</p>
+<h2 id="前提が変われば結論はどう変わるかweb-の進化と-llm-の自己修復">前提が変われば結論はどう変わるか：Web の進化と LLM の自己修復</h2>
+<p>技術環境の変化によって、この結論は今後どのように変わり得るでしょうか。</p>
+<p>現在、世界中の Web サイトの大多数は UTF-8 で配信されています。新規に立ち上がる Web サービスや API を相手にする限り、Shift_JIS や CP932 を意識する機会は年々減少しています。</p>
+<p>しかし、AI エージェントが自律的に外部 Web を探索・リサーチする実務においては、この少数派のロングテールこそが致命傷になると考えています。老舗の技術情報サイト、官公庁の広報、学術機関のアーカイブ、レガシーなイントラネットなど、高い価値を持つ一次情報源には依然として非 UTF-8 コンテンツが数多く残されています。自律エージェントのパイプラインは、数十本の正常な UTF-8 ページを処理した後に、突如として現れる 1 本の CP932 ページによって汚染されます。今回の事例でも、パイプラインは止まらず、文字化けした本文がキャッシュに入りました。</p>
+<p>もうひとつの論点は、LLM の自己修復能力です。最近のフロンティアモデルは非常に優秀であり、多少の文字化け（Mojibake）や壊れたトークン列が入力されても、前後の文脈から推測して一定の自己修復を行って回答を生成できます。</p>
+<p>しかし、壊れたデータを LLM に修復させるアプローチには大きなリスクが伴います。文字化けしたテキストは、単語単位ではなく 1 バイトや置換文字ごとに細切れのトークンとして扱われやすく、入力トークン数が膨らむと私たちは見ています。推論レイテンシと API コストが増えるだけでなく、壊れた入力から LLM がもっともらしい本文を補ってしまう余地も生まれます。</p>
+<p>可逆なものは検収で弾き、不可逆なものは予防する。LLM に渡す工程から見れば、その手前で文字化けを検収しておくことが、そのまま不可逆なコストへの予防になります。LLM を呼び出す処理は、トークン消費という不可逆な金銭的・時間的コストを伴います。だからこそ、LLM にデータを渡す前段の決定論的ゲートにおいて、文字化けを機械的に検収し、泥臭いフォールバックで健全な UTF-8 テキストへ修復しておくことが、システムの経済性と安定性の両面で極めて合理的な選択となります。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-なぜ-wordcount-チェックを設けていても文字化けした-html-が検知をすり抜けるのですか">Q. なぜ wordCount チェックを設けていても文字化けした HTML が検知をすり抜けるのですか？</h3>
+<p><strong>A.</strong> 文字化けによって生成された置換文字（<code>U+FFFD</code>）や Latin-1 記号列も、単語カウント処理において空白以外の有効な文字コード（コードポイント 32 超）として認識され、単語数として加算されるためです。空コンテンツを検知する文字数チェックは、文字の意味的破損（文字化け）を判定できないため、十分な文字数を持つ文字化けデータは正常値としてゲートを素通りします。</p>
+<h3 id="q-web-スクレイピングで-shift_jis--cp932-ページの文字化けを防ぐ確実なフォールバック設計は何ですか">Q. Web スクレイピングで Shift_JIS / CP932 ページの文字化けを防ぐ確実なフォールバック設計は何ですか？</h3>
+<p><strong>A.</strong> スマートな Markdown 抽出ツールの引数調整を繰り返すのではなく、文字コード変換ツールで UTF-8 へ変換した上で、正規表現による素のタグ除去を行う決定論的なフォールバックを用意することです。その際、標準の Shift_JIS（JIS X 0208）ではなく、機種依存文字を含むスーパーセットである <code>CP932</code>（Windows-31J）を指定して変換することで、不正バイトによる変換エラーを防ぐことができます。</p>
+<h2 id="まとめ">まとめ</h2>
+<ol>
+<li><strong>網羅すべきは「原因の空間」ではなく「結果の空間」である</strong>: 文字コード誤判定の原因は多層かつ無限であり、事前にすべて塞ぐことはできません。「出力されたテキストが文字化けしている」という結果の破損状態を能動的に検収するゲートを設けてください。</li>
+<li><strong>検出できないゲートの隣には、その限界を書け</strong>: 単語数や文字数（<code>wordCount</code>）のチェックは空コンテンツを防ぐためのものであり、文字化けした記号列は平然と素通りします。ゲートの死角を仕様や運用ルールに明記し、盲信を防いでください。</li>
+<li><strong>降り先は同一レイヤーで横に試すのではなく、垂直に掘れ</strong>: 抽出ツールが charset を誤判定した際、入力形式を工夫して同じツールを呼び直す横の試行錯誤は往復を浪費します。壊れたら即座に <code>iconv -f CP932 -t UTF-8</code> と素のタグ除去という、原始的で壊れない決定論的フォールバックへ垂直に降下してください。</li>
+</ol>
+<p>AI エージェントのデータパイプライン構築、データ品質ゲートの設計、AI Operations の導入について、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://atmarkit.itmedia.co.jp/ait/articles/2608/13/news049.html">AIコーディングを「より速く省トークンに」 VS Codeチームが実証、GPT-5.5向けプロンプトの改善効果</a> ＠IT (ITmedia), 2026年8月13日公開。実測対象記事。Content-Type に charset が無く、meta shift_jis（CP932）で配信されている実例。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://encoding.spec.whatwg.org/#shift_jis-decoder">Encoding Standard</a> WHATWG, 2026年規格。「Shift_JIS decoder」節に Web 標準の <code>shift_jis</code> が Windows-31J（CP932）拡張にマッピングされる仕様と第 1 バイト（<code>0x81〜0x9F</code>）の定義、「TextDecoder interface」節（<a href="https://encoding.spec.whatwg.org/#interface-textdecoder%EF%BC%89%E3%81%AB">https://encoding.spec.whatwg.org/#interface-textdecoder）に</a> <code>fatal</code> フラグが false の場合にデコードエラーで置換文字 <code>U+FFFD</code> が放出される仕様。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://developer.mozilla.org/en-US/docs/Web/API/TextDecoder/TextDecoder">TextDecoder() constructor</a> MDN Web Docs (Mozilla), 2026年確認。<code>fatal</code> オプションのデフォルトが false であり、不正バイトでも例外を投げず正常終了する仕様。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://github.com/kepano/defuddle/blob/main/src/cli.ts">kepano/defuddle (src/cli.ts)</a> Steph Ango (kepano), 2026年確認。<code>readStdin</code> で <code>utf8</code> 強制設定、<code>parseSource</code> で <code>readFile(filePath, 'utf-8')</code> を呼び出し外部入力を強制 UTF-8 デコードする実装。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://github.com/kepano/defuddle/blob/main/src/fetch.ts">kepano/defuddle (src/fetch.ts)</a> Steph Ango (kepano), 2026年確認。<code>detectCharset</code> が先頭 1024 バイトから meta の charset を探し、見つからなければバイト列スキャンで <code>0x80 &#x3C;= b &#x3C;= 0x9F</code> を Windows-1252 と判定する実装。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://github.com/kepano/defuddle/blob/main/src/utils.ts">kepano/defuddle (src/utils.ts)</a> Steph Ango (kepano), 2026年確認。<code>countWords</code> がコードポイント 32 以下の文字で単語区切りを判定し、文字化け記号列を欧文単語としてカウントする実装。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://html.spec.whatwg.org/multipage/parsing.html#encoding-sniffing-algorithm">Encoding sniffing algorithm</a> WHATWG (Web Hypertext Application Technology Working Group), 2026年規格。BOM 判定、HTTP ヘッダー、先頭 1024 バイトの <code>&#x3C;meta></code> prescan を経る HTML 文字コード自動判別手順の仕様根拠。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://www.rfc-editor.org/rfc/rfc7231#appendix-B">RFC 7231: Changes from RFC 2616</a> IETF (R. Fielding, J. Reschke), 2014年6月。Appendix B における RFC 2616 からの変更点（<code>text/*</code> のデフォルト文字セット ISO-8859-1 削除）の仕様。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://github.com/psf/requests/blob/main/src/requests/utils.py">psf/requests (src/requests/utils.py)</a> Python Software Foundation / requests contributors, 2026年確認。<code>get_encoding_from_headers</code> において charset 未指定の <code>text</code> コンテンツに依然として <code>ISO-8859-1</code> を返す実装。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

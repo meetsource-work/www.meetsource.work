@@ -1,0 +1,182 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>正しい指摘が「別の文献に同じ事実がある」という理由で誤検出に降格されていた ── 所在の検査と事実の検査は別物 | Meetsource</title><meta name="description" content="多段LLMパイプラインにおいて、検証役（Verifier）の指摘を「別の文献に同じ事実がある」ことを理由に誤検出として降格すると、文献の所在を問う正当な指摘が握りつぶされてしまいます。自社システムで起きたRFC 9110の脚注誤りインシデントをもとに、世の中の真偽を問う「事実性の検査（Factuality）」と指定文献の記述を問う「所在の検査（Citation Attribution）」の根本的な違いと、誤検出フィルタの再設計ルールを解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/verifier-downgrade-factuality-vs-attribution"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="正しい指摘が「別の文献に同じ事実がある」という理由で誤検出に降格されていた ── 所在の検査と事実の検査は別物 | Meetsource"><meta property="og:description" content="多段LLMパイプラインにおいて、検証役（Verifier）の指摘を「別の文献に同じ事実がある」ことを理由に誤検出として降格すると、文献の所在を問う正当な指摘が握りつぶされてしまいます。自社システムで起きたRFC 9110の脚注誤りインシデントをもとに、世の中の真偽を問う「事実性の検査（Factuality）」と指定文献の記述を問う「所在の検査（Citation Attribution）」の根本的な違いと、誤検出フィルタの再設計ルールを解説します。"><meta property="og:url" content="https://www.meetsource.work/blog/verifier-downgrade-factuality-vs-attribution"><meta property="og:image" content="https://www.meetsource.work/blog/verifier-downgrade-factuality-vs-attribution-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-10-20T13:25:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="正しい指摘が「別の文献に同じ事実がある」という理由で誤検出に降格されていた ── 所在の検査と事実の検査は別物 | Meetsource"><meta name="twitter:description" content="多段LLMパイプラインにおいて、検証役（Verifier）の指摘を「別の文献に同じ事実がある」ことを理由に誤検出として降格すると、文献の所在を問う正当な指摘が握りつぶされてしまいます。自社システムで起きたRFC 9110の脚注誤りインシデントをもとに、世の中の真偽を問う「事実性の検査（Factuality）」と指定文献の記述を問う「所在の検査（Citation Attribution）」の根本的な違いと、誤検出フィルタの再設計ルールを解説します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/verifier-downgrade-factuality-vs-attribution-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"正しい指摘が「別の文献に同じ事実がある」という理由で誤検出に降格されていた ── 所在の検査と事実の検査は別物","description":"多段LLMパイプラインにおいて、検証役（Verifier）の指摘を「別の文献に同じ事実がある」ことを理由に誤検出として降格すると、文献の所在を問う正当な指摘が握りつぶされてしまいます。自社システムで起きたRFC 9110の脚注誤りインシデントをもとに、世の中の真偽を問う「事実性の検査（Factuality）」と指定文献の記述を問う「所在の検査（Citation Attribution）」の根本的な違いと、誤検出フィルタの再設計ルールを解説します。","datePublished":"2026-10-20T13:25:00.000Z","image":"https://www.meetsource.work/blog/verifier-downgrade-factuality-vs-attribution-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/verifier-downgrade-factuality-vs-attribution"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"事実は正しいのに、なぜ別の文献を理由に指摘を降格してはいけないのか？","acceptedAnswer":{"@type":"Answer","text":"読者が脚注を検証する行為は「その文献のその場所」を起点とするためです。別の文献に事実が存在していても、読者が開いた原典に記述がなければ「虚偽の引用」と受け取られ、記事全体の信頼性が失われます。事実の正しさを理由に指摘を握りつぶすのではなく、出典を正しい文献へ差し替えるべきです。"}},{"@type":"Question","name":"本文キャッシュが欠けている場合、Verifier の指摘はどう扱うべきか？","acceptedAnswer":{"@type":"Answer","text":"推測で「キャッシュ欠落による誤検出」と決めつけて降格してはなりません。まずは原典の全文を取り直して決定論的に記述の有無を確認し、確認できない場合は指摘事項として残して出典を修正するのが安全です。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-10-20T13:25:00.000Z" data-astro-cid-7jjqptxk> 2026.10.20 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#llm-as-a-judge</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#quality-gate</span><span class="tag" data-astro-cid-7jjqptxk>#url-verification</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>正しい指摘が「別の文献に同じ事実がある」という理由で誤検出に降格されていた ── 所在の検査と事実の検査は別物</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/verifier-downgrade-factuality-vs-attribution-hero.webp" alt="正しい指摘が「別の文献に同じ事実がある」という理由で誤検出に降格されていた ── 所在の検査と事実の検査は別物" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>LLM を活用した自律執筆やコード生成のパイプラインでは、生成物のハルシネーションや不正確な記述を防ぐために、検証役（Verifier や LLM-as-a-Judge）を配置する多段構成が一般的になりつつあります。</p>
+<p>しかし、検証役の過剰な指摘（偽陽性 / False Positive）を減らそうとして設けた「誤検出フィルタ」や「降格ルール」そのものが誤作動し、本来止めるべき正当な指摘を握りつぶしてしまう失敗も起こりえます。</p>
+<p>自社のブログ自動生成システムでも、「正しい指摘が誤検出として降格され、誤った脚注がそのまま公開記事に残る」というインシデントが起きました。</p>
+<p>この失敗が示しているのは、「世の中の事実関係が合っているか」という事実の検査と、「指定された文献の指定された場所に書いてあるか」という所在の検査を混同してはならないということです。</p>
+<p>Citation Attribution（引用帰属）とは、生成された主張が指定された参照文献の内容から論理的に直接導出・検証可能である性質のことです。</p>
+<p>以前の記事『<a href="/blog/orchestrator-downgrade-subagent-severity">サブエージェントの「高」判定を、そのまま信じない ── 一次情報で再評価して進行可を出した事例</a>』<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> では、上位判定処理が検証役の警告を慎重に精査する重要性を論じました。しかし、その判定基準を誤ると、公開記事『<a href="/blog/fetch-success-mojibake-blind-spot">「取得成功」判定が文字化けを見逃す ── URL取得ゲートの死角と決定論的フォールバック</a>』<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup> で発生したように、原典に無い所在を示す脚注を世に出してしまうことになります。本記事では、この失敗の顛末と、そこから得られたパイプライン設計の教訓を共有します。</p>
+<h2 id="何が起きたか--正しい指摘が誤検出として握りつぶされた日">何が起きたか ── 正しい指摘が「誤検出」として握りつぶされた日</h2>
+<p>自社で運用しているブログ自動執筆パイプラインには、設計書の事実関係を懐疑的な読者の視点で事前検証する検証工程があります。この工程では、事前に取得・保存した原典の本文（本文キャッシュ）を検証役に読ませて、脚注の主張と照合させています。</p>
+<p>ある日の検証プロセスにおいて、検証役を務めるサブエージェントが、ある技術記事の草案に対して「RFC 9110 Section 8.3.1 のキャッシュ本文欠落」という指摘を行いました。脚注は charset 省略時のデフォルト規定（旧 ISO-8859-1）の廃止を RFC 9110 §8.3.1 の内容として挙げているのに、渡された本文キャッシュにはその記述が見当たらない、という指摘です。</p>
+<p>ところが、検証役の指摘を取りまとめる上位の判定処理（オーケストレーター）は、この指摘を「誤検出」として降格し、パイプラインの進行を許可してしまいました。</p>
+<p>当時の検証記録には、降格の理由として次の文言が残されていました。</p>
+<blockquote><p>RFC 9110（STD 97）のキャッシュは抽出ツールの範囲により Section 6.4 付近のみ取得されていたが、RFC 7231 Appendix B（中略）に旧デフォルト ISO-8859-1 削除の事実が完全に記録されており、RFC 9110 Section 8.3.1 はその後継仕様として正しく引用されているため事実関係の誤りではない。</p></blockquote>
+<p>つまり、「RFC 7231 という別の文献に同じ事実が書かれており、RFC 9110 はその後継仕様なのだから、事実関係として間違っていない。したがって、該当記述が見当たらないという指摘は検証役の過剰反応（誤検出）である」と解釈したのです。</p>
+<p>しかし、後日のパイプライン振り返りにおいて、RFC 9110 の全文（10,785行）を取り直して精査したところ、驚くべき事実が判明しました<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>Section 8.3.1（Media Type）にも Section 8.3.2（Charset）にも、charset の既定値廃止に関する記述は一切存在しなかったのです。全文 10,785 行の中で <code>ISO-8859-1</code> という文字列が出現するのは、フィールド値の歴史的背景を解説した 1,599〜1,600 行目と、参考文献一覧の 9,533 行目だけでした。</p>
+<p>一方、旧デフォルトの削除は、RFC 7231 Appendix B（5,069行目）に明記されています<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>The default charset of ISO-8859-1 for text media types has been</span></span>
+<span class="line"><span>removed; the default is now whatever the media type definition says.</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>検証役の「RFC 9110 Section 8.3.1 に記述がない」という指摘は完全に正しく、上位判定処理による「後継仕様だから事実関係の誤りではない」という降格判断こそが誤りだったのです。結果として、公開された記事の脚注には「Section 8.3.1 における Content-Type メディアタイプ定義と、charset 省略時のデフォルト規定（旧 ISO-8859-1）廃止の仕様」という、原典に存在しない所在が記載されたまま読者の目に触れることになりました。</p>
+<p>手元でこの原典照合を再現したコマンドと実行ログは次のとおりです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># RFC 9110 全文（10,785行）の取得と ISO-8859-1 出現箇所の確認</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">curl</span><span style="color:#40A02B"> -s</span><span style="color:#40A02B"> -o</span><span style="color:#40A02B"> /tmp/rfc9110.txt</span><span style="color:#40A02B"> https://www.rfc-editor.org/rfc/rfc9110.txt</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">grep</span><span style="color:#40A02B"> -n</span><span style="color:#40A02B"> -i</span><span style="color:#40A02B"> 'ISO-8859-1'</span><span style="color:#40A02B"> /tmp/rfc9110.txt</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#9CA0B0;font-style:italic"># RFC 7231 Appendix B における既定文字セット削除規定の確認</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">curl</span><span style="color:#40A02B"> -s</span><span style="color:#40A02B"> -o</span><span style="color:#40A02B"> /tmp/rfc7231.txt</span><span style="color:#40A02B"> https://www.rfc-editor.org/rfc/rfc7231.txt</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">grep</span><span style="color:#40A02B"> -n</span><span style="color:#40A02B"> -A</span><span style="color:#FE640B"> 1</span><span style="color:#40A02B"> 'The default charset of ISO-8859-1'</span><span style="color:#40A02B"> /tmp/rfc7231.txt</span></span>
+<span class="line"></span></code></pre>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>1599:   Historically, HTTP allowed field content with text in the ISO-8859-1</span></span>
+<span class="line"><span>1600:   charset [ISO-8859-1], supporting other charsets only through use of</span></span>
+<span class="line"><span>9533:   [ISO-8859-1]</span></span>
+<span class="line"><span>5069:   The default charset of ISO-8859-1 for text media types has been</span></span>
+<span class="line"><span>5070-   removed; the default is now whatever the media type definition says.</span></span>
+<span class="line"><span></span></span></code></pre>
+<h2 id="所在の検査と事実の検査は別物--問いのすり替えが起きる構造">所在の検査と事実の検査は別物 ── 問いのすり替えが起きる構造</h2>
+<p>なぜ上位の判定処理は、検証役の正しい指摘を「誤検出」と誤認してしまったのでしょうか。その本質的な原因は、判定処理の中で発生した <strong>「問いのすり替え」</strong> にあります。</p>
+<p>読者が技術記事の脚注をクリックしてリンク先の文献を開く目的を考えてみてください。読者が求めているのは、「その文献の、そのページ・その節に、著者が述べている根拠が本当に書かれているか」を自分の目で確かめること（検証可能性: Verifiability）です。</p>
+<p>このとき、検証役と上位判定処理の間で交わされていた「問い」に決定的なズレが生じていました。</p>
+<ul>
+<li><strong>検証役が発していた問い</strong>: 「指定された文献（RFC 9110 §8.3.1）に、その主張（charset 廃止）が存在するか？（＝ <strong>所在の検査</strong>）」</li>
+<li><strong>上位判定が答えてしまった問い</strong>: 「世の中にその事実が存在するか？ 別の文献（RFC 7231）にあるから主張としては合っている（＝ <strong>事実関係の検査</strong>）」</li>
+</ul>
+<p>問いが「所在」から「世の中の真偽」へとすり替わったことで、「指定された文献に記述がない」という致命的な所在エラーが、「世の中に存在する事実だから問題ない」と不可視化されてしまったのです。</p>
+<p>この現象は、学術的な自然言語処理や引用評価の研究でも厳密に議論されています。</p>
+<p>Google Research が提案した AIS（Attributable to Identified Sources）フレームワーク<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup> は、生成された文が特定された情報源に支えられているか（帰属）を測る枠組みです。論文は発話の「事実性（factuality）」を判定することを避け、事実性を評価するには情報源の質を見るような別の評価手法を AIS と組み合わせる必要がある、という立場を取っています。</p>
+<p>また、Princeton NLP が開発した引用付きテキスト生成のベンチマーク ALCE（Automatic LLMs’ Citation Evaluation）<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup><sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup> においても、文単位で文献が主張を含意（entail）しているかを測る Citation Recall と並び、不要な引用や無関係な文献を引いていないかを測る Citation Precision を測定しています。ELI5 データセットでは、最良のモデルでも 50% の割合で引用による裏付けが完全ではなかったと報告されています。</p>
+<p>さらに、Future AGI による引用評価ルーブリックの分析<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup> では、実務における典型的な死角として <strong>「The right document, wrong page or wrong claim（文献自体は合っているが、指定されたページや節に主張が存在しない）」</strong> という失敗パターンが警告されています。今回のインシデントは、まさにこのパターンに該当していました。</p>
+<p>Michael Brenndoerfer 氏が論じているように<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>、引用の本質は読者に対する検証可能性（Verifiability）を提供し、システムへの信頼を確立することにあります。別の文献に事実があるからといって、間違った文献へのリンクを正当化することは決してできません。</p>
+<p>多段検証において混同されがちな 2 つの品質基準は、以下のように検査の対象と読者価値が根本から異なります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>観点</th><th>事実関係の検査（Factuality）</th><th>所在・引用帰属の検査（Citation Attribution）</th></tr></thead><tbody><tr><td><strong>検証の問い</strong></td><td>「その主張は、世の中の客観的事実として真か？」</td><td>「その主張は、指定された文献の該当箇所に書かれているか？」</td></tr><tr><td><strong>判定の対象</strong></td><td>主張内容そのもの（世界の真偽）</td><td>主張と引用元テキストとの論理的対応関係（含意・所在）</td></tr><tr><td><strong>典型的な欠陥</strong></td><td>ハルシネーション、偽情報の生成</td><td>誤帰属（Misattribution）、原典不一致、偽りの裏付け</td></tr><tr><td><strong>読者への影響</strong></td><td>誤った知識や前提を信じ込んでしまう</td><td>脚注を辿っても根拠を確認できず、信頼が失墜する</td></tr><tr><td><strong>「別文献にある」の意味</strong></td><td>主張の正しさを補強する正当な根拠</td><td><strong>所在エラーを解消する答えには一切ならない</strong></td></tr></tbody></table>
+<p>事実がいくら正しくても、読者が提示されたリンクを辿って記述を見つけられなければ、その記事の検証可能性はゼロになります。</p>
+<h2 id="誤検出削減の裏にあるトレードオフ--偽陽性と見落としの境界線">誤検出削減の裏にあるトレードオフ ── 偽陽性と見落としの境界線</h2>
+<p>なぜパイプラインの設計者は、検証役の指摘を安易に降格するルールを作ってしまうのでしょうか。</p>
+<p>その背景には、実務で避けがたい「誤検出削減の強い圧力」があります。LLM-as-a-Judge や自動検証エージェントは、時に過度に保守的で重箱の隅をつつくような指摘を大量に出力します。これらをすべてブロッカーにしてパイプラインを停止させると、人間や修正エージェントの手戻りコストが跳ね上がります。</p>
+<p>その結果、「多少の食い違いは中へ降格して進行可にする」「別の文献に似た記述があれば良しとする」といった妥協的なフィルタを設ける誘惑に駆られます。</p>
+<p>もちろん、厳密な仕様検証が求められる技術ドキュメントやコード生成ではなく、即時性が最優先される会話ボットやカジュアルな要約など、読者検証可能性の優先度が低いユースケースであれば、所在検査の厳格化は過剰な手戻りコストを生むトレードオフになり得ます。</p>
+<p>しかし、公開成果物の検証可能性を担保すべきパイプラインにおいて、誤検出（偽陽性 / False Positive）を減らすためにフィルタや降格条件を安易に緩める操作は、本来止めるべき本物の欠陥を見逃す「見落とし（偽陰性 / False Negative）」のリスクと完全に表裏一体です。</p>
+<p>さらに深刻なのは、メトリクスの歪みです。正当な指摘を「誤検出」の枠組みへ放り込んでしまうと、検証役の真の精度（False Positive Rate）の測定が狂い、プロンプトやモデルの健全な改善サイクルが機能しなくなります。自社の企画ごとの検証記録 103 件を走査したところ、「別の文献に同じ事実がある」を理由に誤検出として降格した事例は今回の 1 件だけでした。ただし数えられるのは誤検出として記録された降格だけで、記録されないまま素通りした見落としはこの数に含まれません。</p>
+<p>LLM-as-a-Judge の信頼性をどう確保するか（一貫性の向上やバイアスの緩和）はサーベイ<sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>の中心的な問いです。LLM-as-a-Judge が評価するのは出力の妥当性という一層に限られるという整理<sup><a href="#user-content-fn-11" id="user-content-fnref-11" data-footnote-ref="" aria-describedby="footnote-label">11</a></sup>や、ジャッジの判定を少量の人手ラベルと突き合わせて一致度を測る手法<sup><a href="#user-content-fn-12" id="user-content-fnref-12" data-footnote-ref="" aria-describedby="footnote-label">12</a></sup>も示されています。降格ルールも同じく、「何を誤検出とみなし、何をブロッカーとして残すか」の境界を、自分のパイプラインで明示的に決めておく必要があります。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q1-事実は正しいのになぜ別の文献を理由に指摘を降格してはいけないのか">Q1: 事実は正しいのに、なぜ別の文献を理由に指摘を降格してはいけないのか？</h3>
+<p>A1: 読者が脚注を検証する行為は「その文献のその場所」を起点とするためです。別の文献に事実が存在していても、読者が開いた原典に記述がなければ「虚偽の引用」と受け取られ、記事全体の信頼性が失われます。事実の正しさを理由に指摘を握りつぶすのではなく、出典を正しい文献へ差し替えるべきです。</p>
+<h3 id="q2-本文キャッシュが欠けている場合verifier-の指摘はどう扱うべきか">Q2: 本文キャッシュが欠けている場合、Verifier の指摘はどう扱うべきか？</h3>
+<p>A2: 推測で「キャッシュ欠落による誤検出」と決めつけて降格してはなりません。まずは原典の全文を取り直して決定論的に記述の有無を確認し、確認できない場合は指摘事項として残して出典を修正するのが安全です。</p>
+<h2 id="検証パイプラインの降格条件を再設計する--2つの修正ルール">検証パイプラインの降格条件を再設計する ── 2つの修正ルール</h2>
+<p>このインシデントを受け、自社パイプラインでは 2 段階の是正措置を実施しました。</p>
+<h3 id="第-1-段階-記事成果物の修正">第 1 段階: 記事成果物の修正</h3>
+<p>公開記事とその草案から RFC 9110 への言及を除去し、正しく廃止規定が書かれている RFC 7231 のみで支える形に修正しました。同期検査スクリプトを実行し、公開記事と草案の間に不一致が 0 組であることを確認して修正を完了させました。</p>
+<h3 id="第-2-段階-検証スキルの降格ルールの改定">第 2 段階: 検証スキルの降格ルールの改定</h3>
+<p>検証工程の運用手順に、以下の 2 つの降格禁止ルールを明文化しました。</p>
+<ol>
+<li><strong>「別の文献が同じ事実を支える」ことは降格理由にならない</strong>: 指摘が問うているのが「その出典の本文に主張があるか（所在）」である場合、事実が別の文献で正しいことは答えになりません。所在の誤りは、誤検出として捨てるのではなく、出典の差し替えや削除で閉じる局所修正として扱います。</li>
+<li><strong>「本文キャッシュの欠け」を理由に推測で降格しない</strong>: キャッシュが原典の一部しか保存していない疑いがある場合は、想像で格下げする前に原典を取り直して該当箇所を精査します。取り直せなければ降格せず、未確認として指摘事項に残します。</li>
+</ol>
+<p>改定した検証ルールの該当箇所は次のとおりです（社内の管理番号と内部ツール名は伏せています）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#7C7F93">**</span><span style="color:#D20F39;font-weight:bold">次の2つは降格の理由になりません</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69">（「RFC 9110 §8.3.1 のキャッシュ本文に主張が無い」という正しい指摘が下の2つを理由に降格され、原典に無い所在を示す脚注のまま公開された）:</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">「別の文献が同じ事実を支える」</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69"> — 指摘が問うているのがその出典の本文にその主張があるか（所在）なら、事実が別の文献で正しいことは答えになりません。所在の誤りは、出典の差し替え・削除で閉じる指摘として扱います（局所修正で閉じるなら </span><span style="color:#40A02B">`## その場で解消した指摘`</span><span style="color:#4C4F69"> へ）。</span></span>
+<span class="line"><span style="color:#179299">-</span><span style="color:#7C7F93"> **</span><span style="color:#D20F39;font-weight:bold">本文キャッシュの欠け</span><span style="color:#7C7F93">**</span><span style="color:#4C4F69"> — キャッシュが原典の一部しか保存していない（抽出範囲の都合など）、または保存されていないために主張が見つからない場合は、降格する前に原典を取り直して該当箇所を読み、その本文で判定します。取り直せなければ降格せず、確かめられなかったものとして </span><span style="color:#40A02B">`## 指摘事項`</span><span style="color:#4C4F69"> に残します。</span></span>
+<span class="line"></span></code></pre>
+<p>将来的に LLM のコンテキスト長がさらに拡大し、キャッシュ抽出ツールを介さず常に原典の全文を直接参照できるようになれば、「キャッシュ欠落」に起因する摩擦は減少するかもしれません。</p>
+<p>しかし、「別の文献にあるからいいだろう」という問いのすり替えは、モデルの性能向上だけでは解決しません。検証ルールとして明示的にガードレールを敷き続ける必要があります。</p>
+<h2 id="まとめ--誤検出フィルタを点検する">まとめ ── 誤検出フィルタを点検する</h2>
+<p>検証役の指摘を格下げする操作は、パイプラインのノイズを減らす便利な道具に見えますが、一歩間違えれば、原典に無い所在のような誤りを素通りさせる抜け穴になります。</p>
+<p>健全な多段検証パイプラインを運用するために、以下の 4 つの命題を現場の判断基準として提案します。</p>
+<ul>
+<li><strong>所在の検査と事実の検査を明確に分離する</strong>: 読者が脚注に求めるのは「世界の真理」ではなく「その文献のその場所に根拠があるか」という検証可能性です。</li>
+<li><strong>「別文献にある」を理由に所在指摘を降格しない</strong>: 別の文献に事実があるなら、指摘を誤検出として捨てるのではなく、出典をその文献へと差し替える修正を行うべきです。</li>
+<li><strong>キャッシュ欠落を推測で片付けない</strong>: 情報源のテキストが手元にないときは、想像で格下げせず、原典を取り直して決定論的に白黒をつけます。</li>
+<li><strong>誤検出の削減は見落としのリスクと背中合わせである</strong>: 降格ルールを緩めるほど偽陰性（本物の欠陥の見逃し）が増えます。自社の誤検出フィルタが正当な指摘を握りつぶしていないか、定期的に点検する姿勢が不可欠です。</li>
+</ul>
+<p>AI エージェントを活用した多段検証パイプラインの構築、LLM-as-a-Judge の精度改善、ハルシネーションや引用精度の品質ゲート設計に関するご相談は、<a href="/#contact">コンタクトフォーム</a> よりお気軽にお問い合わせください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="/blog/orchestrator-downgrade-subagent-severity">サブエージェントの「高」判定を、そのまま信じない ── 一次情報で再評価して進行可を出した事例</a> meetsource、2026年8月12日。サブエージェントが重要度「高」とした指摘を、出典の実在と記事の核心を支えるかの2観点で再評価して格下げし、進行を許可した事例。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="/blog/fetch-success-mojibake-blind-spot">「取得成功」判定が文字化けを見逃す ── URL取得ゲートの死角と決定論的フォールバック</a> meetsource、2026年10月8日。原典に無い所在を示す脚注（旧・脚注8）が公開後に残っていた記事（現在は修正済み）。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://www.rfc-editor.org/rfc/rfc9110.html#section-8.3.1">RFC 9110: HTTP Semantics</a> Fielding, R., et al., IETF, 2022年6月, STD 97。§8.3.1 に旧既定値 ISO-8859-1 廃止の規定が無いこと（全文 10,785 行中、ISO-8859-1 の出現は 1,599〜1,600 行目と 9,533 行目のみ）。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://www.rfc-editor.org/rfc/rfc7231.html#appendix-B">RFC 7231: Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content</a> Fielding, R., Reschke, J., IETF, 2014年6月。Appendix B（5,069 行目）に「text メディアタイプにおける既定文字セット ISO-8859-1 の削除」が明記されていること。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://arxiv.org/abs/2112.12870">Measuring Attribution in Natural Language Generation Models</a> Rashkin, H., et al. (Google Research), 2021年12月。AIS フレームワークの定義と、発話の事実性（factuality）の判定は避け、事実性の評価には「source quality」のような補完的な評価手法を AIS と組み合わせる必要があるとしていること（§2 Background）。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://arxiv.org/abs/2305.14627">Enabling Large Language Models to Generate Text with Citations</a> Gao, T., et al. (Princeton NLP), 2023年5月。引用生成ベンチマーク ALCE の提案、Citation Recall と Citation Precision の定義、ELI5 データセットでは最良のモデルでも 50% の割合で引用の裏付けが完全でないこと（Abstract）。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://github.com/princeton-nlp/ALCE/blob/main/eval.py">princeton-nlp/ALCE (eval.py)</a> Princeton NLP, 2023年。<code>compute_autoais</code> 関数内で NLI モデルによる文単位含意評価と、不要な引用に対する過剰引用ペナルティの実装。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://futureagi.com/blog/evaluating-llm-citation-attribution-2026/">Evaluating LLM Citation &#x26; Attribution (2026)</a> Future AGI, 2026年4月21日。引用評価の 3 ルーブリック（構文・実在性・意味的含有）と、死角となる「The right document, wrong page or wrong claim」（文献は合っているが節に記述が無い）の指摘。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://mbrenndoerfer.com/writing/attribution-and-citation">Attribution and Citation: Sourcing LLM Outputs</a> Brenndoerfer, M., 2026年2月16日。引用が提供する本質は読者に対する検証可能性（Verifiability）と信頼の機能（trust function）であり、単なる検索精度とは異なること。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://arxiv.org/abs/2411.15594">A Survey on LLM-as-a-Judge</a> Gu, J., et al., 2024年11月。LLM-as-a-Judge における評価バイアス、多段検証パイプラインの設計、ジャッジの信頼性・一貫性向上のためのメタ評価手法（§2, §4）。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-11">
+<p><a href="https://zenn.dev/pharmax/articles/2d07bf0498e212">LLMによるLLMの評価「LLM-as-a-Judge」入門〜基礎から運用まで徹底解説</a> pharmax エンジニアブログ、2024年8月6日。LLM アプリケーションにおける出力妥当性と非機能要件の多層評価、評価プロンプト運用の勘所。 <a href="#user-content-fnref-11" data-footnote-backref="" aria-label="Back to reference 11" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-12">
+<p><a href="https://zenn.dev/aishift/articles/08bbe9ec0a4b3b">【LLM-as-a-Judge】少量のデータでジャッジを人手評価に近づける手法を比較する</a> AI Shift Tech Blog、2026年7月31日。少量の人間ラベルを用いたジャッジモデルのアラインメント手法、ジャッジと人間判定の一致度を定量化するメタ評価。 <a href="#user-content-fnref-12" data-footnote-backref="" aria-label="Back to reference 12" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

@@ -1,0 +1,581 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Claude Code の組み込み Explore を Explore.md で上書きすると仕様変更が見えなくなる：実行ファイル内の文字列照合で自動検知する方法 | Meetsource</title><meta name="description" content="~/.claude/agents/Explore.md で Claude Code の組み込み Explore を上書きすると、組み込み一覧（builtInTypes）から外れて自作定義（isBuiltIn: false）に固定され、本体アップデート時の仕様変更が見えなくなります。版更新時だけ実行ファイル内の固定プロンプト行・whenToUse 側 description・公式 CHANGELOG.md を照合して警告する、標準 Python 製 SessionStart フックの実装手順と、意図的破壊テスト・擬似版更新テストの検証結果を解説します。"><link rel="canonical" href="https://www.meetsource.work/blog/claude-code-explore-override-drift"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="Explore を Haiku に固定したら、本家の仕様変更が見えなくなった ── 実行ファイルの文字列照合でずれを検知する"><meta property="og:description" content="組み込み Explore を Explore.md で上書きすると builtInTypes から外れて更新が観測できなくなります。版更新時だけバイナリ内文字列と CHANGELOG を照合する SessionStart フックの実装と破壊テストの結果をまとめました。"><meta property="og:url" content="https://www.meetsource.work/blog/claude-code-explore-override-drift"><meta property="og:image" content="https://www.meetsource.work/blog/claude-code-explore-override-drift-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-11-18T04:02:00.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Explore を Haiku に固定したら、本家の仕様変更が見えなくなった ── 実行ファイルの文字列照合でずれを検知する"><meta name="twitter:description" content="組み込み Explore を Explore.md で上書きすると builtInTypes から外れて更新が観測できなくなります。版更新時だけバイナリ内文字列と CHANGELOG を照合する SessionStart フックの実装と破壊テストの結果をまとめました。"><meta name="twitter:image" content="https://www.meetsource.work/blog/claude-code-explore-override-drift-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Claude Code の組み込み Explore を Explore.md で上書きすると仕様変更が見えなくなる：実行ファイル内の文字列照合で自動検知する方法","description":"~/.claude/agents/Explore.md で Claude Code の組み込み Explore を上書きすると、組み込み一覧（builtInTypes）から外れて自作定義（isBuiltIn: false）に固定され、本体アップデート時の仕様変更が見えなくなります。版更新時だけ実行ファイル内の固定プロンプト行・whenToUse 側 description・公式 CHANGELOG.md を照合して警告する、標準 Python 製 SessionStart フックの実装手順と、意図的破壊テスト・擬似版更新テストの検証結果を解説します。","datePublished":"2026-11-18T04:02:00.000Z","image":"https://www.meetsource.work/blog/claude-code-explore-override-drift-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/claude-code-explore-override-drift"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"~/.claude/agents/Explore.md で Explore を上書きすると何が置き換わりますか？","acceptedAnswer":{"@type":"Answer","text":"モデル指定だけでなくシステムプロンプト・ツール構成・ description も自作ファイル側へ置き換わり、セッションログ上では組み込みエージェント一覧（ builtInTypes ）から外れて isBuiltIn: false として扱われます。そのため Claude Code 本体がアップデートされても、自作ファイルを更新しない限り新しい組み込みプロンプトは使われません。"}},{"@type":"Question","name":"check.py はなぜハッシュ値ではなく固定文字列と description で照合しているのですか？","acceptedAnswer":{"@type":"Answer","text":"バイナリ内の組み込みプロンプトは JS テンプレートリテラルとして ${...} の変数補間を含んでおり、変数名や補間構文の変化を避けて実文面の変更だけを検知するためです。 check.py は ${...} を除いた固定行が Explore.md 本文に出現順で含まれるか、 whenToUse 側の description が一致するか、公式 CHANGELOG.md に Explore を含む更新があるかの 3 点を確認します。"}},{"@type":"Question","name":"CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1 と Explore.md 上書き＋監視はどう使い分けるべきですか？","acceptedAnswer":{"@type":"Answer","text":"組み込みプロンプトの追従を保ったまま全サブエージェントのモデルを一律に固定したいなら CLAUDE_CODE_SUBAGENT_MODEL と CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1 の併用、コード編集を行う general-purpose 等のモデルを変えずに Explore だけモデルやツールを制御しつつ本家の更新ずれも検知したいなら Explore.md 上書きと check.py 監視を選びます。なお CLAUDE_CODE_SUBAGENT_MODEL 単独では組み込み Explore のモデルは変わりません。"}},{"@type":"Question","name":"Claude Code のアップデートでバイナリ内の目印（P_START 等）が消えた場合はどうなりますか？","acceptedAnswer":{"@type":"Answer","text":"check.py は「実行ファイルに Explore プロンプト（または description）の目印が見つからない」という警告を標準出力へ出し、 last-version を更新せずに正常経路では exit 0 で終了します。セッション開始をブロックせず、「構造が変わった可能性がある」ことを毎セッション通知するため、安全側に倒して手動確認へ移れます。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-11-18T04:02:00.000Z" data-astro-cid-7jjqptxk> 2026.11.18 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#AIエージェント</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span><span class="tag" data-astro-cid-7jjqptxk>#subagents</span><span class="tag" data-astro-cid-7jjqptxk>#automation</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>Claude Code の組み込み Explore を Explore.md で上書きすると仕様変更が見えなくなる：実行ファイル内の文字列照合で自動検知する方法</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/claude-code-explore-override-drift-hero.webp" alt="Claude Code の組み込み Explore を Explore.md で上書きすると仕様変更が見えなくなる：実行ファイル内の文字列照合で自動検知する方法" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>Claude Code の組み込み <code>Explore</code> サブエージェントを <code>~/.claude/agents/Explore.md</code> で上書きして <code>model: haiku</code> などに固定すると、モデルだけでなくシステムプロンプト・ツール制限・ <code>description</code> まで丸ごと自作ファイル側へ置き換わります。その結果、Claude Code 本体がアップデートされても組み込み側の仕様変更が見えなくなります。 <strong>組み込みサブエージェントの上書きによる仕様ずれ</strong> とは、同名の定義ファイルを配置してモデルやツールを変更した結果、本体の内蔵一覧（セッションログ上の <code>builtInTypes</code> ）から対象エージェントが外れて自作定義（ <code>isBuiltIn: false</code> ）へ固定され、本体更新に伴うプロンプトや挙動の改善への追従も観測もできなくなる状態を指します。</p>
+<p><a href="/blog/subagent-model-ranking-inversion">サブエージェントのモデル選定に関する比較記事</a> では <code>Explore.md</code> によるモデル固定と解決仕様を扱いましたが、本記事ではその運用を続けた先に発生する「本家の更新を取り逃す問題」を解決します。構築するのは、外部パッケージ不要の標準 Python 3 スクリプト <code>check.py</code> と <code>~/.claude/settings.json</code> の <code>SessionStart</code> フックを組み合わせた自動検知の仕組みです。Claude Code のバージョンが変わったときだけ実行ファイル内の固定プロンプト文字列・ <code>description</code> ・公式 <code>CHANGELOG.md</code> を照合し、ずれがあれば警告を出します。構成するファイルは <code>~/.claude/agents/Explore.md</code> 、 <code>~/.claude/explore-override/check.py</code> （143 行）、自動生成される <code>~/.claude/explore-override/last-version</code> 、 <code>~/.claude/settings.json</code> の 4 つで完結します<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。なお、検証環境（2026-11-06 導入〜2026-11-18 確認）では <code>v2.1.318</code> から <code>v2.1.327</code> までの実運用アップデートにおける警告発火は 0 件でしたが、修正前のテスト（本文 1 行削除と <code>description</code> 改変）での初回検知、修正後の 1 行削除テストでの継続警告（再通知）、および <code>last-version</code> を <code>2.1.190</code> に書き換えた擬似版更新テストで動作を確認しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h2 id="explore-を上書きすると何が起きなぜ自動検知が必要なのか">Explore を上書きすると何が起き、なぜ自動検知が必要なのか</h2>
+<p>組み込み <code>Explore</code> を同名のカスタム定義で上書きすることの影響と、実行ファイル内部の構造を踏まえた文字列照合の設計方針を整理します。</p>
+<h3 id="上書き前後で起きる仕様変更の不可視化一次ログ実測">上書き前後で起きる仕様変更の不可視化（一次ログ実測）</h3>
+<p>Claude Code の公式仕様では、ユーザー設定やプロジェクト設定に <code>Explore</code> と同名のサブエージェントを配置すると組み込み <code>Explore</code> が上書きされ、独自の <code>model</code> とプロンプトが使われます<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。組み込み <code>Explore</code> は <code>v2.1.198</code> 以降、従来の Haiku 固定からメイン会話のモデル継承（Claude API 上では Opus 上限）へ変更されました<sup><a href="#user-content-fn-2" id="user-content-fnref-2-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。そのため、 <a href="/blog/tokenmaxxing-ai-cost-optimization">コスト最適化の実践記事</a> でも触れたように、コスト削減の目的で <code>Explore.md</code> を配置する運用が生まれますが、定義ファイルで丸ごと置き換える手法では「Anthropic が調整したプロンプトの喪失」「元のエージェント挙動の推測」「将来の改善の取り逃し」という 3 つの弊害が指摘されています<sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。</p>
+<p>手元の検証環境におけるセッションログ（2026-10-12〜2026-11-18 観測）を比較すると、上書き前後でログ構造に明確な変化が現れます<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<ul>
+<li><strong>上書き前（2026-10-12〜2026-10-31）</strong>: 調査対象の組み込み <code>Explore</code> 実行ログ直近 5 本（応答数 <code>10 / 32 / 9 / 22 / 11</code> 件）は、すべて <code>claude-opus-5-5</code> で応答していました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。また、2026-11-06 の上書き前セッション冒頭ログ（ <code>agent_listing_delta</code> ）では <code>builtInTypes</code> 配列に <code>"Explore"</code> が含まれ、説明文には簡略版 <code>whenToUseLean</code> （ <code>Read-only search agent for broad fan-out searches...</code> ）が出力されていました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-5" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。当時の組み込み <code>Explore</code> （ <code>v2.1.316</code> ）が <code>api-request-shape</code> で送信していたシステムプロンプト展開長は 3,212 文字でした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-6" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+<li><strong>上書き後（2026-11-06・2026-11-07・2026-11-16）</strong>: <code>Explore.md</code> 作成後の 2026-11-07 と 2026-11-16 のセッション冒頭ログでは <code>builtInTypes</code> 配列から <code>"Explore"</code> が外れ、 <code>addedLines</code> 側の <code>Explore</code> 説明文が自作 <code>Explore.md</code> に設定した通常版 <code>whenToUse</code> （ <code>Fast read-only search agent for locating code... (Tools: Bash, Read, Skill, ToolSearch)</code> ）へ置換されました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-7" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。さらに 2026-11-06 の上書き作成後に起動したサブエージェント 2 本のメタデータ（ <code>.meta.json</code> ）はいずれも <code>"isBuiltIn": false</code> となり、リクエスト送信時のシステムプロンプト（ <code>api-request-shape</code> ）も <code>v2.1.316</code> から写した自作本文（1,977 文字）と共通末尾を合わせた計 3,212 文字に固定されました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-8" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+</ul>
+<p>上書き前と同じ文面・同じ文字数で固定されるため、Claude Code 本体が更新されても、セッションログやサブエージェントの出力からは組み込み側の変更を観測できなくなります。なお、 <code>builtInTypes</code> や <code>isBuiltIn</code> 、 <code>agent_listing_delta</code> 、 <code>api-request-shape</code> はセッションログ上の内部構造であり、本体がどの条件で除外や切り替えを行うかの内部機序全体は公開仕様になく断定できません。また、 <code>Explore.md</code> 上書きはモデル変更と同時にプロンプト・ツール制限・ <code>description</code> を置き換えるため、モデル単独の効果とは切り分けていません。</p>
+<h3 id="実行ファイル内の構造と-2-系統の-description">実行ファイル内の構造と 2 系統の description</h3>
+<p>自動照合の設計にあたって、2026-11-06 時点の <code>v2.1.318</code> ネイティブ実行ファイル（ <code>319,598,464</code> bytes ）を Python の <code>mmap</code> で読み取ったところ、組み込み <code>Explore</code> の定義が文字列としてそのまま埋め込まれていました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-9" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<ul>
+<li><strong>プロンプトテンプレート</strong>: <code>return`You are a file search specialist...report your findings clearly.` </code> という JS テンプレートリテラルとして埋め込まれており、内部にはツール名などを埋め込む <code>`${s}`</code> 、 <code>`${h}`</code> 、 <code>`${ze}`</code> 、 <code>`${n}`</code> 、 <code>`${e?...}`</code> のような変数補間が含まれていました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-10" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+<li><strong>2 系統の <code>description</code></strong>: <code>Explore</code> の定義オブジェクト周辺には、 <code>whenToUse</code> （通常版、変数 <code>vfo</code> ）と <code>whenToUseLean</code> （簡略版、変数 <code>Cfo</code> ）の 2 種類が存在しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-11" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。
+<ul>
+<li><code>whenToUse</code>: <code>Fast read-only search agent for locating code. ... When calling, specify search breadth: ...</code></li>
+<li><code>whenToUseLean</code>: <code>Read-only search agent for broad fan-out searches — ... Specify search breadth: ...</code></li>
+</ul>
+</li>
+</ul>
+<p>サードパーティによる抽出スナップショットでも <code>whenToUse</code> と <code>whenToUseLean</code> の 2 系統が記録されています<sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。また、ネイティブバイナリから <code>strings</code> と <code>awk</code> で <code>Explore.md</code> を手動再生成する公開 Gist スクリプト（ <code>extract-explore-prompt.sh</code> ）も存在しますが、そちらは <code>whenToUseLean</code> 側を採用して <code>`${tool}`</code> 補間ギャップを手動解消する再生成スクリプトであり、版更新時の自動ずれ検知や <code>CHANGELOG.md</code> 照合は持ちません<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p>Claude Code 本体がどの条件で <code>whenToUse</code> と <code>whenToUseLean</code> を使い分けるかは公開ドキュメントに記載がない非公開仕様のため、内部仕様は断定しません。また、 <code>v2.1.318</code> の実行ファイル自体は自動更新の整理により削除されており、2026-11-18 時点でディスク上に残っているのは <code>v2.1.322</code> 〜 <code>v2.1.327</code> のうち 5 版です<sup><a href="#user-content-fn-1" id="user-content-fnref-1-12" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。ただし、 <code>v2.1.326</code> バイナリでは <code>whenToUse</code> と固定プロンプトの一致を、 <code>v2.1.327</code> バイナリ（ <code>354,515,104</code> bytes ）でもテンプレートと 2 系統の埋め込み、および固定断片・ <code>description</code> の一致を確認しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-13" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="全体構成図と文字列照合の設計方針">全体構成図と文字列照合の設計方針</h3>
+<p>以上の構造を踏まえ、 <code>check.py</code> はハッシュ値ではなく、次の 3 本立てでずれを検査する設計にしました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-14" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<ol>
+<li><strong>テンプレート固定行の出現順一致</strong>: バイナリ内のテンプレートから <code>`${...}`</code> を除いた固定行を抜き出し、 <code>Explore.md</code> 本文に出現順で含まれるか（ <code>body.find</code> ）を照合する</li>
+<li><strong><code>whenToUse</code> 側 <code>description</code> の完全一致</strong>: <code>D_START = b"Fast read-only search agent for locating code."</code> から抽出した文字列と、 <code>Explore.md</code> フロントマターの <code>description</code> を文字列比較する（ <code>whenToUseLean</code> 側は照合対象外）</li>
+<li><strong>公式 <code>CHANGELOG.md</code> の正規表現検索</strong>: 前回版より新しく現在版以下の見出し配下から <code>\bExplore\b(?!r)</code> （ <code>Explorer</code> を除外）に一致する行を抽出する</li>
+</ol>
+<p>全体フローは次のとおりです。</p>
+<pre class="mermaid">flowchart TD
+    A["SessionStart フック発火"] --> B{"last-version == 現在版?"}
+    B -- "一致 (--force なし)" --> Z["無出力で exit 0"]
+    B -- "不一致または初回" --> C["バイナリを mmap で走査"]
+    C --> D["1. 固定プロンプト行の順序包含"]
+    C --> E["2. whenToUse 側 description 一致"]
+    D --> F["drift = bool(warn) を確定"]
+    E --> F
+    F --> G{"last-version あり?"}
+    G -- "あり" --> H["3. 公式 CHANGELOG.md 検索 (timeout=5)"]
+    G -- "なし (初回)" --> I{"warn あり?"}
+    H --> I
+    I -- "なし" --> J["last-version を更新して exit 0"]
+    I -- "あり" --> K{"drift が True?"}
+    K -- "True (定義ずれ・目印消失)" --> L["last-version を更新せず警告を stdout 出力 (exit 0)"]
+    K -- "False (CHANGELOG のみ/通信失敗)" --> M["last-version を更新し通知を stdout 出力 (exit 0)"]</pre>
+<p>この設計では 3 つの判断を入れています。</p>
+<ul>
+<li><strong>固定行の順序一致を採用した理由</strong>: バイナリ内のテンプレートは <code>`${...}`</code> 補間を含み、ビルド時の縮小（minify）で内部変数名だけが変わっても指示内容の本質は同じ場合があります。ネストした <code>`${...}`</code> を飛ばして固定テキスト断片だけを抜き出し順序包含を見ることで、変数名変化によるノイズを避けつつ文面の欠落や順序変更を拾えます（なお、ハッシュ値比較を実装した場合の偽陽性率との比較実測は行っていません）。</li>
+<li><strong>無出力成功と警告時のみ出力、かつ <code>exit 0</code> を返す理由</strong>: <code>SessionStart</code> フックは、終了コード 0 のプレーンテキスト標準出力を Claude が参照できるコンテキスト（ <code>system reminder</code> 等、10,000 文字上限）へ注入する一方、セッションをブロックできない仕様です<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。終了コード 2 を返してもユーザー画面にエラー通知が出るだけで Claude 側には渡らないため<sup><a href="#user-content-fn-7" id="user-content-fnref-7-2" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>、正常経路では常に <code>exit 0</code> を返します。また、問題がないセッションで毎回「確認済み」と出すと慣れで見落としやすいため、異常時だけ出力して意識に引っかかるようにしています。</li>
+<li><strong>目印消失時のフェイルセーフ</strong>: 実行ファイル内部の文字列や構文は公開 API ではないため、目印（ <code>P_START</code> / <code>P_END</code> / <code>D_START</code> ）が見つからない場合も「構造が変わった可能性」として警告を出します<sup><a href="#user-content-fn-1" id="user-content-fnref-1-15" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+</ul>
+<h2 id="前提環境とファイル構成">前提環境とファイル構成</h2>
+<p><code>check.py</code> は <code>os.path.realpath(shutil.which("claude"))</code> で実行ファイルの実体パスを解決し、末尾のファイル名をバージョン番号（例: <code>2.1.327</code> ）として取得した上で、そのネイティブバイナリを <code>mmap</code> で読み取ります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-16" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。したがって、macOS の <code>~/.local/share/claude/versions/&#x3C;version></code> のように、実体ファイル名がバージョン文字列になる <strong>ネイティブインストーラ版 Claude Code</strong> を前提とします（npm インストール等で実体ファイル名が <code>cli.js</code> や <code>claude</code> のままになる構成ではバージョン比較が動作しません）。</p>
+<p>外部パッケージのインストールは不要で、Python 3 の標準ライブラリ（ <code>json</code>, <code>mmap</code>, <code>os</code>, <code>pathlib</code>, <code>re</code>, <code>shutil</code>, <code>sys</code>, <code>urllib.request</code> ）のみで動作します。検証環境（macOS）ではシステム標準の <code>/usr/bin/python3</code> （ <code>Python 3.9.6</code> ）で <code>--force</code> 実行が <code>exit=0</code> で完了することを確認しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-17" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>作成・配置するファイル構成は次の 4 点です（ <code>last-version</code> は初回正常実行時に自動作成されます）。なお、ユーザー全体の <code>~/.claude/agents/Explore.md</code> よりプロジェクト固有の <code>.claude/agents/Explore.md</code> が優先されるスコープ規則がありますが<sup><a href="#user-content-fn-2" id="user-content-fnref-2-3" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>、本手順ではユーザー全体を対象に配置します（プロジェクト単位で監視したい場合は、 <code>check.py</code> 内の <code>AGENT</code> パスとフック設定先をプロジェクト配下へ読み替えてください）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>~/.claude/</span></span>
+<span class="line"><span>├── agents/</span></span>
+<span class="line"><span>│   └── Explore.md                 # 組み込みベースの Explore 上書き定義</span></span>
+<span class="line"><span>├── explore-override/</span></span>
+<span class="line"><span>│   ├── check.py                   # 版更新時のみ走る文字列照合スクリプト（143 行）</span></span>
+<span class="line"><span>│   └── last-version               # 最終検査済みバージョンの記録（自動生成）</span></span>
+<span class="line"><span>└── settings.json                  # SessionStart フックの登録先</span></span>
+<span class="line"><span></span></span></code></pre>
+<h2 id="ステップ1-組み込みベースの上書き定義exploremdを用意する">ステップ1: 組み込みベースの上書き定義（Explore.md）を用意する</h2>
+<p><strong>目的</strong>: 組み込み <code>Explore</code> の読み取り専用プロンプトとツール制限、 <code>whenToUse</code> 側の <code>description</code> を維持したまま、使用モデルを <code>model: haiku</code> へ切り替えるため <code>~/.claude/agents/Explore.md</code> を作成します。</p>
+<p>検証環境で運用している <code>Explore.md</code> のフロントマター（1〜9 行目）と、本文中の読み取り専用制約部分（12〜20 行目）は次のとおりです。</p>
+<p>引用元: 検証環境の Explore.md（フロントマター部分）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>---</span></span>
+<span class="line"><span>name: Explore</span></span>
+<span class="line"><span># 組み込み Explore の上書き（2026-11-06）。本文は v2.1.316 の Explore トランスクリプト（api-request-shape）から、</span></span>
+<span class="line"><span># description は v2.1.318 の実行ファイルから逐語で写した。組み込みの変更は ~/.claude/explore-override/check.py が検知する。</span></span>
+<span class="line"><span>description: "Fast read-only search agent for locating code. Use it to find files by pattern (eg. \"src/components/**/*.tsx\"), grep for symbols or keywords (eg. \"API endpoints\"), or answer \"where is X defined / which files reference Y.\" Do NOT use it for code review, design-doc auditing, cross-file consistency checks, or open-ended analysis — it reads excerpts rather than whole files and will miss content past its read window. When calling, specify search breadth: \"quick\" for a single targeted lookup, \"medium\" for moderate exploration, or \"very thorough\" to search across multiple locations and naming conventions."</span></span>
+<span class="line"><span>tools: Bash, Read, Skill, ToolSearch</span></span>
+<span class="line"><span>model: haiku</span></span>
+<span class="line"><span>omitClaudeMd: true</span></span>
+<span class="line"><span>---</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>引用元: 検証環境の Explore.md（読み取り専用制約部分）</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>=== CRITICAL: READ-ONLY MODE - NO FILE MODIFICATIONS ===</span></span>
+<span class="line"><span>This is a READ-ONLY exploration task. You are STRICTLY PROHIBITED from:</span></span>
+<span class="line"><span>- Creating new files (no Write, touch, or file creation of any kind)</span></span>
+<span class="line"><span>- Modifying existing files (no Edit operations)</span></span>
+<span class="line"><span>- Deleting files (no rm or deletion)</span></span>
+<span class="line"><span>- Moving or copying files (no mv or cp)</span></span>
+<span class="line"><span>- Creating temporary files anywhere, including /tmp</span></span>
+<span class="line"><span>- Using redirect operators (>, >>, |) or heredocs to write to files</span></span>
+<span class="line"><span>- Running ANY commands that change system state</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>実際のファイルはフロントマター（1〜9 行目）を含めて計 42 行で構成されており、本文部分（10〜42 行目）は冒頭の <code>You are a file search specialist for Claude Code...</code> から末尾の <code>Complete the user's search request efficiently and report your findings clearly.</code> まで計 33 行・1,977 文字で、 <code>v2.1.316</code> の組み込み <code>Explore</code> セッションログ（ <code>api-request-shape</code> ）から写したものです<sup><a href="#user-content-fn-1" id="user-content-fnref-1-18" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。後述の意図的破壊テストでは、上記の 15 行目にあたる <code>- Deleting files (no rm or deletion)</code> を削除して検知を確認します。</p>
+<p>読者が手元の環境から展開後のプロンプト本文やバイナリ内の <code>whenToUse</code> を取り出して <code>Explore.md</code> を作成する場合、サブエージェントログは公式仕様どおり 2 階層下の <code>~/.claude/projects/*/*/subagents/agent-*.jsonl</code> に保存されます<sup><a href="#user-content-fn-2" id="user-content-fnref-2-4" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。上書き後の <code>isBuiltIn: false</code> ログや古い版のログを拾わないよう、更新日時が最新の <code>isBuiltIn: true</code> ログを優先して探し、ログが手元にない場合は実行バイナリのテンプレート本体と <code>description</code> を取り出す参考例は次のとおりです（手元の環境に合わせて調整して実行してください）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#9CA0B0;font-style:italic"># 手元の最新の組み込み Explore ログ（isBuiltIn: true）または実行バイナリから文面を確認する参考例</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">python3</span><span style="color:#40A02B"> -</span><span style="color:#179299"> &#x3C;&#x3C;</span><span style="color:#40A02B">'EOF'</span></span>
+<span class="line"><span style="color:#40A02B">import json, mmap, pathlib, shutil, os</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B"># 1) 更新日時が最新の組み込み Explore ログから展開済みプロンプト（api-request-shape）を探す</span></span>
+<span class="line"><span style="color:#40A02B">found_prompt = False</span></span>
+<span class="line"><span style="color:#40A02B">meta_files = sorted(</span></span>
+<span class="line"><span style="color:#40A02B">    pathlib.Path.home().glob(".claude/projects/*/*/subagents/agent-*.meta.json"),</span></span>
+<span class="line"><span style="color:#40A02B">    key=lambda p: p.stat().st_mtime,</span></span>
+<span class="line"><span style="color:#40A02B">    reverse=True,</span></span>
+<span class="line"><span style="color:#40A02B">)</span></span>
+<span class="line"><span style="color:#40A02B">for meta_path in meta_files:</span></span>
+<span class="line"><span style="color:#40A02B">    meta = json.loads(meta_path.read_text())</span></span>
+<span class="line"><span style="color:#40A02B">    if meta.get("agentType") == "Explore" and meta.get("isBuiltIn") is True:</span></span>
+<span class="line"><span style="color:#40A02B">        jsonl_path = meta_path.with_name(meta_path.name.replace(".meta.json", ".jsonl"))</span></span>
+<span class="line"><span style="color:#40A02B">        if not jsonl_path.exists():</span></span>
+<span class="line"><span style="color:#40A02B">            continue</span></span>
+<span class="line"><span style="color:#40A02B">        for line in jsonl_path.open():</span></span>
+<span class="line"><span style="color:#40A02B">            rec = json.loads(line)</span></span>
+<span class="line"><span style="color:#40A02B">            if rec.get("type") == "api-request-shape":</span></span>
+<span class="line"><span style="color:#40A02B">                text = rec["shape"]["system"][1]["text"]</span></span>
+<span class="line"><span style="color:#40A02B">                end = text.find("report your findings clearly.")</span></span>
+<span class="line"><span style="color:#40A02B">                if end != -1:</span></span>
+<span class="line"><span style="color:#40A02B">                    print("--- PROMPT FROM LOG ---", jsonl_path)</span></span>
+<span class="line"><span style="color:#40A02B">                    print(text[: end + len("report your findings clearly.")])</span></span>
+<span class="line"><span style="color:#40A02B">                    found_prompt = True</span></span>
+<span class="line"><span style="color:#40A02B">                    break</span></span>
+<span class="line"><span style="color:#40A02B">        if found_prompt:</span></span>
+<span class="line"><span style="color:#40A02B">            break</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B"># 2) 実行バイナリから whenToUse の description と（ログ未取得時用に）テンプレート本体を取り出す</span></span>
+<span class="line"><span style="color:#40A02B">exe = pathlib.Path(os.path.realpath(shutil.which("claude")))</span></span>
+<span class="line"><span style="color:#40A02B">with open(exe, "rb") as f, mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as m:</span></span>
+<span class="line"><span style="color:#40A02B">    if not found_prompt:</span></span>
+<span class="line"><span style="color:#40A02B">        p_start = b"return`You are a file search specialist"</span></span>
+<span class="line"><span style="color:#40A02B">        p_end = b"report your findings clearly.`"</span></span>
+<span class="line"><span style="color:#40A02B">        i = m.find(p_start)</span></span>
+<span class="line"><span style="color:#40A02B">        j = m.find(p_end, i) if i != -1 else -1</span></span>
+<span class="line"><span style="color:#40A02B">        if j != -1:</span></span>
+<span class="line"><span style="color:#40A02B">            print("--- PROMPT TEMPLATE FROM BINARY ---")</span></span>
+<span class="line"><span style="color:#40A02B">            print(m[i + len(b"return`") : j + len(p_end) - 1].decode())</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">    marker = b"Fast read-only search agent for locating code."</span></span>
+<span class="line"><span style="color:#40A02B">    k = m.find(marker)</span></span>
+<span class="line"><span style="color:#40A02B">    if k != -1:</span></span>
+<span class="line"><span style="color:#40A02B">        q = m[k - 1 : k]</span></span>
+<span class="line"><span style="color:#40A02B">        raw = m[k : m.find(q, k)].decode()</span></span>
+<span class="line"><span style="color:#40A02B">        desc = json.loads('"' + raw.replace('"', '\\"') + '"') if q == b"'" else raw</span></span>
+<span class="line"><span style="color:#40A02B">        print("--- DESCRIPTION FROM BINARY ---")</span></span>
+<span class="line"><span style="color:#40A02B">        print(json.dumps(desc, ensure_ascii=False))</span></span>
+<span class="line"><span style="color:#40A02B">EOF</span></span>
+<span class="line"></span></code></pre>
+<p>未上書きのサブエージェントログが手元にない場合は、上のスクリプトが出力した <code>--- PROMPT TEMPLATE FROM BINARY ---</code> の本文から <code>`${...}`</code> 変数補間部分を自分の <code>tools</code> 設定に合わせた記述（ <code>Guidelines:</code> 直下の検索ツール指示 2 行、ファイル読み取り用の <code>Read</code> 、読み取り専用シェル用の <code>Bash</code> と許可・禁止コマンド群）に置き換えて本文を組み立てます。後述の <code>check.py</code> （ <code>literal_parts()</code> ）は <code>`${...}`</code> で囲まれた部分をすべて除外し固定行だけを順序照合するため、補間部分の文言を手元環境に合わせて埋めても照合は通過します。なお、全文スナップショットや <code>`${tool}`</code> 補間の手動解消スクリプトの実装例は公開資料も参考にできます<sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup><sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<p><strong>重要箇所の解説</strong>:</p>
+<ul>
+<li><strong><code>description:</code> を JSON 文字列形式で 1 行に書く理由</strong>: 後述する <code>check.py</code> の <code>agent_parts()</code> は、フロントマターから正規表現 <code>^description:\s*(.*)$</code> で 1 行を取り出し、 <code>json.loads()</code> でパースしています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-19" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。そのため、ダブルクォートで囲み内部の <code>"</code> を <code>\"</code> でエスケープした 1 行の JSON 文字列として記述する必要があります（複数行 YAML にするとパースエラーになります）。</li>
+<li><strong>初版作成からの修正経緯</strong>: 初版を作成した時点では、本文先頭に HTML コメントを置き、 <code>description</code> も末尾の <code>"When calling, specify search breadth: ..."</code> がない短縮文を手書きしていました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-20" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。その直後に、コメントをフロントマター内の <code># ...</code> へ移し、 <code>description</code> を <code>v2.1.318</code> 実行ファイルから抽出した完全文字列へ差し替えています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-21" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。本文の由来は <code>v2.1.316</code> トランスクリプト、 <code>description</code> の由来は <code>v2.1.318</code> バイナリとバージョンが異なりますが、 <code>v2.1.318</code> ・ <code>v2.1.326</code> ・ <code>v2.1.327</code> のいずれに対しても固定部分の一致を確認済みです<sup><a href="#user-content-fn-1" id="user-content-fnref-1-22" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+<li><strong><code>tools</code> と <code>omitClaudeMd: true</code> の位置づけ</strong>: <code>tools: Bash, Read, Skill, ToolSearch</code> は、本文内の <code>find</code> / <code>grep</code> を <code>Bash</code> で使う指示と整合する読み取り中心の構成であり、 <code>Edit</code> や <code>Write</code> を外しています（ <code>Grep</code> や <code>Glob</code> を使う構成にする場合は本文の該当行も合わせて調整します）。また、公式ドキュメントには、組み込み <code>Explore</code> と <code>Plan</code> だけが <code>CLAUDE.md</code> と親セッションの <code>git status</code> スナップショットを省略する旨が書かれています<sup><a href="#user-content-fn-2" id="user-content-fnref-2-5" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。一方、 <code>omitClaudeMd: true</code> は <code>v2.1.271</code> 以降で言及されているカスタム定義向けの <code>CLAUDE.md</code> 省略オプションであり<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>、サードパーティのバイナリ定義スナップショットにも同フィールドが含まれています<sup><a href="#user-content-fn-5" id="user-content-fnref-5-3" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。ただし、検証環境の自作 <code>Explore.md</code> （ <code>isBuiltIn: false</code> ）において <code>CLAUDE.md</code> や <code>git status</code> が実際にどこまで省略されるか自体は実測していないため、ここでは設定の記載に留めます。</li>
+</ul>
+<h2 id="ステップ2-版更新時だけ走る照合スクリプトcheckpyを実装する">ステップ2: 版更新時だけ走る照合スクリプト（check.py）を実装する</h2>
+<p><strong>目的</strong>: セッション起動のたびに呼び出しても同版なら即終了し、Claude Code のバージョンが変わったときだけ実行ファイルと公式 <code>CHANGELOG.md</code> を照合する <code>~/.claude/explore-override/check.py</code> を配置します。</p>
+<p>まず <code>mkdir -p ~/.claude/explore-override</code> でディレクトリを作成し、以下の 143 行のスクリプトを <code>~/.claude/explore-override/check.py</code> として保存したあと <code>chmod +x ~/.claude/explore-override/check.py</code> で実行権限を付けておきます（実行時は <code>/usr/bin/python3</code> の引数として渡して呼び出すためシバンに依存しません）。</p>
+<p>引用元: 検証環境の check.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>#!/usr/bin/env python3</span></span>
+<span class="line"><span>"""組み込み Explore と ~/.claude/agents/Explore.md（上書き定義）のずれを検知する。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Claude Code の版が変わったときだけ走る（SessionStart hook 用。同じ版なら何も出さない）。</span></span>
+<span class="line"><span>- 実行ファイル内の Explore プロンプト（テンプレート文字列）の固定部分が、上書き定義の本文に順に含まれるか</span></span>
+<span class="line"><span>- 実行ファイル内の Explore description が、上書き定義の description と一致するか</span></span>
+<span class="line"><span>- 公式 CHANGELOG の、前回確認した版より新しい項目に「Explore」を含む行があるか</span></span>
+<span class="line"><span>ずれがあれば標準出力に警告を出す（hook の出力はセッションの文脈に入る）。常に exit 0。</span></span>
+<span class="line"><span>実行ファイルの中身は公開仕様ではないので、目印が見つからないときも「変わった」として警告する。</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>使い方: check.py [--force]   （--force は版が同じでも検査する）</span></span>
+<span class="line"><span>"""</span></span>
+<span class="line"><span>import json, mmap, os, pathlib, re, shutil, sys, urllib.request</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>HOME = pathlib.Path(os.environ.get("HOME"))</span></span>
+<span class="line"><span>AGENT = HOME / ".claude/agents/Explore.md"</span></span>
+<span class="line"><span>STATE = HOME / ".claude/explore-override/last-version"</span></span>
+<span class="line"><span>CHANGELOG = "https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md"</span></span>
+<span class="line"><span>P_START = b"return`You are a file search specialist"</span></span>
+<span class="line"><span>P_END = b"report your findings clearly.`"</span></span>
+<span class="line"><span>D_START = b"Fast read-only search agent for locating code."</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def binary():</span></span>
+<span class="line"><span>    exe = shutil.which("claude")</span></span>
+<span class="line"><span>    return pathlib.Path(os.path.realpath(exe)) if exe else None</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def ver_tuple(v):</span></span>
+<span class="line"><span>    return tuple(int(x) for x in re.findall(r"\d+", v))</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def extract(path):</span></span>
+<span class="line"><span>    with open(path, "rb") as f, mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as m:</span></span>
+<span class="line"><span>        i = m.find(P_START)</span></span>
+<span class="line"><span>        j = m.find(P_END, i) if i != -1 else -1</span></span>
+<span class="line"><span>        prompt = m[i + len(b"return`"):j + len(P_END) - 1].decode() if j != -1 else None</span></span>
+<span class="line"><span>        k = m.find(D_START)</span></span>
+<span class="line"><span>        desc = None</span></span>
+<span class="line"><span>        if k != -1:</span></span>
+<span class="line"><span>            q = m[k - 1:k]</span></span>
+<span class="line"><span>            raw = m[k:m.find(q, k)].decode()</span></span>
+<span class="line"><span>            desc = json.loads('"' + raw.replace('"', '\\"') + '"') if q == b"'" else raw</span></span>
+<span class="line"><span>    return prompt, desc</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def literal_parts(template):</span></span>
+<span class="line"><span>    """テンプレート文字列から ${...} を除いた固定部分（ネストした ${} とバッククォートも飛ばす）。"""</span></span>
+<span class="line"><span>    parts, buf, i, n = [], [], 0, len(template)</span></span>
+<span class="line"><span>    while i &#x3C; n:</span></span>
+<span class="line"><span>        if template.startswith("${", i):</span></span>
+<span class="line"><span>            parts.append("".join(buf)); buf = []</span></span>
+<span class="line"><span>            depth, i = 1, i + 2</span></span>
+<span class="line"><span>            while i &#x3C; n and depth:</span></span>
+<span class="line"><span>                c = template[i]</span></span>
+<span class="line"><span>                depth += c == "{"</span></span>
+<span class="line"><span>                depth -= c == "}"</span></span>
+<span class="line"><span>                i += 1</span></span>
+<span class="line"><span>        else:</span></span>
+<span class="line"><span>            buf.append(template[i]); i += 1</span></span>
+<span class="line"><span>    parts.append("".join(buf))</span></span>
+<span class="line"><span>    return [p.strip() for p in parts if p.strip()]</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def agent_parts():</span></span>
+<span class="line"><span>    text = AGENT.read_text()</span></span>
+<span class="line"><span>    _, fm, body = text.split("---\n", 2)</span></span>
+<span class="line"><span>    m = re.search(r"^description:\s*(.*)$", fm, re.M)</span></span>
+<span class="line"><span>    desc = json.loads(m.group(1)) if m else None</span></span>
+<span class="line"><span>    return desc, body</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def check_prompt(template, body):</span></span>
+<span class="line"><span>    pos, missing = 0, []</span></span>
+<span class="line"><span>    for part in literal_parts(template):</span></span>
+<span class="line"><span>        for line in part.splitlines():</span></span>
+<span class="line"><span>            line = line.strip()</span></span>
+<span class="line"><span>            if not line:</span></span>
+<span class="line"><span>                continue</span></span>
+<span class="line"><span>            k = body.find(line, pos)</span></span>
+<span class="line"><span>            if k == -1:</span></span>
+<span class="line"><span>                missing.append(line)</span></span>
+<span class="line"><span>            else:</span></span>
+<span class="line"><span>                pos = k + len(line)</span></span>
+<span class="line"><span>    return missing</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def changelog_hits(since, upto):</span></span>
+<span class="line"><span>    try:</span></span>
+<span class="line"><span>        text = urllib.request.urlopen(CHANGELOG, timeout=5).read().decode()</span></span>
+<span class="line"><span>    except Exception as e:  # ネットワーク不達でも本体の検査は済ませる</span></span>
+<span class="line"><span>        return None, str(e)</span></span>
+<span class="line"><span>    hits, cur = [], None</span></span>
+<span class="line"><span>    for line in text.splitlines():</span></span>
+<span class="line"><span>        h = re.match(r"^## (\d+\.\d+\.\d+)", line)</span></span>
+<span class="line"><span>        if h:</span></span>
+<span class="line"><span>            cur = h.group(1)</span></span>
+<span class="line"><span>            continue</span></span>
+<span class="line"><span>        if cur and ver_tuple(since) &#x3C; ver_tuple(cur) &#x3C;= ver_tuple(upto) and re.search(r"\bExplore\b(?!r)", line):</span></span>
+<span class="line"><span>            hits.append(f"{cur}: {line.strip()}")</span></span>
+<span class="line"><span>    return hits, None</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>def main():</span></span>
+<span class="line"><span>    force = "--force" in sys.argv</span></span>
+<span class="line"><span>    exe = binary()</span></span>
+<span class="line"><span>    if not exe or not AGENT.exists():</span></span>
+<span class="line"><span>        return</span></span>
+<span class="line"><span>    version = exe.name</span></span>
+<span class="line"><span>    last = STATE.read_text().strip() if STATE.exists() else None</span></span>
+<span class="line"><span>    if last == version and not force:</span></span>
+<span class="line"><span>        return</span></span>
+<span class="line"><span>    warn = []</span></span>
+<span class="line"><span>    prompt, desc = extract(exe)</span></span>
+<span class="line"><span>    a_desc, body = agent_parts()</span></span>
+<span class="line"><span>    if prompt is None:</span></span>
+<span class="line"><span>        warn.append("実行ファイルに Explore プロンプトの目印が見つからない（構造が変わった可能性）")</span></span>
+<span class="line"><span>    else:</span></span>
+<span class="line"><span>        missing = check_prompt(prompt, body)</span></span>
+<span class="line"><span>        if missing:</span></span>
+<span class="line"><span>            warn.append("組み込みプロンプトにあって上書き定義に無い行:\n" + "\n".join(f"    {l}" for l in missing))</span></span>
+<span class="line"><span>    if desc is None:</span></span>
+<span class="line"><span>        warn.append("実行ファイルに Explore description の目印が見つからない")</span></span>
+<span class="line"><span>    elif desc != a_desc:</span></span>
+<span class="line"><span>        warn.append(f"description が組み込みと違う。組み込み:\n    {desc}")</span></span>
+<span class="line"><span>    drift = bool(warn)  # 定義のずれは直るまで毎セッション出す。CHANGELOG の該当は版ごとに1回だけ</span></span>
+<span class="line"><span>    if last:</span></span>
+<span class="line"><span>        hits, err = changelog_hits(last, version)</span></span>
+<span class="line"><span>        if err:</span></span>
+<span class="line"><span>            warn.append(f"CHANGELOG を取得できず未確認（{err}）")</span></span>
+<span class="line"><span>        elif hits:</span></span>
+<span class="line"><span>            warn.append("CHANGELOG に Explore の変更:\n" + "\n".join(f"    {h}" for h in hits))</span></span>
+<span class="line"><span>    if warn:</span></span>
+<span class="line"><span>        print(f"[explore-override] Claude Code {last or '?'} → {version}: 組み込み Explore と {AGENT} のずれを確認してください")</span></span>
+<span class="line"><span>        for w in warn:</span></span>
+<span class="line"><span>            print("- " + w)</span></span>
+<span class="line"><span>    if not drift:</span></span>
+<span class="line"><span>        STATE.parent.mkdir(parents=True, exist_ok=True)</span></span>
+<span class="line"><span>        STATE.write_text(version + "\n")</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>if __name__ == "__main__":</span></span>
+<span class="line"><span>    main()</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><strong>重要箇所の解説</strong>:</p>
+<ul>
+<li><strong><code>binary()</code> （L24–L26）</strong>: <code>shutil.which("claude")</code> を <code>os.path.realpath()</code> で辿り、 <code>exe.name</code> （例: <code>2.1.327</code> ）を版番号として取得します。実体ファイル名が数値バージョンでない配置では <code>ver_tuple()</code> が空タプルになり版更新の比較が働きません。</li>
+<li><strong><code>extract()</code> （L33–L44）</strong>: バイナリを <code>mmap.ACCESS_READ</code> で開き、 <code>P_START</code> 〜 <code>P_END</code> の範囲と、 <code>D_START</code> 直前の引用符（ <code>'</code> か <code>"</code> ）に対応した終端までの文字列を取り出します。シングルクォートで囲まれていた場合は内部のダブルクォートをエスケープした上で <code>json.loads</code> により文字列をデコードしています（ <code>q == b'"'</code> 側の分岐は文字列内にエスケープされた <code>\"</code> を含まない単純な構成を想定しており、現行バイナリで <code>D_START</code> 文字列がシングルクォート囲みかつ内部に <code>'</code> を含まない前提で動作しています）。</li>
+<li><strong><code>literal_parts()</code> （L47–L62）</strong>: 波括弧のネスト深さ <code>depth</code> を数えながら <code>`${...}`</code> をスキップし、変数の入らない固定テキスト断片だけを抜き出します。</li>
+<li><strong><code>check_prompt()</code> （L73–L85）</strong>: 抽出した各非空行が <code>Explore.md</code> 本文に出現順で含まれているかを <code>body.find(line, pos)</code> で検査し、1 行でも欠落または順序逆転があれば <code>missing</code> に積みます。</li>
+<li><strong><code>changelog_hits()</code> （L88–L101）</strong>: <code>urllib.request.urlopen(CHANGELOG, timeout=5)</code> で公式 <code>CHANGELOG.md</code> を取得し、 <code>last &#x3C; cur &#x3C;= version</code> の見出し配下から <code>\bExplore\b(?!r)</code> （ <code>Explorer</code> を除く）に一致する行を拾います。通信に失敗した場合は例外を握りつぶさずエラー文字列を返し、本体バイナリの照合結果を優先して出力します（ただし後述の <code>drift</code> が <code>False</code> のときはオフラインの回でも <code>last-version</code> が更新されるため、通信失敗だった回の <code>CHANGELOG</code> 照合は次回へ持ち越されません）。</li>
+</ul>
+<h3 id="実装時に踏んだバグ警告が出ても-last-version-を更新してしまう問題">実装時に踏んだバグ：警告が出ても last-version を更新してしまう問題</h3>
+<p><code>check.py</code> の初版では、 <code>warn</code> リストにずれが入っていても、 <code>main()</code> の末尾で無条件に状態ファイルを更新していました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-23" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>引用元: 検証環境の初期版 check.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>    STATE.parent.mkdir(parents=True, exist_ok=True)</span></span>
+<span class="line"><span>    STATE.write_text(version + "\n")</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この作りだと、1 回目の起動で警告が出た瞬間に <code>last-version</code> が現在版へ書き換わるため、2 回目以降の起動では <code>last == version</code> と判定されて無出力で素通りしてしまいます。実際に後述の破壊テストの 2 回目でこの欠陥が露呈しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-24" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>そこで、 <code>changelog_hits()</code> を呼ぶ直前に <code>drift = bool(warn)</code> として「バイナリ内の定義側のずれ・目印消失」の有無だけを記録し、 <code>if not drift:</code> のときだけ <code>last-version</code> を更新するよう改めました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-25" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>引用元: 検証環境の修正版 check.py</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>    drift = bool(warn)  # 定義のずれは直るまで毎セッション出す。CHANGELOG の該当は版ごとに1回だけ</span></span>
+<span class="line"><span>    if last:</span></span>
+<span class="line"><span>        hits, err = changelog_hits(last, version)</span></span>
+<span class="line"><span>        if err:</span></span>
+<span class="line"><span>            warn.append(f"CHANGELOG を取得できず未確認（{err}）")</span></span>
+<span class="line"><span>        elif hits:</span></span>
+<span class="line"><span>            warn.append("CHANGELOG に Explore の変更:\n" + "\n".join(f"    {h}" for h in hits))</span></span>
+<span class="line"><span>    if warn:</span></span>
+<span class="line"><span>        print(f"[explore-override] Claude Code {last or '?'} → {version}: 組み込み Explore と {AGENT} のずれを確認してください")</span></span>
+<span class="line"><span>        for w in warn:</span></span>
+<span class="line"><span>            print("- " + w)</span></span>
+<span class="line"><span>    if not drift:</span></span>
+<span class="line"><span>        STATE.parent.mkdir(parents=True, exist_ok=True)</span></span>
+<span class="line"><span>        STATE.write_text(version + "\n")</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>この分離により、定義側にずれがないとき（ <code>drift == False</code> ）は <code>CHANGELOG.md</code> の変更通知や取得失敗警告を版更新の 1 回だけ出しつつ <code>last-version</code> が進み、逆に定義側にずれがある間（ <code>drift == True</code> ）は <code>last-version</code> が進まないため、 <code>Explore.md</code> または <code>check.py</code> を修正するまで毎セッション警告と <code>CHANGELOG</code> 通知が出続けます。</p>
+<h2 id="ステップ3-sessionstart-フックに登録するmise-shim-回避">ステップ3: SessionStart フックに登録する（mise shim 回避）</h2>
+<p><strong>目的</strong>: <code>~/.claude/settings.json</code> の <code>hooks.SessionStart</code> に <code>check.py</code> を登録し、セッション開始・再開時に自動実行されるようにします。</p>
+<p>ここで検証時に踏んだ重要なハマりどころが <strong><code>mise</code> などのバージョン管理 shim</strong> です<sup><a href="#user-content-fn-1" id="user-content-fnref-1-26" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。テストのために <code>HOME</code> を一時ディレクトリへ差し替えて <code>python3</code> （ <code>mise</code> の shim）を実行したところ、元のホームディレクトリ配下の設定ファイル（ <code>~/.config/mise/config.toml</code> ）が新しい <code>HOME</code> から未信頼扱いとなり、 <code>mise ERROR ... config.toml are not trusted</code> が出て <code>exit=1</code> で失敗しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-27" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。フックが動く環境の <code>PATH</code> や shim 設定に左右されないよう、外部ライブラリを使わない <code>check.py</code> にはシステム標準の <code>/usr/bin/python3</code> （macOS 環境では <code>Python 3.9.6</code> 、 <code>--force</code> 実行 <code>exit=0</code> を確認済み）をフルパスで指定する方針にしました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-28" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p><code>~/.claude/settings.json</code> の <code>hooks.SessionStart</code> に追加する定義は次のとおりです（既存の <code>SessionStart</code> フックがある場合は上書きせず配列の末尾に追記します）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>{</span></span>
+<span class="line"><span>  "hooks": {</span></span>
+<span class="line"><span>    "SessionStart": [</span></span>
+<span class="line"><span>      {</span></span>
+<span class="line"><span>        "hooks": [</span></span>
+<span class="line"><span>          {</span></span>
+<span class="line"><span>            "type": "command",</span></span>
+<span class="line"><span>            "command": "/usr/bin/python3 ~/.claude/explore-override/check.py"</span></span>
+<span class="line"><span>          }</span></span>
+<span class="line"><span>        ]</span></span>
+<span class="line"><span>      }</span></span>
+<span class="line"><span>    ]</span></span>
+<span class="line"><span>  }</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>既存の <code>~/.claude/settings.json</code> を壊さずに <code>hooks.SessionStart</code> 配列の末尾へ 1 項目追記したい場合は、次のワンライナーで安全に更新できます（ <code>~/.claude/settings.json</code> がまだ存在しない場合は、事前に <code>echo '{}' > ~/.claude/settings.json</code> で空の JSON ファイルを作成してから実行してください）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">/usr/bin/python3</span><span style="color:#40A02B"> -c</span><span style="color:#40A02B"> "import json,pathlib;p=pathlib.Path.home()/'.claude/settings.json';d=json.loads(p.read_text());d.setdefault('hooks',{}).setdefault('SessionStart',[]).append({'hooks':[{'type':'command','command':'/usr/bin/python3 ~/.claude/explore-override/check.py'}]});p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n')"</span></span>
+<span class="line"></span></code></pre>
+<p>登録後、システム標準の <code>/usr/bin/python3</code> で <code>--force</code> 実行がエラーなく終了するかを確認します。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">/usr/bin/python3</span><span style="color:#40A02B"> --version</span><span style="color:#7C7F93"> &#x26;&#x26;</span><span style="color:#1E66F5;font-style:italic"> /usr/bin/python3</span><span style="color:#40A02B"> ~/.claude/explore-override/check.py</span><span style="color:#40A02B"> --force</span><span style="color:#7C7F93">;</span><span style="color:#D20F39;font-style:italic"> echo</span><span style="color:#40A02B"> "exit=</span><span style="color:#4C4F69">$?</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span></code></pre>
+<p>検証環境での実行結果（一次記録に基づく出力）は次のとおりです<sup><a href="#user-content-fn-1" id="user-content-fnref-1-29" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Python 3.9.6</span></span>
+<span class="line"><span>exit=0</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><strong>重要箇所の解説</strong>:</p>
+<ul>
+<li><strong><code>SessionStart</code> の発火範囲</strong>: <code>SessionStart</code> フックは通常の新規起動だけでなく、 <code>--continue</code> や <code>--resume</code> （ <code>source</code> が <code>"resume"</code> ）、 <code>--fork-session</code> （ <code>"fork"</code> ）、 <code>/clear</code> の実行時にも発火します<sup><a href="#user-content-fn-7" id="user-content-fnref-7-3" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。インタラクティブ起動ではバックグラウンドで走りつつ Claude の初回応答前に完了を待ちます<sup><a href="#user-content-fn-7" id="user-content-fnref-7-4" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</li>
+<li><strong>設定の配置スコープ</strong>: フック設定もサブエージェント定義と同様にユーザー全体の <code>~/.claude/settings.json</code> とプロジェクトごとの <code>.claude/settings.json</code> 等でスコープが分かれており<sup><a href="#user-content-fn-9" id="user-content-fnref-9" data-footnote-ref="" aria-describedby="footnote-label">9</a></sup>、今回はユーザー全体の <code>Explore.md</code> に合わせて <code>~/.claude/settings.json</code> に配置しています。</li>
+</ul>
+<h2 id="動作確認と期待する出力擬似版更新意図的破壊テスト">動作確認と期待する出力（擬似版更新・意図的破壊テスト）</h2>
+<p>正常時に無出力となる監視スクリプトは、本番で本当に発火するのかを外から判断しづらいため、過去版を装う擬似版更新テストと、定義をわざと壊す意図的破壊テストの両方で検知動作を確かめておくことが重要です。以下は検証時に実施した 3 つのテスト手順と実測結果です<sup><a href="#user-content-fn-1" id="user-content-fnref-1-30" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="1-初回実行同版無出力擬似版更新テスト">1. 初回実行・同版無出力・擬似版更新テスト</h3>
+<p>まず <code>last-version</code> がない状態での初回記録、同版での無出力、および <code>last-version</code> を <code>2.1.190</code> に書き換えて <code>CHANGELOG.md</code> 抽出が動くかを確認します。ステップ 3 の確認コマンド（ <code>--force</code> ）を実行してすでに <code>last-version</code> が作成されている場合は、先に <code>rm -f ~/.claude/explore-override/last-version</code> で削除してから試します（検証環境では <code>v2.1.318</code> 時点で <code>python3</code> を用いて実測しましたが、以下の検証コマンドは本番フックと同じ <code>/usr/bin/python3</code> に統一しており、同じ出力構造を確認できます<sup><a href="#user-content-fn-1" id="user-content-fnref-1-31" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#4C4F69">P</span><span style="color:#179299">=</span><span style="color:#40A02B">~/.claude/explore-override/check.py</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> '--- 1回目（状態なし）'</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">/usr/bin/python3</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$P</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> "exit=</span><span style="color:#4C4F69">$?</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#40A02B"> ~/.claude/explore-override/last-version</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> '--- 2回目（同じ版、無出力のはず）'</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">/usr/bin/python3</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$P</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> "exit=</span><span style="color:#4C4F69">$?</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> '--- 前の版を装う（CHANGELOG 照合）'</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#FE640B"> 2.1.190</span><span style="color:#179299"> ></span><span style="color:#40A02B"> ~/.claude/explore-override/last-version</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">/usr/bin/python3</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$P</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">echo</span><span style="color:#40A02B"> "exit=</span><span style="color:#4C4F69">$?</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span></code></pre>
+<p>検証環境（ <code>v2.1.318</code> ）で実測したところ、1 回目は <code>exit=0</code> で <code>last-version</code> に <code>2.1.318</code> が記録され、2 回目は無出力 <code>exit=0</code> で終了しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-32" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。3 回目の擬似版更新（ <code>2.1.190</code> ）では、先頭に <code>[explore-override] Claude Code 2.1.190 → 2.1.318: 組み込み Explore と ~/.claude/agents/Explore.md のずれを確認してください</code> という通知行が出力されたうえで、公式 <code>CHANGELOG.md</code> から <code>2.1.190</code> 超・ <code>2.1.318</code> 以下の <code>Explore</code> 関連 2 行が抽出されました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-33" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>--- 1回目（状態なし）</span></span>
+<span class="line"><span>exit=0</span></span>
+<span class="line"><span>2.1.318</span></span>
+<span class="line"><span>--- 2回目（同じ版、無出力のはず）</span></span>
+<span class="line"><span>exit=0</span></span>
+<span class="line"><span>--- 前の版を装う（CHANGELOG 照合）</span></span>
+<span class="line"><span>- CHANGELOG に Explore の変更:</span></span>
+<span class="line"><span>    2.1.284: - Fixed the Explore subagent switching to Opus on the Claude API when the session runs a model ID Claude Code doesn't recognize, such as a custom model behind a proxy; Explore now inherits that model</span></span>
+<span class="line"><span>    2.1.198: - The built-in Explore agent now inherits the main session's model (capped at opus) instead of running on haiku</span></span>
+<span class="line"><span>exit=0</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>（注: 検証ログの実測出力のうち、通知ヘッダ行のみローカルの絶対パスを含むため上のブロックでは省略し、直前の段落に <code>~</code> 表記で転記しています。抽出された 2 行は公式 <code>CHANGELOG.md</code> の記載と一致しています<sup><a href="#user-content-fn-3" id="user-content-fnref-3-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。）</p>
+<h3 id="2-意図的破壊テスト修正前後の挙動確認">2. 意図的破壊テスト（修正前後の挙動確認）</h3>
+<p>次に、本番の <code>~/.claude/explore-override/last-version</code> を汚さないよう一時的な <code>HOME</code> ディレクトリを作り、 <code>Explore.md</code> から <code>- Deleting files (no rm or deletion)</code> の 1 行を削除して実行し、壊れている間は毎回警告が出て、復元後に無出力へ戻るかを確かめます。以下は <code>/usr/bin/python3</code> を使って独立環境で試せる再現コマンドです（検証環境では <code>mise</code> shim を回避した実体パスで実行しました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-34" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>）。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#4C4F69">PY</span><span style="color:#179299">=</span><span style="color:#40A02B">/usr/bin/python3</span></span>
+<span class="line"><span style="color:#4C4F69">T</span><span style="color:#179299">=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">mktemp</span><span style="color:#40A02B"> -d</span><span style="color:#7C7F93">)</span></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">mkdir</span><span style="color:#40A02B"> -p</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$T</span><span style="color:#40A02B">/.claude/agents"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#4C4F69">$PY -c </span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#40A02B">import pathlib</span></span>
+<span class="line"><span style="color:#40A02B">s = (pathlib.Path.home() / '.claude/agents/Explore.md').read_text()</span></span>
+<span class="line"><span style="color:#40A02B">pathlib.Path('</span><span style="color:#4C4F69">$T</span><span style="color:#40A02B">/.claude/agents/Explore.md').write_text(</span></span>
+<span class="line"><span style="color:#40A02B">    s.replace('- Deleting files (no rm or deletion)\n', '')</span></span>
+<span class="line"><span style="color:#40A02B">)</span></span>
+<span class="line"><span style="color:#40A02B">"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#4C4F69"> i </span><span style="color:#8839EF">in</span><span style="color:#40A02B"> 1</span><span style="color:#40A02B"> 2</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  echo</span><span style="color:#40A02B"> "--- ずれあり </span><span style="color:#4C4F69">$i</span><span style="color:#40A02B"> 回目"</span></span>
+<span class="line"><span style="color:#4C4F69">  HOME</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">$T</span><span style="color:#40A02B">"</span><span style="color:#4C4F69"> $PY </span><span style="color:#40A02B">~/.claude/explore-override/check.py</span></span>
+<span class="line"><span style="color:#8839EF">done</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">cp</span><span style="color:#40A02B"> ~/.claude/agents/Explore.md</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$T</span><span style="color:#40A02B">/.claude/agents/Explore.md"</span></span>
+<span class="line"><span style="color:#8839EF">for</span><span style="color:#4C4F69"> i </span><span style="color:#8839EF">in</span><span style="color:#40A02B"> 1</span><span style="color:#40A02B"> 2</span><span style="color:#7C7F93">;</span><span style="color:#8839EF"> do</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  echo</span><span style="color:#40A02B"> "--- 修正後 </span><span style="color:#4C4F69">$i</span><span style="color:#40A02B"> 回目"</span></span>
+<span class="line"><span style="color:#4C4F69">  HOME</span><span style="color:#179299">=</span><span style="color:#40A02B">"</span><span style="color:#4C4F69">$T</span><span style="color:#40A02B">"</span><span style="color:#4C4F69"> $PY </span><span style="color:#40A02B">~/.claude/explore-override/check.py</span></span>
+<span class="line"><span style="color:#D20F39;font-style:italic">  echo</span><span style="color:#40A02B"> "exit=</span><span style="color:#4C4F69">$?</span><span style="color:#40A02B"> state=</span><span style="color:#7C7F93">$(</span><span style="color:#1E66F5;font-style:italic">cat</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$T</span><span style="color:#40A02B">/.claude/explore-override/last-version" </span><span style="color:#179299">2></span><span style="color:#40A02B">/dev/null</span><span style="color:#7C7F93">)</span><span style="color:#40A02B">"</span></span>
+<span class="line"><span style="color:#8839EF">done</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#1E66F5;font-style:italic">rm</span><span style="color:#40A02B"> -rf</span><span style="color:#40A02B"> "</span><span style="color:#4C4F69">$T</span><span style="color:#40A02B">"</span></span>
+<span class="line"></span></code></pre>
+<p>検証環境（ <code>v2.1.318</code> ）での修正前後の挙動差は次のとおりでした<sup><a href="#user-content-fn-1" id="user-content-fnref-1-35" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<ul>
+<li><strong>修正前（初版）</strong>: 本文 1 行削除と <code>description</code> 改変を同時に行ってテストしたところ、1 回目は両方の警告が出たものの、2 回目は <code>last-version</code> 更新済みのため無出力で素通りしました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-36" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+<li><strong>修正後（ <code>if not drift:</code> 追加後）</strong>: 本文 1 行削除の状態で 2 回連続実行したところ、1 回目・2 回目とも通知ヘッダに続けて欠落行の警告が出力され続け、元の <code>Explore.md</code> を復元した直後の 1 回目で <code>last-version</code> に <code>2.1.318</code> が記録されて無出力・ <code>exit=0</code> に戻りました<sup><a href="#user-content-fn-1" id="user-content-fnref-1-37" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+</ul>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>- 組み込みプロンプトにあって上書き定義に無い行:</span></span>
+<span class="line"><span>    - Deleting files (no rm or deletion)</span></span>
+<span class="line"><span>--- 修正後 1 回目</span></span>
+<span class="line"><span>exit=0 state=2.1.318</span></span>
+<span class="line"><span>--- 修正後 2 回目</span></span>
+<span class="line"><span>exit=0 state=2.1.318</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>（注: 検証ログの実測出力から抜粋しているため、コマンド側のラベル行 <code>--- ずれあり ...</code> や通知ヘッダ行、および 2 回目の重複する警告行は省略しています。）</p>
+<p>なお、修正前のテストでは「本文 1 行削除」と「 <code>description</code> 改変」を同時に行ったのに対し、修正後のテストでは「本文 1 行削除」のみを実施しているため、 <code>description</code> 単体を改変した際の継続警告挙動は同テストでは単体切り分けしていません（コード上は同じ <code>warn</code> リストから <code>drift = bool(warn)</code> を判定しています）。</p>
+<h3 id="3-現行バイナリでの読み取り専用検算2026-11-18-時点">3. 現行バイナリでの読み取り専用検算（2026-11-18 時点）</h3>
+<p><code>last-version</code> の書き換えや外部通信を行わずに、現存する実行ファイルと <code>Explore.md</code> の一致だけを確かめたい場合は、 <code>check.py</code> をモジュールとして読み込んで検査関数を直接呼び出せます。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#1E66F5;font-style:italic">/usr/bin/python3</span><span style="color:#40A02B"> -</span><span style="color:#179299"> &#x3C;&#x3C;</span><span style="color:#40A02B">'EOF'</span></span>
+<span class="line"><span style="color:#40A02B">import importlib.util, pathlib</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">spec = importlib.util.spec_from_file_location(</span></span>
+<span class="line"><span style="color:#40A02B">    "chk", pathlib.Path.home() / ".claude/explore-override/check.py"</span></span>
+<span class="line"><span style="color:#40A02B">)</span></span>
+<span class="line"><span style="color:#40A02B">m = importlib.util.module_from_spec(spec)</span></span>
+<span class="line"><span style="color:#40A02B">spec.loader.exec_module(m)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#40A02B">prompt, desc = m.extract(m.binary())</span></span>
+<span class="line"><span style="color:#40A02B">a_desc, body = m.agent_parts()</span></span>
+<span class="line"><span style="color:#40A02B">print("parts:", len(m.literal_parts(prompt)), "missing:", m.check_prompt(prompt, body), "desc_match:", desc == a_desc)</span></span>
+<span class="line"><span style="color:#40A02B">EOF</span></span>
+<span class="line"></span></code></pre>
+<p>2026-11-18 時点でディスク上に現存する <code>v2.1.326</code> バイナリと現行の <code>v2.1.327</code> バイナリ（ <code>354,515,104</code> bytes ）に対してこの読み取り専用検算を実行したところ、 <code>v2.1.326</code> では <code>missing: []</code> ・ <code>desc_match: True</code> を、 <code>v2.1.327</code> では <code>literal_parts</code> 7 断片に対して <code>missing: []</code> ・ <code>desc_match: True</code> を確認しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-38" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h2 id="運用上の制約実証範囲の境界と代替手段の比較">運用上の制約・実証範囲の境界と代替手段の比較</h2>
+<p>導入後の運用実態と、この仕組みがカバーできる範囲・代替手段との使い分けを整理します。</p>
+<h3 id="実運用の現在地と検証できていない領域">実運用の現在地と検証できていない領域</h3>
+<p>検証環境では 2026-11-08 以降も <code>Explore.md</code> を変更せず維持しており（2026-11-17 のプロンプト監査でも読み取り専用の逐語コピーとして残す判断）、2026-11-18 11:08 時点では <code>last-version</code> が <code>2.1.327</code> まで自動追従しています<sup><a href="#user-content-fn-1" id="user-content-fnref-1-39" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<p>ただし、導入（2026-11-06 <code>v2.1.318</code> ）から <code>v2.1.327</code> （2026-11-18 時点）までの全セッションログ検索および筆者の確認範囲において、 <strong>実版更新を契機に <code>[explore-override]</code> 警告が発火した実例はまだ 0 件</strong> です<sup><a href="#user-content-fn-1" id="user-content-fnref-1-40" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。本仕組みの検知動作はあくまで先述の意図的破壊テストと擬似版更新テストで確認したものであり、実版更新での発火頻度や検知率は未計測です。</p>
+<p>また、運用上は次の 4 点の境界・制約があります。</p>
+<ol>
+<li><strong>ネイティブ配置とバイナリ内部構文への依存</strong>: <code>exe.name</code> による版番号取得と <code>mmap</code> はバージョン文字列の実行ファイル名で配置されるネイティブインストーラ版を前提としており、npm 版など配置が異なる環境では更新検知が動作しません。また <code>P_START</code> / <code>P_END</code> / <code>D_START</code> は非公開の実装文字列に依存するため、将来のどの版で構文が変わって壊れるかは予測できません（消失時はフェイルセーフで警告が出ます）。</li>
+<li><strong><code>whenToUseLean</code> と <code>${...}</code> 変数の対象外</strong>: <code>check.py</code> は <code>whenToUse</code> 側のみを照合しており、 <code>whenToUseLean</code> 側や <code>`${...}`</code> 変数展開の中身だけが変化した場合の差は検知しません。また <code>v2.1.318</code> バイナリは自動更新で整理されているため、現存する <code>v2.1.322</code> 〜 <code>v2.1.327</code> 分を除き、全期間を通じて <code>whenToUseLean</code> や <code>`${...}`</code> が変化したかは遡って切り分けられません<sup><a href="#user-content-fn-1" id="user-content-fnref-1-41" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</li>
+<li><strong><code>CHANGELOG.md</code> のオフライン耐性と網羅限界</strong>: ネットワーク不達時は <code>timeout=5</code> （5 秒）でタイムアウトして未確認の警告を出しつつバイナリ照合を優先します。ただし <code>drift == False</code> （定義側が一致）のときはオフラインの回でも <code>last-version</code> が更新されるため、その回に取得できなかった <code>CHANGELOG</code> の範囲は次回再照合されません。また <code>CHANGELOG.md</code> に <code>Explore</code> の語を含まない微調整はバイナリ照合側で拾う前提です。</li>
+<li><strong>未計測の領域</strong>: カスタム <code>Explore.md</code> （ <code>isBuiltIn: false</code> ）で <code>omitClaudeMd: true</code> を指定した場合の <code>CLAUDE.md</code> や <code>git status</code> の実挙動、および <code>whenToUseLean</code> との切り替えによる呼び出し精度差は本検証の計測範囲外であるため、公式仕様上の挙動の参照に留めています。</li>
+</ol>
+<h3 id="代替手段との比較モデル固定制御の-4-パターン">代替手段との比較：モデル固定・制御の 4 パターン</h3>
+<p>組み込みプロンプトの変更追従性を保ったままモデルだけを一律で下げたい場合は <code>CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1</code> の併用または呼び出し時の <code>model</code> 指定を選び、コード編集を行う他のサブエージェントのモデルを変えずに <code>Explore</code> だけをツール制限ごと安全に固定したい場合は <code>Explore.md</code> 上書きと <code>check.py</code> 監視の併用を選びます。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方式</th><th>対象範囲</th><th>組み込みプロンプトの追従</th><th>他サブエージェントへの影響</th><th>向いている用途</th></tr></thead><tbody><tr><td><code>Explore.md</code> 上書き ＋ <code>check.py</code> 監視</td><td><code>Explore</code> のみ（ <code>~/.claude/agents/</code> または <code>.claude/agents/</code> ）</td><td>自動追従しない（版更新時に自動で差分警告）</td><td>なし</td><td><code>Explore</code> だけモデルやツールを固定し、仕様変化を逃したくない場合</td></tr><tr><td><code>CLAUDE_CODE_SUBAGENT_MODEL</code> ＋ <code>CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1</code></td><td>全サブエージェント・teammate・workflow agent（ <code>v2.1.257</code> 以降）</td><td>組み込みプロンプトのまま追従（ <code>Explore</code> に適用）</td><td><strong>あり</strong> （ <code>general-purpose</code> 等も含め全指定モデルへ強制）</td><td>コード編集を含む全サブエージェントを一律に同一モデルへ固定したい場合</td></tr><tr><td>呼び出し時の <code>model</code> 指定</td><td>その 1 回の委任のみ</td><td>組み込みプロンプトのまま追従</td><td>なし</td><td>特定タスクだけ一時的に Haiku 等へ逃がしたい場合</td></tr><tr><td><code>CLAUDE_CODE_DISABLE_EXPLORE_PLAN_AGENTS=1</code></td><td>組み込み <code>Explore</code> / <code>Plan</code> の無効化（ <code>v2.1.198</code> 以降）</td><td>組み込み自体を使わない（通常の検索ツールや <code>general-purpose</code> を使用）</td><td>検索が汎用側へ移る</td><td>組み込み <code>Explore</code> の挙動や <code>CLAUDE.md</code> スキップを丸ごと避けたい場合</td></tr></tbody></table>
+<p>ここで注意したいのは、 <code>CLAUDE_CODE_SUBAGENT_MODEL=haiku</code> を単独で設定しても、 <code>v2.1.251</code> 以降は組み込み <code>Explore</code> と <code>Plan</code> のモデルが変わらない点です<sup><a href="#user-content-fn-2" id="user-content-fnref-2-6" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup><sup><a href="#user-content-fn-10" id="user-content-fnref-10" data-footnote-ref="" aria-describedby="footnote-label">10</a></sup>。Developers Digest（2026-10-09 更新）による Claude Code <code>v2.1.295</code> （メインモデル Sonnet 5.5）でのヘッドレス実測でも、 <code>CLAUDE_CODE_SUBAGENT_MODEL=haiku</code> 単独では <code>Explore</code> は Sonnet 5.5 のまま（18,249 トークン / 6.5s）であり、 <code>CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1</code> 併用で Haiku 5.5（18,656 トークン / 5.3s）、 <code>--agents</code> での <code>Explore</code> 上書きで Haiku 5.5（14,088 トークン / 3.8s）になったと報告されています<sup><a href="#user-content-fn-8" id="user-content-fnref-8-2" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。同記事では 100K トークン以下の単価（100 万トークンあたり Haiku 5.5 が入力 $0.10・出力 $0.50、Sonnet 5.5 が入力 $2.00・出力 $10.00、Opus 5.5 が入力 $4.00・出力 $20.00）から、Haiku 5.5 は Opus 5.5 比で 40x、Sonnet 5.5 比で 20x 安価であると試算しています<sup><a href="#user-content-fn-8" id="user-content-fnref-8-3" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。一方で、Terminal-Bench 4.0 では Haiku 5.5 が 39.2% であるのに対し Sonnet 5.5 は 70.6% を記録しています<sup><a href="#user-content-fn-8" id="user-content-fnref-8-4" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。そのため同記事は、コード編集を行うサブエージェントまで一律で Haiku へ固定する <code>CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1</code> の常時適用には慎重であるべきだと指摘しています<sup><a href="#user-content-fn-8" id="user-content-fnref-8-5" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-claudeagentsexploremd-で-explore-を上書きすると何が置き換わりますか">Q. ~/.claude/agents/Explore.md で Explore を上書きすると何が置き換わりますか？</h3>
+<p><strong>A.</strong> モデル指定だけでなくシステムプロンプト・ツール構成・ <code>description</code> も自作ファイル側へ置き換わり、セッションログ上では組み込みエージェント一覧（ <code>builtInTypes</code> ）から外れて <code>isBuiltIn: false</code> として扱われます。そのため Claude Code 本体がアップデートされても、自作ファイルを更新しない限り新しい組み込みプロンプトは使われません。</p>
+<h3 id="q-checkpy-はなぜハッシュ値ではなく固定文字列と-description-で照合しているのですか">Q. check.py はなぜハッシュ値ではなく固定文字列と description で照合しているのですか？</h3>
+<p><strong>A.</strong> バイナリ内の組み込みプロンプトは JS テンプレートリテラルとして <code>`${...}`</code> の変数補間を含んでおり、変数名や補間構文の変化を避けて実文面の変更だけを検知するためです。 <code>check.py</code> は <code>`${...}`</code> を除いた固定行が <code>Explore.md</code> 本文に出現順で含まれるか、 <code>whenToUse</code> 側の <code>description</code> が一致するか、公式 <code>CHANGELOG.md</code> に <code>Explore</code> を含む更新があるかの 3 点を確認します。</p>
+<h3 id="q-claude_code_subagent_model_force1-と-exploremd-上書き監視はどう使い分けるべきですか">Q. CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1 と Explore.md 上書き＋監視はどう使い分けるべきですか？</h3>
+<p><strong>A.</strong> 組み込みプロンプトの追従を保ったまま全サブエージェントのモデルを一律に固定したいなら <code>CLAUDE_CODE_SUBAGENT_MODEL</code> と <code>CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1</code> の併用、コード編集を行う <code>general-purpose</code> 等のモデルを変えずに <code>Explore</code> だけモデルやツールを制御しつつ本家の更新ずれも検知したいなら <code>Explore.md</code> 上書きと <code>check.py</code> 監視を選びます。なお <code>CLAUDE_CODE_SUBAGENT_MODEL</code> 単独では組み込み <code>Explore</code> のモデルは変わりません。</p>
+<h3 id="q-claude-code-のアップデートでバイナリ内の目印p_start-等が消えた場合はどうなりますか">Q. Claude Code のアップデートでバイナリ内の目印（P_START 等）が消えた場合はどうなりますか？</h3>
+<p><strong>A.</strong> <code>check.py</code> は「実行ファイルに Explore プロンプト（または description）の目印が見つからない」という警告を標準出力へ出し、 <code>last-version</code> を更新せずに正常経路では <code>exit 0</code> で終了します。セッション開始をブロックせず、「構造が変わった可能性がある」ことを毎セッション通知するため、安全側に倒して手動確認へ移れます。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li><code>~/.claude/agents/Explore.md</code> による組み込み <code>Explore</code> の上書きは、モデル解決だけでなくプロンプトと <code>description</code> を丸ごと置き換え、セッションの <code>builtInTypes</code> から外れて <code>isBuiltIn: false</code> に固定されるため、放置すると本家の仕様変更が見えなくなる。</li>
+<li>版更新時だけバイナリ内の固定プロンプト行（ <code>literal_parts()</code> ）・ <code>whenToUse</code> 側 <code>description</code> ・公式 <code>CHANGELOG.md</code> の <code>\bExplore\b(?!r)</code> 行を照合し、 <code>drift = bool(warn)</code> と <code>if not drift:</code> で「ずれがある間は毎回警告を出し、解消後にだけ <code>last-version</code> を更新する」設計にすれば、一度きりの素通りを防げる。</li>
+<li>外部ライブラリ不要の標準 Python をシステム標準のフルパス（ <code>/usr/bin/python3</code> ）で <code>SessionStart</code> フックに登録し、正常経路で <code>exit 0</code> を返すことで、 <code>mise</code> 等の shim による環境依存エラーを避けつつセッション開始を止めずに警告をコンテキストへ注入できる。</li>
+<li>導入後から <code>v2.1.327</code> （2026-11-18 時点）までの実運用では実版更新による警告発火が 0 件であり、実環境での発火頻度は未計測である一方、初回破壊テスト（ <code>Explore.md</code> 1 行削除＋ <code>description</code> 改変）と修正後の 1 行削除テスト・擬似版更新テスト（ <code>2.1.190</code> ）で検知と再通知の動作を確認できている。</li>
+</ul>
+<p>本チュートリアルで構築した仕組みの自社開発環境への統合や、AI エージェントのフック設計・モデル運用基盤・品質管理に関するお悩みやご要望は、ぜひ <a href="/#contact">コンタクトフォーム</a> よりお気軽にご相談ください。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p>筆者による検証環境ログ（2026-10-12〜2026-11-18 観測、非公開ローカル記録）。上書き前 5 本の <code>claude-opus-5-5</code> 応答、 <code>builtInTypes</code> 除外と <code>isBuiltIn: false</code> 化、 <code>v2.1.318</code> バイナリのオフセットとサイズ（ <code>319,598,464</code> bytes ）、 <code>check.py</code> バグ修正前後の破壊テストと <code>2.1.190</code> 擬似版更新テスト、 <code>v2.1.326</code> ・ <code>v2.1.327</code> （ <code>354,515,104</code> bytes ）の読み取り専用検算、実運用での警告発火 0 件の記録に基づく。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-1-5" data-footnote-backref="" aria-label="Back to reference 1-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-1-6" data-footnote-backref="" aria-label="Back to reference 1-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-1-7" data-footnote-backref="" aria-label="Back to reference 1-7" class="data-footnote-backref">↩<sup>7</sup></a> <a href="#user-content-fnref-1-8" data-footnote-backref="" aria-label="Back to reference 1-8" class="data-footnote-backref">↩<sup>8</sup></a> <a href="#user-content-fnref-1-9" data-footnote-backref="" aria-label="Back to reference 1-9" class="data-footnote-backref">↩<sup>9</sup></a> <a href="#user-content-fnref-1-10" data-footnote-backref="" aria-label="Back to reference 1-10" class="data-footnote-backref">↩<sup>10</sup></a> <a href="#user-content-fnref-1-11" data-footnote-backref="" aria-label="Back to reference 1-11" class="data-footnote-backref">↩<sup>11</sup></a> <a href="#user-content-fnref-1-12" data-footnote-backref="" aria-label="Back to reference 1-12" class="data-footnote-backref">↩<sup>12</sup></a> <a href="#user-content-fnref-1-13" data-footnote-backref="" aria-label="Back to reference 1-13" class="data-footnote-backref">↩<sup>13</sup></a> <a href="#user-content-fnref-1-14" data-footnote-backref="" aria-label="Back to reference 1-14" class="data-footnote-backref">↩<sup>14</sup></a> <a href="#user-content-fnref-1-15" data-footnote-backref="" aria-label="Back to reference 1-15" class="data-footnote-backref">↩<sup>15</sup></a> <a href="#user-content-fnref-1-16" data-footnote-backref="" aria-label="Back to reference 1-16" class="data-footnote-backref">↩<sup>16</sup></a> <a href="#user-content-fnref-1-17" data-footnote-backref="" aria-label="Back to reference 1-17" class="data-footnote-backref">↩<sup>17</sup></a> <a href="#user-content-fnref-1-18" data-footnote-backref="" aria-label="Back to reference 1-18" class="data-footnote-backref">↩<sup>18</sup></a> <a href="#user-content-fnref-1-19" data-footnote-backref="" aria-label="Back to reference 1-19" class="data-footnote-backref">↩<sup>19</sup></a> <a href="#user-content-fnref-1-20" data-footnote-backref="" aria-label="Back to reference 1-20" class="data-footnote-backref">↩<sup>20</sup></a> <a href="#user-content-fnref-1-21" data-footnote-backref="" aria-label="Back to reference 1-21" class="data-footnote-backref">↩<sup>21</sup></a> <a href="#user-content-fnref-1-22" data-footnote-backref="" aria-label="Back to reference 1-22" class="data-footnote-backref">↩<sup>22</sup></a> <a href="#user-content-fnref-1-23" data-footnote-backref="" aria-label="Back to reference 1-23" class="data-footnote-backref">↩<sup>23</sup></a> <a href="#user-content-fnref-1-24" data-footnote-backref="" aria-label="Back to reference 1-24" class="data-footnote-backref">↩<sup>24</sup></a> <a href="#user-content-fnref-1-25" data-footnote-backref="" aria-label="Back to reference 1-25" class="data-footnote-backref">↩<sup>25</sup></a> <a href="#user-content-fnref-1-26" data-footnote-backref="" aria-label="Back to reference 1-26" class="data-footnote-backref">↩<sup>26</sup></a> <a href="#user-content-fnref-1-27" data-footnote-backref="" aria-label="Back to reference 1-27" class="data-footnote-backref">↩<sup>27</sup></a> <a href="#user-content-fnref-1-28" data-footnote-backref="" aria-label="Back to reference 1-28" class="data-footnote-backref">↩<sup>28</sup></a> <a href="#user-content-fnref-1-29" data-footnote-backref="" aria-label="Back to reference 1-29" class="data-footnote-backref">↩<sup>29</sup></a> <a href="#user-content-fnref-1-30" data-footnote-backref="" aria-label="Back to reference 1-30" class="data-footnote-backref">↩<sup>30</sup></a> <a href="#user-content-fnref-1-31" data-footnote-backref="" aria-label="Back to reference 1-31" class="data-footnote-backref">↩<sup>31</sup></a> <a href="#user-content-fnref-1-32" data-footnote-backref="" aria-label="Back to reference 1-32" class="data-footnote-backref">↩<sup>32</sup></a> <a href="#user-content-fnref-1-33" data-footnote-backref="" aria-label="Back to reference 1-33" class="data-footnote-backref">↩<sup>33</sup></a> <a href="#user-content-fnref-1-34" data-footnote-backref="" aria-label="Back to reference 1-34" class="data-footnote-backref">↩<sup>34</sup></a> <a href="#user-content-fnref-1-35" data-footnote-backref="" aria-label="Back to reference 1-35" class="data-footnote-backref">↩<sup>35</sup></a> <a href="#user-content-fnref-1-36" data-footnote-backref="" aria-label="Back to reference 1-36" class="data-footnote-backref">↩<sup>36</sup></a> <a href="#user-content-fnref-1-37" data-footnote-backref="" aria-label="Back to reference 1-37" class="data-footnote-backref">↩<sup>37</sup></a> <a href="#user-content-fnref-1-38" data-footnote-backref="" aria-label="Back to reference 1-38" class="data-footnote-backref">↩<sup>38</sup></a> <a href="#user-content-fnref-1-39" data-footnote-backref="" aria-label="Back to reference 1-39" class="data-footnote-backref">↩<sup>39</sup></a> <a href="#user-content-fnref-1-40" data-footnote-backref="" aria-label="Back to reference 1-40" class="data-footnote-backref">↩<sup>40</sup></a> <a href="#user-content-fnref-1-41" data-footnote-backref="" aria-label="Back to reference 1-41" class="data-footnote-backref">↩<sup>41</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://code.claude.com/docs/en/sub-agents">Create custom subagents - Claude Code Docs</a> Anthropic（Claude Code Docs）、取得キャッシュ確認日 2026-09-07（URL 疎通 200 確認 2026-11-18）。同名 <code>Explore</code> による組み込み上書き・Claude API 上の Opus 上限継承は <code>## Built-in subagents</code>、配置優先順位とログ階層 <code>~/.claude/projects/{project}/{sessionId}/subagents/</code> は <code>### Choose the subagent scope</code> / <code>#### Resume subagents</code>、対応 frontmatter 一覧は <code>#### Supported frontmatter fields</code>、モデル解決順と <code>v2.1.251</code> 以前からの変更は <code>### Choose a model</code>、 <code>CLAUDE_CODE_SUBAGENT_MODEL_FORCE</code> 併用時の挙動は <code>#### Run every subagent on one model</code>、 <code>CLAUDE.md</code> ・ <code>git status</code> 省略仕様は <code>#### What loads at startup</code>（本記事参照キャッシュは 2026-09-07 取得分のため <code>v2.1.271</code> 以降に追加された <code>omitClaudeMd</code> の記述は含まない。同フィールドの公式導入は <code>[^8]</code> で確認）。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-2-2" data-footnote-backref="" aria-label="Back to reference 2-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-2-3" data-footnote-backref="" aria-label="Back to reference 2-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-2-4" data-footnote-backref="" aria-label="Back to reference 2-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-2-5" data-footnote-backref="" aria-label="Back to reference 2-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-2-6" data-footnote-backref="" aria-label="Back to reference 2-6" class="data-footnote-backref">↩<sup>6</sup></a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md">Claude Code CHANGELOG.md</a> Anthropic（GitHub リポジトリ <code>anthropics/claude-code</code> ）、取得キャッシュ確認日 2026-10-01（ <code>2.1.286</code> まで）・2026-11-06 テスト時実取得（URL 疎通 200 確認 2026-11-18）。 <code>Explore</code> の <code>inherit</code> 変更（ <code>capped at opus</code> ）は <code>## 2.1.198</code>、 <code>CLAUDE_CODE_SUBAGENT_MODEL</code> の優先順位変更は <code>## 2.1.251</code>、 <code>CLAUDE_CODE_SUBAGENT_MODEL_FORCE</code> 追加は <code>## 2.1.257</code>、未知モデル ID 時の Explore 継承修正は <code>## 2.1.284</code> （擬似版更新テストで <code>2.1.198</code> と <code>2.1.284</code> の 2 行検出と一致）。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-3-3" data-footnote-backref="" aria-label="Back to reference 3-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://github.com/anthropics/claude-code/issues/25546">Allow configuring model for built-in agents without replacing entire agent definition · Issue #25546</a> testaccedu、2026-02-13 投稿（GitHub Issue、Claude Code 2.1.41、URL 疎通 200 確認 2026-11-18）。 <code>~/.claude/agents/Explore.md</code> で定義を丸ごと上書きするワークアラウンドの 3 つの弊害（Anthropic のプロンプト喪失・元挙動の推測・将来の改善取り逃し）は <code>## Current Workaround</code>（先行 Issue #16594 の重複としてクローズ）。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://github.com/asgeirtj/system_prompts_leaks/blob/main/Anthropic/claude-code/agents/Explore.md">system_prompts_leaks / Anthropic/claude-code/agents/Explore.md</a> asgeirtj（GitHub リポジトリ <code>system_prompts_leaks</code> ）、取得確認日 2026-11-18（URL 疎通 200 確認 2026-11-18）。 <code>whenToUse</code> / <code>whenToUseLean</code> の 2 種類の説明文字列、 <code>model: inherit</code>、 <code>omitClaudeMd: true</code>、 <code>disallowedTools</code> の構造スナップショットは同ファイル冒頭フロントマターおよび本文（サードパーティによる非公式抽出スナップショットであり、公式仕様の根拠ではなくバイナリ調査の補助資料）。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-5-3" data-footnote-backref="" aria-label="Back to reference 5-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://gist.github.com/joshcartme/dd71df7b4c51c356760b28d7f383dff2">extract calude code explore subagent, set model to haiku</a> joshcartme（GitHub Gist）、取得確認日 2026-11-18（URL 疎通 200 確認 2026-11-18）。 <code>strings</code> と <code>awk</code> でバイナリから <code>whenToUseLean</code> 側の <code>description</code> とテンプレートを抜き出す手動・再生成スクリプト（ <code>`${tool}`</code> 補間ギャップを手動解消する方式で自動監視は持たない）は <code>README.md</code> の <code>### DESCRIPTION (whenToUseLean — used verbatim as the agent description)</code> および <code>extract-explore-prompt.sh</code> コメント（単一ソース、タイトル原文どおり <code>calude</code> の綴り）。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://code.claude.com/docs/en/hooks">Hooks reference - Claude Code Docs</a> Anthropic（Claude Code Docs）、取得キャッシュ確認日 2026-10-02（URL 疎通 200 確認 2026-11-18）。ライフサイクルと開始・再開タイミングは <code>## Hook lifecycle</code> / <code>### SessionStart</code>、非ブロック仕様と <code>exit code 2</code> の扱いは <code>#### Exit code 2 behavior per event</code>、 <code>stdout</code> のコンテキスト注入と 10,000 文字上限は <code>#### Exit code 0</code> / <code>### JSON output</code> / <code>#### Add context for Claude</code>、 <code>--continue</code> ・ <code>--resume</code> ・ <code>--fork-session</code> 時実行は <code>### SessionStart</code> / <code>#### SessionStart input</code>。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-7-2" data-footnote-backref="" aria-label="Back to reference 7-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-7-3" data-footnote-backref="" aria-label="Back to reference 7-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-7-4" data-footnote-backref="" aria-label="Back to reference 7-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://www.developersdigest.tech/blog/claude-code-subagent-model-haiku-explore-2026">Claude Code Subagent Model: Put Explore on Haiku 5.5</a> Developers Digest、2026-10-09 更新（URL 疎通 200 確認 2026-11-18）。 <code>v2.1.295</code> （メイン Sonnet 5.5）での 5 パターン <code>claude -p</code> 実測トークン数・秒数は <code>## What we tested</code> 配下の比較表（ <code>omitClaudeMd: true (v2.1.271 or later)</code> への言及を含む）、Haiku 5.5（ <code>up to 100K</code>、入力 $0.10 / 出力 $0.50）と Opus 5.5 / Sonnet 5.5 の単価・40x / 20x 試算は <code>## What it saves</code>、Terminal-Bench 4.0（39.2% vs 70.6%）と <code>_FORCE=1</code> 常時適用の注意は <code>## When to keep a subagent off Haiku</code>（第三者メディアによる単一ソース実測、計測日 2026-10-09・対象版 <code>v2.1.295</code> ）。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-8-2" data-footnote-backref="" aria-label="Back to reference 8-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-8-3" data-footnote-backref="" aria-label="Back to reference 8-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-8-4" data-footnote-backref="" aria-label="Back to reference 8-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-8-5" data-footnote-backref="" aria-label="Back to reference 8-5" class="data-footnote-backref">↩<sup>5</sup></a></p>
+</li>
+<li id="user-content-fn-9">
+<p><a href="https://code.claude.com/docs/en/settings">Settings files and precedence - Claude Code Docs</a> Anthropic（Claude Code Docs）、取得キャッシュ確認日 2026-10-18（URL 疎通 200 確認 2026-11-18）。ユーザー設定 <code>~/.claude/settings.json</code> の適用範囲とプロジェクト設定との優先順位は <code>## Settings files and who they affect</code> / <code>### Compare the scope of each settings file</code> / <code>## Settings precedence</code>。 <a href="#user-content-fnref-9" data-footnote-backref="" aria-label="Back to reference 9" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-10">
+<p><a href="https://code.claude.com/docs/en/env-vars">Environment variables - Claude Code Docs</a> Anthropic（Claude Code Docs）、取得キャッシュ確認日 2026-10-02（URL 疎通 200 確認 2026-11-18）。 <code>CLAUDE_CODE_DISABLE_EXPLORE_PLAN_AGENTS</code> （組み込み Explore/Plan 無効化、カスタム定義には非影響）・ <code>CLAUDE_CODE_SUBAGENT_MODEL</code> ・ <code>CLAUDE_CODE_SUBAGENT_MODEL_FORCE</code> の定義は <code>## Variables</code>。 <a href="#user-content-fnref-10" data-footnote-backref="" aria-label="Back to reference 10" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 

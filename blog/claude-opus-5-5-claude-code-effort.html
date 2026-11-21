@@ -1,0 +1,198 @@
+<!DOCTYPE html><html lang="ja" data-tone="business" data-astro-cid-sckkx6r4> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Claude Opus 5.5 で Claude Code はどう変わる？ — 何もしなければ effort は medium で動く | Meetsource</title><meta name="description" content="Claude Code v2.1.280 で Opus 5.5 が Pro と Team Standard の既定モデルになり、effort の既定は Opus 5 の high から medium に変わりました。ユーザー設定に残した旧形式の effortLevel も効きません。手元の Claude Code の記録で実際に起きたことと、effort の確認・選び直しの手順を整理します。"><link rel="canonical" href="https://www.meetsource.work/blog/claude-opus-5-5-claude-code-effort"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="512x512"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest"><link rel="alternate" type="application/rss+xml" title="Meetsource Tech Blog" href="/rss.xml"><meta property="og:type" content="article"><meta property="og:site_name" content="Meetsource"><meta property="og:title" content="Claude Opus 5.5 で Claude Code はどう変わる？ — 何もしなければ effort は medium で動く | Meetsource"><meta property="og:description" content="Claude Code v2.1.280 で Opus 5.5 が Pro と Team Standard の既定モデルになり、effort の既定は Opus 5 の high から medium に変わりました。ユーザー設定に残した旧形式の effortLevel も効きません。手元の Claude Code の記録で実際に起きたことと、effort の確認・選び直しの手順を整理します。"><meta property="og:url" content="https://www.meetsource.work/blog/claude-opus-5-5-claude-code-effort"><meta property="og:image" content="https://www.meetsource.work/blog/claude-opus-5-5-claude-code-effort-hero.webp"><meta property="og:locale" content="ja_JP"><meta property="article:published_time" content="2026-09-25T09:17:33.000Z"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Claude Opus 5.5 で Claude Code はどう変わる？ — 何もしなければ effort は medium で動く | Meetsource"><meta name="twitter:description" content="Claude Code v2.1.280 で Opus 5.5 が Pro と Team Standard の既定モデルになり、effort の既定は Opus 5 の high から medium に変わりました。ユーザー設定に残した旧形式の effortLevel も効きません。手元の Claude Code の記録で実際に起きたことと、effort の確認・選び直しの手順を整理します。"><meta name="twitter:image" content="https://www.meetsource.work/blog/claude-opus-5-5-claude-code-effort-hero.webp"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Claude Opus 5.5 で Claude Code はどう変わる？ — 何もしなければ effort は medium で動く","description":"Claude Code v2.1.280 で Opus 5.5 が Pro と Team Standard の既定モデルになり、effort の既定は Opus 5 の high から medium に変わりました。ユーザー設定に残した旧形式の effortLevel も効きません。手元の Claude Code の記録で実際に起きたことと、effort の確認・選び直しの手順を整理します。","datePublished":"2026-09-25T09:17:33.000Z","image":"https://www.meetsource.work/blog/claude-opus-5-5-claude-code-effort-hero.webp","author":{"@type":"Organization","name":"Meetsource"},"publisher":{"@type":"Organization","name":"Meetsource","logo":{"@type":"ImageObject","url":"https://www.meetsource.work/favicon.png"}},"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.meetsource.work/blog/claude-opus-5-5-claude-code-effort"}}</script><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Claude Code で Opus 5.5 の effort の既定値はいくつですか？","acceptedAnswer":{"@type":"Answer","text":"medium です。Opus 5 の既定は high だったので、1段階低い名前から始まります。いまの値はセッションのヘッダーに表示されます。"}},{"@type":"Question","name":"settings.json の effortLevel が Opus 5.5 に効かないのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"ユーザー設定のトップレベルにある effortLevel は、/effort がモデルごとに保存するようになる前（v2.1.251 より前）の古い形式で、Opus 5.5 以降のモデルには適用されない仕様だからです。/effort か /model で Opus 5.5 用のレベルを選ぶと、modelSettings に保存されます。プロジェクト・ローカル・管理設定のトップレベルの値は、Opus 5.5 にも効きます。なお modelSettings はモデルごとの保存なので、Opus 5 用に保存した値も Opus 5.5 には使われません。"}},{"@type":"Question","name":"Opus 5.5 の effort は medium と high のどちらにすべきですか？","acceptedAnswer":{"@type":"Answer","text":"まずは既定の medium で試すのが、公式の指針に沿った選び方です。Anthropic のテストでは、Opus 5.5 の medium はコーディングと知識労働の評価で Opus 5 の high と同等以上でした。より丁寧さが欲しい作業だけ high 以上に上げます。そのセッションの間だけ上げたいなら /effort のスライダーで s を、1回の応答だけ深く考えさせたいならプロンプトに ultrathink を使います（ultrathink は effort の値そのものは変えません）。"}}]}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"><noscript><style>
+        .fade-in-section {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      </style></noscript><link rel="stylesheet" href="/_astro/_slug_.DwvtkQL7.css">
+<link rel="stylesheet" href="/_astro/_slug_.Bkwt-oz-.css"><script type="module" src="/_astro/page.DPScUaxX.js"></script></head>  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YHLMFSCRPQ"></script> <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-YHLMFSCRPQ');
+        </script> <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923446804785015" crossorigin="anonymous"></script>  </html> <body data-astro-cid-sckkx6r4> <header class="glass" data-astro-cid-sckkx6r4> <div class="header-container" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <nav class="nav-links" data-astro-cid-sckkx6r4> <a href="/#services" class="nav-link" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" class="nav-link" data-astro-cid-sckkx6r4>開発実績</a> <a href="/#about" class="nav-link" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" class="nav-link" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" class="nav-link CTA-btn" data-astro-cid-sckkx6r4>お問い合わせ</a> </nav> </div> </header> <main data-astro-cid-sckkx6r4>   <article class="blog-post" data-astro-cid-7jjqptxk> <header class="post-header" data-astro-cid-7jjqptxk> <div class="post-meta" data-astro-cid-7jjqptxk> <time datetime="2026-09-25T09:17:33.000Z" data-astro-cid-7jjqptxk> 2026.09.25 </time> <a href="/blog/engineering" class="category-badge category-engineering" data-astro-cid-7jjqptxk> 技術 </a> <div class="post-tags" data-astro-cid-7jjqptxk> <span class="tag" data-astro-cid-7jjqptxk>#claude-code</span><span class="tag" data-astro-cid-7jjqptxk>#claude</span><span class="tag" data-astro-cid-7jjqptxk>#llm</span><span class="tag" data-astro-cid-7jjqptxk>#ai-operations</span> </div> </div> <h1 class="post-title" data-astro-cid-7jjqptxk>Claude Opus 5.5 で Claude Code はどう変わる？ — 何もしなければ effort は medium で動く</h1> <div class="hero-image-container" data-astro-cid-7jjqptxk> <img src="/blog/claude-opus-5-5-claude-code-effort-hero.webp" alt="Claude Opus 5.5 で Claude Code はどう変わる？ — 何もしなければ effort は medium で動く" class="hero-image" data-astro-cid-7jjqptxk> </div> </header> <div class="post-content markdown-body" data-astro-cid-7jjqptxk> <p>2026年9月22日（米国時間）に公開された Claude Code v2.1.280 で Claude Opus 5.5 が追加され、Pro と Team Standard の既定モデルが Sonnet から Opus（Opus 5.5）に変わりました<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。日本時間では9月23日 1:38 の公開です。</p>
+<p>同じモデルの話なのに、使った人の評価は驚くほど割れています。その差には、それぞれの設定や CLAUDE.md といった環境の違い（ハーネス）も効いているのだろうと私は思っています。</p>
+<p>評価を寄せた人の中には、effort の設定そのものに気づいた人もいます。Hacker News のある利用者は、Opus 5.5 に現在のブランチのコードレビューを頼んだところ、示された5つの行番号のうち4つが間違っていたと書いています。続けて「Claude の CLI 画面の隅に “Effort: medium” と出ているのに気づいた。前に high にしていたはずなのに、いつ medium に戻ったのかわからない」とも書いています<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup>。</p>
+<p>effort とは、Claude がどれだけ考えるか（思考の深さ）を調整する設定で、Claude Code では <code>low</code> から <code>max</code> までの5段階から選びます<sup><a href="#user-content-fn-3" id="user-content-fnref-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。平たく言えば「考える深さのつまみ」です。</p>
+<p>この記事を読むと、自分の Opus 5.5 がいまどの effort で動いているかを確かめ、据え置くか変えるかを意図して選べるようになります。</p>
+<div class="callout" data-callout="note" data-collapsible="false"><div class="callout-title"><div class="callout-title-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="2" x2="22" y2="6"></line><path d="M7.5 20.5 19 9l-4-4L3.5 16.5 2 22z"></path></svg></div><div class="callout-title-text">Note</div></div><div class="callout-content"><p>対象は Claude Code v2.1.280 以降と Claude Opus 5.5（<code>claude-opus-5-5</code>）です。事実は 2026年9月25日時点の公式ドキュメントに基づきます。</p></div></div>
+<h2 id="opus-5-までの-claude-code-の-effort-はどう決まっていたか">Opus 5 までの Claude Code の effort はどう決まっていたか</h2>
+<p>Opus 5 の既定の effort は <code>high</code> でした<sup><a href="#user-content-fn-3" id="user-content-fnref-3-2" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup><sup><a href="#user-content-fn-4" id="user-content-fnref-4" data-footnote-ref="" aria-describedby="footnote-label">4</a></sup>。何も設定しなければ、Opus 5 は <code>high</code> で動いていました（Opus 5 を使っていた頃の記録は<a href="/blog/opus-5-blog-writing-rejection">Opus 5 にブログを書かせた記事</a>にまとめています）。</p>
+<p>もう1つ押さえておきたいのが、effort の保存形式が途中で変わっていることです。</p>
+<ul>
+<li><strong>v2.1.251（2026年8月28日、米国時間）より前</strong>: <code>/effort</code> はユーザー設定の <strong>トップレベル</strong> に <code>effortLevel</code> を書いていました。全モデル共通の1つの値です<sup><a href="#user-content-fn-1" id="user-content-fnref-1-2" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-5" id="user-content-fnref-5" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</li>
+<li><strong>v2.1.251 以降</strong>: <code>/effort</code> は <strong>モデルごと</strong> に、<code>modelSettings</code> の下へ保存します<sup><a href="#user-content-fn-1" id="user-content-fnref-1-3" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup><sup><a href="#user-content-fn-5" id="user-content-fnref-5-2" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</li>
+</ul>
+<p>以前は全モデル共通のつまみが1つだけあり、いまはモデルごとにつまみがある、と考えるとわかりやすいと思います。</p>
+<h2 id="opus-5-と-opus-55-の-effort-の違い3つの変化">Opus 5 と Opus 5.5 の effort の違い：3つの変化</h2>
+<p>Opus 5.5 では、何も指定しないときの effort が1段階低い名前になり、古い形式の設定も効かなくなりました。ただし、同じ名前のレベルでも中身は同じではありません。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th></th><th>Opus 5</th><th>Opus 5.5</th></tr></thead><tbody><tr><td>何も指定しないときの effort</td><td><code>high</code></td><td><code>medium</code></td></tr><tr><td>ユーザー設定（<code>~/.claude/settings.json</code>）のトップレベル <code>effortLevel</code></td><td>効く</td><td>効かない（プロジェクト・ローカル・管理設定と <code>--settings</code> の値は効く）</td></tr><tr><td>同じレベル名での思考量</td><td>—</td><td>Opus 5 より1ターンあたり多く考える傾向（とくに <code>xhigh</code>・<code>max</code>）</td></tr></tbody></table>
+<p>つまり、環境変数や起動オプションで effort を指定せず、プロジェクト設定などにも値が無ければ、Opus 5 のときの感覚で何も触らずに使うと <code>medium</code> で動きます。</p>
+<p>なお Pro と Team Standard では、v2.1.280 から Claude Code の既定モデル自体も Sonnet 5 から Opus 5.5 に変わりました<sup><a href="#user-content-fn-3" id="user-content-fnref-3-3" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<h3 id="既定の-effort-が-medium-になった">既定の effort が medium になった</h3>
+<p>Claude Platform のドキュメントは、Opus 5 との挙動の違いとして次のように書いています<sup><a href="#user-content-fn-6" id="user-content-fnref-6" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<blockquote><p>A request that omits <code>effort</code> runs at <code>medium</code>; on Claude Opus 5 it ran at <code>high</code>.</p></blockquote>
+<p>（<code>effort</code> を省略したリクエストは <code>medium</code> で動く。Claude Opus 5 では <code>high</code> で動いていた）</p>
+<p>Claude Code のドキュメントも、各モデルの既定を次のように説明しています<sup><a href="#user-content-fn-3" id="user-content-fnref-3-4" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<blockquote><p><code>high</code> on every model that supports effort, except that Opus 5.5 defaults to <code>medium</code>, Opus 4.7 defaults to <code>xhigh</code>, …</p></blockquote>
+<p>（effort に対応するモデルでは <code>high</code>。ただし Opus 5.5 の既定は <code>medium</code>、Opus 4.7 の既定は <code>xhigh</code> で……）</p>
+<h3 id="settingsjson-のトップレベル-effortlevel-は-opus-55-に効かない">settings.json のトップレベル effortLevel は Opus 5.5 に効かない</h3>
+<p>ユーザー設定のトップレベルに <code>effortLevel</code> を残していても、Opus 5.5 には効きません。Claude Code のドキュメントの説明は次のとおりです<sup><a href="#user-content-fn-3" id="user-content-fnref-3-5" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<blockquote><p>a top-level <code>effortLevel</code> in your user settings file doesn’t count for Opus 5.5 … it keeps applying where it applied before, on Opus 5, Fable 5.1, and earlier models, while Opus 5.5 and models released after it start at their own default until you choose a level for them with <code>/effort</code> or the <code>/model</code> picker.</p></blockquote>
+<p>（ユーザー設定ファイルのトップレベルの <code>effortLevel</code> は Opus 5.5 には数えられない。〔中略〕Opus 5、Fable 5.1 とそれ以前のモデルにはこれまでどおり適用されるが、Opus 5.5 とそれ以降のモデルは、<code>/effort</code> か <code>/model</code> のピッカーでレベルを選ぶまで、それぞれの既定値から始まる）</p>
+<p>効かないのは、ユーザー設定（<code>~/.claude/settings.json</code>）のトップレベルの値だけです。同じ段落は続けて “A top-level <code>effortLevel</code> in project, local, or managed settings, or one passed with <code>--settings</code>, applies to every model.” と書いています<sup><a href="#user-content-fn-3" id="user-content-fnref-3-6" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。プロジェクト・ローカル・管理設定のトップレベルの値や、<code>--settings</code> で渡した値は Opus 5.5 にも効きます。</p>
+<p>v2.1.280 の CHANGELOG にも、“Changed an effort level saved before <code>/effort</code> became per-model to no longer apply to newly released models such as Opus 5.5” とあります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-4" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>。</p>
+<h3 id="同じレベル名でも中身は同じではない">同じレベル名でも中身は同じではない</h3>
+<p>名前が1段階下がったことを、公式は品質が1段階下がったこととは説明していません。Opus 5.5 のプロンプトガイドは、Anthropic のテストでは Opus 5.5 の <code>medium</code> が、コーディングと知識労働の評価で Opus 5 の <code>high</code> と同等以上だったと書いています<sup><a href="#user-content-fn-7" id="user-content-fnref-7" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</p>
+<blockquote><p>in Anthropic’s testing, Claude Opus 5.5 at <code>medium</code> matches or exceeds Claude Opus 5 at <code>high</code> on coding and knowledge-work evaluations</p></blockquote>
+<p>一方で、同じ Opus 5.5 の中で比べれば、<code>medium</code> は <code>high</code> より思考を減らすレベルです。Claude Code のレベル表は <code>medium</code> を “Reduces token usage for cost-sensitive work that can trade off some intelligence. The default on Opus 5.5” と説明しています<sup><a href="#user-content-fn-3" id="user-content-fnref-3-7" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。「Opus 5 の <code>high</code> と比べてどうか」（モデル間）と「同じ Opus 5.5 の <code>medium</code> と <code>high</code> はどう違うか」（モデル内）は、別の軸の話です。</p>
+<p>そもそも、レベル名が同じでもモデルが違えば中身は揃っていません<sup><a href="#user-content-fn-3" id="user-content-fnref-3-8" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<blockquote><p>The effort scale is calibrated per model, so the same level name does not represent the same underlying value across models.</p></blockquote>
+<p>（effort の尺度はモデルごとに調整されているので、同じレベル名でもモデルが違えば同じ値を表さない）</p>
+<p>さらに、同じレベルなら Opus 5.5 は Opus 5 より多く考える傾向があります。“At the same effort setting the model tends to think more per turn than Claude Opus 5, most of all at <code>xhigh</code> and <code>max</code>.” とされています<sup><a href="#user-content-fn-6" id="user-content-fnref-6-2" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。その帰結として、プロンプトガイドは “If you keep the <code>effort</code> value you set for Claude Opus 5, expect longer turns and more output tokens.” と書いています<sup><a href="#user-content-fn-7" id="user-content-fnref-7-2" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。Opus 5 で使っていた値をそのまま持ち込むと、ターンが長くなり出力トークンが増える、ということです。</p>
+<h2 id="私の-claude-code-では切り替えた瞬間に-medium-になっていた">私の Claude Code では、切り替えた瞬間に medium になっていた</h2>
+<p>自分の Claude Code のセッション記録（トランスクリプト）と設定ファイルを、Claude に集計させました。トランスクリプトには応答ごとに effort が記録されています（v2.1.212 の CHANGELOG に “Changed session transcripts to record the reasoning effort level on each assistant message” とあります<sup><a href="#user-content-fn-1" id="user-content-fnref-1-5" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>）。日時はすべて日本時間です。</p>
+<p><strong>Opus 5 の期間はすべて <code>high</code> だった。</strong> 2026年8月27日〜9月25日の直近25セッションのうち、Opus 5 を使った18本は、すべて effort が <code>high</code> でした。この期間、Opus に effort を保存した記録はなく、<code>high</code> は Opus 5 の既定値でした。25本の内訳は Opus 5 が18本、Sonnet 5 が4本、Opus 5.5 が4本です。9月23日の切り替えのセッション1本が Opus 5 と Opus 5.5 の両方に入るので、足すと26になります。</p>
+<p><strong><code>/model</code> で切り替えた次の応答から <code>medium</code> になった。</strong> 9月23日 2:54 に <code>/model</code> で Opus 5.5 を選びました。そのときの出力は次の1行です。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Set model to `Opus 5.5 (default)` and saved as your default for new sessions</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>その次の応答から、effort は <code>medium</code> になりました。この間、effort の操作は一度もしていません。</p>
+<p><strong>その後もずっと <code>medium</code> のまま。</strong> 9月25日までの Opus 5.5 のセッション（切り替えのセッションの後半を含む4本）は、すべて <code>medium</code> のままでした。<code>/effort</code> は一度も実行していません。</p>
+<p><strong>設定ファイルには Sonnet 5 の effort だけがあった。</strong> 9月25日時点で <code>~/.claude/settings.json</code> に保存されていたのは、Sonnet 5 の effort（<code>high</code>）だけでした。実物から effort に関係するキーだけを抜き出すと、次のとおりです。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>{</span></span>
+<span class="line"><span>  "modelSettings": {</span></span>
+<span class="line"><span>    "claude-sonnet-5": {</span></span>
+<span class="line"><span>      "effortLevel": "high"</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>  }</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>Opus 5.5 の項目も、トップレベルの <code>effortLevel</code> もありません。</p>
+<p>ここから読み取れることは3つです。</p>
+<ul>
+<li>私のケースは、旧設定が引き継がれなかった例ではありません。記録のある期間、Opus に effort を保存しておらず、<strong>既定値そのものが <code>high</code> から <code>medium</code> に変わった</strong> 例です。</li>
+<li>公式の解決順（明示の指定 → 保存した設定 → モデルの既定値）に照らすと<sup><a href="#user-content-fn-3" id="user-content-fnref-3-9" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>、保存が無い以上 <code>medium</code> になるのは仕様どおりで、記録と一致します。</li>
+<li>私は記録のある期間、Opus の effort を一度も選んでいなかったので、変化に気づく場面がありませんでした。モデルを選び直したときの出力にも、effort は出てきません（上の1行のとおりです）。</li>
+</ul>
+<h2 id="claude-code-で-opus-55-の-effort-を確認して選び直すやり方">Claude Code で Opus 5.5 の effort を確認して選び直すやり方</h2>
+<p>ここからの操作結果は、公式ドキュメントの記述に基づきます。</p>
+<h3 id="1-いまの-effort-を確かめる">1. いまの effort を確かめる</h3>
+<p>いちばん手早いのは、セッションのヘッダーを見ることです。effort はモデル名の隣に表示されます<sup><a href="#user-content-fn-3" id="user-content-fnref-3-10" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<blockquote><p>The current effort level is also shown in the session header next to the model name, for example “with low effort”</p></blockquote>
+<p><code>/model</code> を開かなくても、いまどのレベルで動いているかがわかります。</p>
+<h3 id="2-設定ファイルを確かめる">2. 設定ファイルを確かめる</h3>
+<p>次に <code>~/.claude/settings.json</code> の <code>modelSettings</code> に <code>claude-opus-5-5</code> の項目があるかを見ます。項目が無く、環境変数 <code>CLAUDE_CODE_EFFORT_LEVEL</code>・起動オプション <code>--effort</code>・プロジェクトなどの設定にも指定が無ければ、既定の <code>medium</code> で動きます<sup><a href="#user-content-fn-3" id="user-content-fnref-3-11" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<p>見落としやすい点が2つあります。</p>
+<ul>
+<li>ユーザー設定のトップレベルに <code>effortLevel</code> があっても、Opus 5.5 には効きません（前述）。</li>
+<li><code>modelSettings</code> はモデルごとの保存なので、Opus 5 用に保存した値も Opus 5.5 には使われません。ドキュメントのとおり、Opus 5.5 は “start at their own default until you choose a level for them” です<sup><a href="#user-content-fn-3" id="user-content-fnref-3-12" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</li>
+</ul>
+<h3 id="3-選び直す">3. 選び直す</h3>
+<p>保存はモデルごとなので、Opus 5.5 を選んだ状態で操作します<sup><a href="#user-content-fn-3" id="user-content-fnref-3-13" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。操作ごとの効き方は次のとおりです<sup><a href="#user-content-fn-3" id="user-content-fnref-3-14" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<ul>
+<li><code>/effort</code> を引数なしで実行 → スライダーが開きます。</li>
+<li><code>/effort high</code> のようにレベル名を付けて実行 → その値を既定として保存し、以後のセッションにも適用します。</li>
+<li>スライダーか <code>/model</code> のピッカーで <code>Enter</code> → 既定として保存します。</li>
+<li>スライダーか <code>/model</code> のピッカーで <code>s</code> → そのセッションだけに適用します（v2.1.257 以降）。</li>
+<li><code>/effort auto</code> → 使用中のモデルに保存したレベルを消します。</li>
+<li><code>max</code> → 環境変数 <code>CLAUDE_CODE_EFFORT_LEVEL</code> で指定しない限り、そのセッションだけに適用されます。</li>
+</ul>
+<p>保存か一時適用かは、確定のしかたで決まります。<code>Enter</code> とレベル名の直接指定は保存、<code>s</code> はそのセッションだけです。</p>
+<h3 id="4-公式の設定例">4. 公式の設定例</h3>
+<p>保存先の形を確かめたいときのために、Settings reference に載っている公式の例を示します。前置きは “This example keeps Opus 5.5 at <code>high</code> while other models use their own saved or default levels” です<sup><a href="#user-content-fn-5" id="user-content-fnref-5-3" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。</p>
+<pre class="astro-code catppuccin-latte" style="background-color:#eff1f5;color:#4c4f69; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>{</span></span>
+<span class="line"><span>  "modelSettings": {</span></span>
+<span class="line"><span>    "claude-opus-5-5": {</span></span>
+<span class="line"><span>      "effortLevel": "high"</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>  }</span></span>
+<span class="line"><span>}</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>保存先のキーはモデルの正式名（<code>claude-opus-5-5</code>）で、エイリアスや <code>[1m]</code> 付きの ID も同じ項目に対応します<sup><a href="#user-content-fn-5" id="user-content-fnref-5-4" data-footnote-ref="" aria-describedby="footnote-label">5</a></sup>。手で書くより、<code>/effort</code> を実行して Claude Code に書かせるほうが確実です。</p>
+<h3 id="5-1回だけ深く考えさせたいとき">5. 1回だけ深く考えさせたいとき</h3>
+<p>プロンプトのどこかに <code>ultrathink</code> と書きます。そのターンだけ深く考えるよう求める指示が加わります。セッションの effort も、API に送る effort も変わりません<sup><a href="#user-content-fn-3" id="user-content-fnref-3-15" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。“think hard” などの言い回しはキーワードとして扱われず、普通のプロンプトの文として渡されます<sup><a href="#user-content-fn-3" id="user-content-fnref-3-16" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。</p>
+<h2 id="opus-55-の-effort-はどのレベルを選ぶべきか">Opus 5.5 の effort はどのレベルを選ぶべきか</h2>
+<p>公式の指針は「たいていのタスクはモデルの既定の effort を使う」です<sup><a href="#user-content-fn-8" id="user-content-fnref-8" data-footnote-ref="" aria-describedby="footnote-label">8</a></sup>。</p>
+<blockquote><p>Our guidance is that for most tasks you should use the model’s default effort level.</p></blockquote>
+<p>ただしこれは Opus 5.5 の登場前、2026年7月7日の公式ブログの記述です。</p>
+<p>それでも、ここでいう「選び直す」は「<code>high</code> に上げる」という意味ではありません。既定が変わったことを知ったうえで、<code>medium</code> の据え置きも含めて、意図して選ぶということです。</p>
+<p>選ぶときの材料になる公式の記述は次の3つです。</p>
+<ul>
+<li>Opus 5 で使っていた値をそのまま持ち込むと、ターンが長くなり出力トークンが増えます<sup><a href="#user-content-fn-7" id="user-content-fnref-7-3" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</li>
+<li>思考を減らしたいときは、プロンプトで頼むより effort を下げるほうが確実です。“Lowering effort reduces thinking, and with it cost and latency, more reliably than prompt instructions do.” とされています<sup><a href="#user-content-fn-7" id="user-content-fnref-7-4" data-footnote-ref="" aria-describedby="footnote-label">7</a></sup>。</li>
+<li><code>max</code> は “may show diminishing returns and is prone to overthinking. Test before adopting broadly” とされています<sup><a href="#user-content-fn-3" id="user-content-fnref-3-17" data-footnote-ref="" aria-describedby="footnote-label">3</a></sup>。上げるほど良くなるとは限らず、広く使う前に試すように、ということです。</li>
+</ul>
+<p>既定値は、提供者が品質とコストの釣り合いで選んだ値であって、自分の用途に合う保証はありません。モデルを切り替えたら、既定値の確認までを切り替え作業に含めたいと私は考えています。</p>
+<p>なお、Claude Code 以外で API を直接呼んでいる場合も、<code>effort</code> を省略すれば <code>medium</code> で動きます<sup><a href="#user-content-fn-6" id="user-content-fnref-6-3" data-footnote-ref="" aria-describedby="footnote-label">6</a></sup>。</p>
+<h2 id="よくある質問faq">よくある質問（FAQ）</h2>
+<h3 id="q-claude-code-で-opus-55-の-effort-の既定値はいくつですか">Q. Claude Code で Opus 5.5 の effort の既定値はいくつですか？</h3>
+<p><strong>A.</strong> <code>medium</code> です。Opus 5 の既定は <code>high</code> だったので、1段階低い名前から始まります。いまの値はセッションのヘッダーに表示されます。</p>
+<h3 id="q-settingsjson-の-effortlevel-が-opus-55-に効かないのはなぜですか">Q. settings.json の effortLevel が Opus 5.5 に効かないのはなぜですか？</h3>
+<p><strong>A.</strong> ユーザー設定のトップレベルにある <code>effortLevel</code> は、<code>/effort</code> がモデルごとに保存するようになる前（v2.1.251 より前）の古い形式で、Opus 5.5 以降のモデルには適用されない仕様だからです。<code>/effort</code> か <code>/model</code> で Opus 5.5 用のレベルを選ぶと、<code>modelSettings</code> に保存されます。プロジェクト・ローカル・管理設定のトップレベルの値は、Opus 5.5 にも効きます。なお <code>modelSettings</code> はモデルごとの保存なので、Opus 5 用に保存した値も Opus 5.5 には使われません。</p>
+<h3 id="q-opus-55-の-effort-は-medium-と-high-のどちらにすべきですか">Q. Opus 5.5 の effort は medium と high のどちらにすべきですか？</h3>
+<p><strong>A.</strong> まずは既定の <code>medium</code> で試すのが、公式の指針に沿った選び方です。Anthropic のテストでは、Opus 5.5 の <code>medium</code> はコーディングと知識労働の評価で Opus 5 の <code>high</code> と同等以上でした。より丁寧さが欲しい作業だけ <code>high</code> 以上に上げます。そのセッションの間だけ上げたいなら <code>/effort</code> のスライダーで <code>s</code> を、1回の応答だけ深く考えさせたいならプロンプトに <code>ultrathink</code> を使います（<code>ultrathink</code> は effort の値そのものは変えません）。</p>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li>Claude Code v2.1.280 で、Pro と Team Standard の既定モデルは Opus 5.5 になった。</li>
+<li>Opus 5.5 の effort の既定は <code>medium</code> で、Opus 5 の既定 <code>high</code> より1段階低い名前から始まる。</li>
+<li>ユーザー設定のトップレベルに残した旧形式の <code>effortLevel</code> は、Opus 5.5 には効かない（プロジェクト・ローカル・管理設定と <code>--settings</code> の値は効く）。</li>
+<li>私の Claude Code では、<code>/model</code> で Opus 5.5 を選んだ次の応答から <code>medium</code> になり、その後も（2026年9月25日まで）effort を一度も触らないまま <code>medium</code> で動いていた。</li>
+<li>同じレベル名でもモデルごとに中身は違う。公式の指針は「たいていは既定で」なので、上げるかどうかは作業に合わせて意図して選ぶ。</li>
+</ul>
+<p>モデルの更新に合わせた AI エージェントの設定の見直しや、チームへの導入のご相談は、<a href="/#contact">コンタクトフォーム</a>からどうぞ。</p>
+<section data-footnotes="" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md">Claude Code CHANGELOG</a> Anthropic、GitHub anthropics/claude-code（2026年9月25日閲覧）。v2.1.280 の節に Opus 5.5 の追加、Pro と Team Standard の既定モデルの Sonnet から Opus への変更、モデルごとの保存になる前に保存した effort が Opus 5.5 などの新しいモデルに適用されなくなったこと。v2.1.251 の節に <code>/effort</code> のモデルごとの保存、v2.1.257 の節に <code>/effort</code> の <code>s</code>、v2.1.212 の節にトランスクリプトへの effort の記録。v2.1.280 の公開日時（2026-09-22T16:38:14Z）はリリースページ <a href="https://github.com/anthropics/claude-code/releases/tag/v2.1.280">Release v2.1.280</a>、v2.1.251 の公開日時（2026-08-28T18:19:32Z）はリリースページ <a href="https://github.com/anthropics/claude-code/releases/tag/v2.1.251">Release v2.1.251</a> による。 <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to reference 1" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-1-2" data-footnote-backref="" aria-label="Back to reference 1-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-1-3" data-footnote-backref="" aria-label="Back to reference 1-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-1-4" data-footnote-backref="" aria-label="Back to reference 1-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-1-5" data-footnote-backref="" aria-label="Back to reference 1-5" class="data-footnote-backref">↩<sup>5</sup></a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://news.ycombinator.com/item?id=49810898">rmunn のコメント（Hacker News「Claude Opus 5.5」スレッド）</a> 2026年9月23日（UTC）投稿。コードレビューで示された行番号の5つ中4つの誤りと、画面の隅の “Effort: medium” に気づいたことの記述。引用は筆者訳。 <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to reference 2" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-3">
+<p><a href="https://code.claude.com/docs/en/model-config">Model configuration</a> Anthropic、Claude Code Docs（2026年9月25日閲覧）。effort の解決順、各モデルの既定値（Opus 5.5 は <code>medium</code>）、ユーザー設定のトップレベル <code>effortLevel</code> が Opus 5.5 に効かないこととその範囲、<code>Enter</code> と <code>s</code> による保存・一時適用、<code>max</code> のセッション限定は「Adjust effort level」節。レベル表と、尺度がモデルごとに違うことは「Choose an effort level」節。<code>ultrathink</code> は「Use ultrathink for one-off deep reasoning」節。<code>/effort</code> の引数なし実行と <code>/effort auto</code>、ヘッダーの表示は「Set the effort level」節。Pro と Team Standard の既定モデルは「<code>default</code> model setting」節。 <a href="#user-content-fnref-3" data-footnote-backref="" aria-label="Back to reference 3" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-3-2" data-footnote-backref="" aria-label="Back to reference 3-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-3-3" data-footnote-backref="" aria-label="Back to reference 3-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-3-4" data-footnote-backref="" aria-label="Back to reference 3-4" class="data-footnote-backref">↩<sup>4</sup></a> <a href="#user-content-fnref-3-5" data-footnote-backref="" aria-label="Back to reference 3-5" class="data-footnote-backref">↩<sup>5</sup></a> <a href="#user-content-fnref-3-6" data-footnote-backref="" aria-label="Back to reference 3-6" class="data-footnote-backref">↩<sup>6</sup></a> <a href="#user-content-fnref-3-7" data-footnote-backref="" aria-label="Back to reference 3-7" class="data-footnote-backref">↩<sup>7</sup></a> <a href="#user-content-fnref-3-8" data-footnote-backref="" aria-label="Back to reference 3-8" class="data-footnote-backref">↩<sup>8</sup></a> <a href="#user-content-fnref-3-9" data-footnote-backref="" aria-label="Back to reference 3-9" class="data-footnote-backref">↩<sup>9</sup></a> <a href="#user-content-fnref-3-10" data-footnote-backref="" aria-label="Back to reference 3-10" class="data-footnote-backref">↩<sup>10</sup></a> <a href="#user-content-fnref-3-11" data-footnote-backref="" aria-label="Back to reference 3-11" class="data-footnote-backref">↩<sup>11</sup></a> <a href="#user-content-fnref-3-12" data-footnote-backref="" aria-label="Back to reference 3-12" class="data-footnote-backref">↩<sup>12</sup></a> <a href="#user-content-fnref-3-13" data-footnote-backref="" aria-label="Back to reference 3-13" class="data-footnote-backref">↩<sup>13</sup></a> <a href="#user-content-fnref-3-14" data-footnote-backref="" aria-label="Back to reference 3-14" class="data-footnote-backref">↩<sup>14</sup></a> <a href="#user-content-fnref-3-15" data-footnote-backref="" aria-label="Back to reference 3-15" class="data-footnote-backref">↩<sup>15</sup></a> <a href="#user-content-fnref-3-16" data-footnote-backref="" aria-label="Back to reference 3-16" class="data-footnote-backref">↩<sup>16</sup></a> <a href="#user-content-fnref-3-17" data-footnote-backref="" aria-label="Back to reference 3-17" class="data-footnote-backref">↩<sup>17</sup></a></p>
+</li>
+<li id="user-content-fn-4">
+<p><a href="https://platform.claude.com/docs/en/build-with-claude/effort">Effort</a> Anthropic、Claude Platform Docs（2026年9月25日閲覧）。Opus 5 の既定が <code>high</code> であることは「Recommended effort levels for Claude Opus 5」節。 <a href="#user-content-fnref-4" data-footnote-backref="" aria-label="Back to reference 4" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-5">
+<p><a href="https://code.claude.com/docs/en/settings-reference">Settings reference（All settings）</a> Anthropic、Claude Code Docs（2026年9月25日閲覧）。v2.1.251 より前は <code>/effort</code> がトップレベルの <code>effortLevel</code> を書いていたことは「effortLevel」節。v2.1.251 以降のモデルごとの保存、正式名での保存とエイリアス・<code>[1m]</code> 付き ID の対応、公式の設定例は「modelSettings」節。 <a href="#user-content-fnref-5" data-footnote-backref="" aria-label="Back to reference 5" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-5-2" data-footnote-backref="" aria-label="Back to reference 5-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-5-3" data-footnote-backref="" aria-label="Back to reference 5-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-5-4" data-footnote-backref="" aria-label="Back to reference 5-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-6">
+<p><a href="https://platform.claude.com/docs/en/models/opus-5-5/whats-new-opus-5-5">What’s new in Claude Opus 5.5</a> Anthropic、Claude Platform Docs（2026年9月25日閲覧）。既定の effort が <code>medium</code>（Opus 5 は <code>high</code>）であることと、同じ effort で1ターンあたり多く考える傾向は「Behavior differences」節。 <a href="#user-content-fnref-6" data-footnote-backref="" aria-label="Back to reference 6" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-6-2" data-footnote-backref="" aria-label="Back to reference 6-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-6-3" data-footnote-backref="" aria-label="Back to reference 6-3" class="data-footnote-backref">↩<sup>3</sup></a></p>
+</li>
+<li id="user-content-fn-7">
+<p><a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5-5">Prompting Claude Opus 5.5</a> Anthropic、Claude Platform Docs（2026年9月25日閲覧）。Opus 5.5 の <code>medium</code> が Opus 5 の <code>high</code> と同等以上だったこと（Anthropic のテスト）、Opus 5 の値を持ち込むとターンが長くなること、effort を下げるほうがプロンプトより確実に思考を減らすことは、いずれも「Calibrate effort」節。 <a href="#user-content-fnref-7" data-footnote-backref="" aria-label="Back to reference 7" class="data-footnote-backref">↩</a> <a href="#user-content-fnref-7-2" data-footnote-backref="" aria-label="Back to reference 7-2" class="data-footnote-backref">↩<sup>2</sup></a> <a href="#user-content-fnref-7-3" data-footnote-backref="" aria-label="Back to reference 7-3" class="data-footnote-backref">↩<sup>3</sup></a> <a href="#user-content-fnref-7-4" data-footnote-backref="" aria-label="Back to reference 7-4" class="data-footnote-backref">↩<sup>4</sup></a></p>
+</li>
+<li id="user-content-fn-8">
+<p><a href="https://claude.com/blog/claude-model-and-effort-level-in-claude-code">Claude Code effort level and model selection</a> Lydia Hallie、Claude Blog（Anthropic）、2026年7月7日。「たいていのタスクはモデルの既定の effort を使う」は「Picking an effort level」節。Opus 5.5 の登場前の記事。 <a href="#user-content-fnref-8" data-footnote-backref="" aria-label="Back to reference 8" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section> </div> <div class="post-ad" data-astro-cid-7jjqptxk> <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3923446804785015" data-ad-slot="8524721763" data-ad-format="auto" data-full-width-responsive="true" data-astro-cid-7jjqptxk></ins> <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        </script> </div> <footer class="post-footer" data-astro-cid-7jjqptxk> <a href="/blog" class="back-to-blog" data-astro-cid-7jjqptxk> <span class="arrow" data-astro-cid-7jjqptxk>&larr;</span> Back to Tech Blog
+</a> </footer> </article>  </main> <footer data-astro-cid-sckkx6r4> <div class="footer-container" data-astro-cid-sckkx6r4> <div class="footer-brand" data-astro-cid-sckkx6r4> <a href="/" class="logo" data-astro-cid-sckkx6r4> <span class="logo-accent" data-astro-cid-sckkx6r4>&lt;</span>Meetsource<span class="logo-accent" data-astro-cid-sckkx6r4> /&gt;</span> </a> <p class="footer-desc" data-astro-cid-sckkx6r4>事業を止めずに、技術的負債を資産に変える設計・開発。</p> </div> <div class="footer-links-group" data-astro-cid-sckkx6r4> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>サイト内</h4> <a href="/#top" data-astro-cid-sckkx6r4>トップ</a> <a href="/#services" data-astro-cid-sckkx6r4>事業内容</a> <a href="/#projects" data-astro-cid-sckkx6r4>開発実績</a> </div> <div class="footer-links" data-astro-cid-sckkx6r4> <h4 data-astro-cid-sckkx6r4>会社情報</h4> <a href="/#about" data-astro-cid-sckkx6r4>私たちについて</a> <a href="/blog" data-astro-cid-sckkx6r4>ブログ</a> <a href="/#contact" data-astro-cid-sckkx6r4>お問い合わせ</a> <a href="/privacy" data-astro-cid-sckkx6r4>プライバシーポリシー</a> </div> </div> <div class="footer-bottom" data-astro-cid-sckkx6r4> <p data-astro-cid-sckkx6r4>&copy; 2026 Meetsource. All rights reserved.</p> </div> </div> </footer> </body> 
